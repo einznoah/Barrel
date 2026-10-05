@@ -1,20 +1,20 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
-import com.github.steveice10.mc.protocol.data.game.level.notify.GameEvent;
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.level.ClientboundGameEventPacket;
-import com.nukkitx.protocol.bedrock.BedrockPacket;
-import com.nukkitx.protocol.bedrock.data.GameType;
 import org.barrelmc.barrel.network.translator.TranslatorUtils;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
+import org.cloudburstmc.protocol.bedrock.data.GameType;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.level.notify.GameEvent;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundGameEventPacket;
 
 public class SetPlayerGameTypePacket implements BedrockPacketTranslator {
 
     @Override
     public void translate(BedrockPacket pk, Player player) {
-        com.nukkitx.protocol.bedrock.packet.SetPlayerGameTypePacket packet = (com.nukkitx.protocol.bedrock.packet.SetPlayerGameTypePacket) pk;
+        org.cloudburstmc.protocol.bedrock.packet.SetPlayerGameTypePacket packet = (org.cloudburstmc.protocol.bedrock.packet.SetPlayerGameTypePacket) pk;
 
         player.setGameMode(GameType.from(packet.getGamemode()));
-        player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAMEMODE, TranslatorUtils.translateGamemodeToJE(GameType.from(packet.getGamemode()))));
+        player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, TranslatorUtils.translateGamemodeToJE(GameType.from(packet.getGamemode()))));
     }
 }

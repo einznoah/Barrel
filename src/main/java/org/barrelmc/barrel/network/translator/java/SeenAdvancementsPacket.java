@@ -1,13 +1,14 @@
 package org.barrelmc.barrel.network.translator.java;
 
-import com.github.steveice10.mc.protocol.codec.MinecraftPacket;
-import com.github.steveice10.mc.protocol.data.game.inventory.AdvancementTabAction;
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundSelectAdvancementsTabPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.inventory.ServerboundSeenAdvancementsPacket;
 import org.barrelmc.barrel.network.translator.interfaces.JavaPacketTranslator;
 import org.barrelmc.barrel.player.Player;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.inventory.AdvancementTabAction;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSelectAdvancementsTabPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSeenAdvancementsPacket;
 
 public class SeenAdvancementsPacket implements JavaPacketTranslator {
+
     @Override
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundSeenAdvancementsPacket packet = (ServerboundSeenAdvancementsPacket) pk;

@@ -1,7 +1,7 @@
 package org.barrelmc.barrel.math;
 
-import com.nukkitx.math.GenericMath;
-import com.nukkitx.math.vector.Vector3f;
+import org.cloudburstmc.math.GenericMath;
+import org.cloudburstmc.math.vector.Vector3f;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -62,5 +62,11 @@ public class Vector3 {
 
     public Vector3f getVector3f() {
         return Vector3f.from(this.x, this.y + 1.62, this.z);
+    }
+
+    public Vector3f getDirectionVector() {
+        double yaw = Math.toRadians(this.yaw);
+        double pitch = Math.toRadians(this.pitch);
+        return Vector3f.from(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
     }
 }

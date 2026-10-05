@@ -5,18 +5,14 @@
 
 package org.barrelmc.barrel.network;
 
-import com.github.steveice10.mc.auth.data.GameProfile;
-import com.github.steveice10.mc.protocol.MinecraftConstants;
-import com.github.steveice10.mc.protocol.codec.MinecraftPacket;
-import com.github.steveice10.mc.protocol.packet.login.serverbound.ServerboundHelloPacket;
-import com.github.steveice10.packetlib.Session;
-import com.github.steveice10.packetlib.event.session.SessionAdapter;
-import com.github.steveice10.packetlib.packet.Packet;
 import org.barrelmc.barrel.auth.AuthManager;
 import org.barrelmc.barrel.player.Player;
 import org.barrelmc.barrel.server.ProxyServer;
-
-import java.util.UUID;
+import org.geysermc.mcprotocollib.network.Session;
+import org.geysermc.mcprotocollib.network.event.session.SessionAdapter;
+import org.geysermc.mcprotocollib.network.packet.Packet;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
+import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundHelloPacket;
 
 public class JavaPacketHandler extends SessionAdapter {
 
@@ -34,14 +30,13 @@ public class JavaPacketHandler extends SessionAdapter {
             if (packet instanceof ServerboundHelloPacket) {
                 ServerboundHelloPacket loginPacket = (ServerboundHelloPacket) packet;
 
-                if (!ProxyServer.getInstance().getConfig().getAuth().equals("offline") && AuthManager.getInstance().getAccessTokens().containsKey(loginPacket.getUsername())) {
-                    new Player(loginPacket, session);
+                if (ProxyServer.getInstance().getConfig().getAuth().equals("offline") || AuthManager.getInstance().getXboxAccounts().containsKey(loginPacket.getUsername())) {
+                    Player oldPlayer = ProxyServer.getInstance().getPlayerByName(loginPacket.getUsername());
+                    if (oldPlayer != null) {
+                        oldPlayer.disconnect("You logged in from another location");
+                    }
 
-                    UUID uuid = UUID.nameUUIDFromBytes((loginPacket.getUsername()).getBytes());
-                    GameProfile gameProfile = new GameProfile(uuid, loginPacket.getUsername());
-                    session.setFlag(MinecraftConstants.PROFILE_KEY, gameProfile);
-
-                    this.player = ProxyServer.getInstance().getPlayerByName(loginPacket.getUsername());
+                    this.player = new Player(loginPacket, session);
                 }
             }
         } else {

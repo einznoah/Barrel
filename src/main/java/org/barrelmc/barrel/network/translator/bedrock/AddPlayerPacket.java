@@ -1,31 +1,34 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
-import com.github.steveice10.mc.auth.data.GameProfile;
-import com.github.steveice10.mc.protocol.data.game.PlayerListEntry;
-import com.github.steveice10.mc.protocol.data.game.PlayerListEntryAction;
-import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundPlayerInfoPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.entity.spawn.ClientboundAddPlayerPacket;
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.protocol.bedrock.BedrockPacket;
-import com.nukkitx.protocol.bedrock.data.entity.EntityData;
 import net.kyori.adventure.text.Component;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
 import org.barrelmc.barrel.utils.Utils;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.geysermc.mcprotocollib.auth.GameProfile;
+import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntry;
+import org.geysermc.mcprotocollib.protocol.data.game.PlayerListEntryAction;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundPlayerInfoUpdatePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
+
+import java.util.EnumSet;
 
 public class AddPlayerPacket implements BedrockPacketTranslator {
 
     @Override
     public void translate(BedrockPacket pk, Player player) {
-        com.nukkitx.protocol.bedrock.packet.AddPlayerPacket packet = (com.nukkitx.protocol.bedrock.packet.AddPlayerPacket) pk;
+        org.cloudburstmc.protocol.bedrock.packet.AddPlayerPacket packet = (org.cloudburstmc.protocol.bedrock.packet.AddPlayerPacket) pk;
 
         Vector3f position = packet.getPosition();
         Vector3f rotation = packet.getRotation();
-
         GameProfile gameProfile = new GameProfile(packet.getUuid(), Utils.lengthCutter(packet.getUsername(), 16));
+        CharSequence nameTag = packet.getMetadata().get(EntityDataTypes.NAME);
 
-        player.getJavaSession().send(new ClientboundPlayerInfoPacket(PlayerListEntryAction.ADD_PLAYER, new PlayerListEntry[]{new PlayerListEntry(gameProfile, GameMode.SURVIVAL, 10, Component.text(Utils.lengthCutter(packet.getMetadata().getString(EntityData.NAMETAG), 16)), 0L, null, null)}));
-        player.getJavaSession().send(new ClientboundAddPlayerPacket((int) packet.getRuntimeEntityId(), packet.getUuid(), position.getX(), position.getY(), position.getZ(), rotation.getY(), rotation.getX()));
+        player.getJavaSession().send(new ClientboundPlayerInfoUpdatePacket(EnumSet.of(PlayerListEntryAction.ADD_PLAYER, PlayerListEntryAction.UPDATE_GAME_MODE, PlayerListEntryAction.UPDATE_LISTED, PlayerListEntryAction.UPDATE_LATENCY, PlayerListEntryAction.UPDATE_DISPLAY_NAME), new PlayerListEntry[]{new PlayerListEntry(packet.getUuid(), gameProfile, true, 10, GameMode.SURVIVAL, Component.text(Utils.lengthCutter(nameTag == null ? null : nameTag.toString(), 16)), true, 0, null, 0L, null, null)}));
+        player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), packet.getUuid(), EntityType.PLAYER, position.getX(), position.getY(), position.getZ(), rotation.getY(), rotation.getX(), rotation.getY()));
     }
 }

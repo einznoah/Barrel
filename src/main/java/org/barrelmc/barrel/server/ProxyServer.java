@@ -5,26 +5,9 @@
 
 package org.barrelmc.barrel.server;
 
-import com.github.steveice10.mc.auth.data.GameProfile;
-import com.github.steveice10.mc.auth.service.SessionService;
-import com.github.steveice10.mc.protocol.MinecraftConstants;
-import com.github.steveice10.mc.protocol.MinecraftProtocol;
-import com.github.steveice10.mc.protocol.ServerLoginHandler;
-import com.github.steveice10.mc.protocol.codec.MinecraftCodec;
-import com.github.steveice10.mc.protocol.data.status.PlayerInfo;
-import com.github.steveice10.mc.protocol.data.status.ServerStatusInfo;
-import com.github.steveice10.mc.protocol.data.status.VersionInfo;
-import com.github.steveice10.mc.protocol.data.status.handler.ServerInfoBuilder;
-import com.github.steveice10.opennbt.NBTIO;
-import com.github.steveice10.opennbt.tag.builtin.*;
-import com.github.steveice10.packetlib.Server;
-import com.github.steveice10.packetlib.event.server.ServerAdapter;
-import com.github.steveice10.packetlib.event.server.ServerClosedEvent;
-import com.github.steveice10.packetlib.event.server.SessionAddedEvent;
-import com.github.steveice10.packetlib.event.server.SessionRemovedEvent;
-import com.github.steveice10.packetlib.tcp.TcpServer;
-import com.nukkitx.protocol.bedrock.BedrockPacketCodec;
-import com.nukkitx.protocol.bedrock.v560.Bedrock_v560;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.barrelmc.barrel.Barrel;
@@ -34,18 +17,38 @@ import org.barrelmc.barrel.config.Config;
 import org.barrelmc.barrel.network.JavaPacketHandler;
 import org.barrelmc.barrel.player.Player;
 import org.barrelmc.barrel.utils.FileManager;
+import org.cloudburstmc.nbt.NbtMap;
+import org.cloudburstmc.nbt.NbtType;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
+import org.cloudburstmc.protocol.bedrock.codec.v2193.Bedrock_v2193;
+import org.geysermc.mcprotocollib.auth.GameProfile;
+import org.geysermc.mcprotocollib.auth.SessionService;
+import org.geysermc.mcprotocollib.network.Server;
+import org.geysermc.mcprotocollib.network.event.server.ServerAdapter;
+import org.geysermc.mcprotocollib.network.event.server.ServerClosedEvent;
+import org.geysermc.mcprotocollib.network.event.server.SessionAddedEvent;
+import org.geysermc.mcprotocollib.network.event.server.SessionRemovedEvent;
+import org.geysermc.mcprotocollib.network.server.NetworkServer;
+import org.geysermc.mcprotocollib.protocol.MinecraftConstants;
+import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
+import org.geysermc.mcprotocollib.protocol.ServerLoginHandler;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftCodec;
+import org.geysermc.mcprotocollib.protocol.data.status.PlayerInfo;
+import org.geysermc.mcprotocollib.protocol.data.status.ServerStatusInfo;
+import org.geysermc.mcprotocollib.protocol.data.status.VersionInfo;
+import org.geysermc.mcprotocollib.protocol.data.status.handler.ServerInfoBuilder;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.GZIPInputStream;
 
 public class ProxyServer {
 
@@ -54,7 +57,9 @@ public class ProxyServer {
     @Getter
     private final Map<String, Player> onlinePlayers = new ConcurrentHashMap<>();
     @Getter
-    private final BedrockPacketCodec bedrockPacketCodec = Bedrock_v560.V560_CODEC;
+    private final BedrockCodec bedrockPacketCodec = Bedrock_v2193.CODEC;
+    @Getter
+    private final EventLoopGroup bedrockEventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
     @Getter
     private final Path dataPath;
@@ -67,8 +72,19 @@ public class ProxyServer {
     @Getter
     private String defaultSkinGeometry;
 
+    // Network ids in the registries MCProtocolLib sends to the client while it is configuring
     @Getter
-    private final CompoundTag dimensionTag;
+    private final int overworldId;
+    @Getter
+    private final int overworldMinSection;
+    @Getter
+    private final int overworldSectionCount;
+    @Getter
+    private final int overworldClockId;
+    @Getter
+    private final int defaultBiomeId;
+    @Getter
+    private final int biomeCount;
 
     public ProxyServer(String dataPath) {
         instance = this;
@@ -78,11 +94,14 @@ public class ProxyServer {
             System.exit(0);
         }
 
-        try {
-            this.dimensionTag = (CompoundTag) NBTIO.readTag(new GZIPInputStream(Objects.requireNonNull(Barrel.class.getClassLoader().getResourceAsStream("registry-codec.dat"))), true);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        NbtMap registries = MinecraftProtocol.loadNetworkCodec();
+        NbtMap overworld = getRegistryEntry(registries, "minecraft:dimension_type", "minecraft:overworld");
+        this.overworldId = overworld.getInt("id");
+        this.overworldMinSection = overworld.getCompound("element").getInt("min_y") >> 4;
+        this.overworldSectionCount = overworld.getCompound("element").getInt("height") >> 4;
+        this.overworldClockId = getRegistryEntry(registries, "minecraft:world_clock", "minecraft:overworld").getInt("id");
+        this.defaultBiomeId = getRegistryEntry(registries, "minecraft:worldgen/biome", "minecraft:plains").getInt("id");
+        this.biomeCount = registries.getCompound("minecraft:worldgen/biome").getList("value", NbtType.COMPOUND).size();
 
         try {
             defaultSkinData = FileManager.getFileContents(Objects.requireNonNull(Barrel.class.getClassLoader().getResourceAsStream("skin/skin_data.txt")));
@@ -92,6 +111,16 @@ public class ProxyServer {
         }
 
         this.startServer();
+    }
+
+    private static NbtMap getRegistryEntry(NbtMap registries, String registry, String name) {
+        for (NbtMap entry : registries.getCompound(registry).getList("value", NbtType.COMPOUND)) {
+            if (entry.getString("name").equals(name)) {
+                return entry;
+            }
+        }
+
+        throw new IllegalStateException(name + " is missing from the " + registry + " registry");
     }
 
     private boolean initConfig() {
@@ -114,14 +143,20 @@ public class ProxyServer {
     private void startServer() {
         SessionService sessionService = new SessionService();
 
-        Server server = new TcpServer(this.config.getBindAddress(), this.config.getPort(), MinecraftProtocol::new);
+        Server server = new NetworkServer(new InetSocketAddress(this.config.getBindAddress(), this.config.getPort()), MinecraftProtocol::new);
         server.setGlobalFlag(MinecraftConstants.SESSION_SERVICE_KEY, sessionService);
-        server.setGlobalFlag(MinecraftConstants.VERIFY_USERS_KEY, false);
-        server.setGlobalFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY, (ServerInfoBuilder) session -> new ServerStatusInfo(new VersionInfo(MinecraftCodec.CODEC.getMinecraftVersion(), MinecraftCodec.CODEC.getProtocolVersion()), new PlayerInfo(10, 0, new GameProfile[0]), Component.text(this.config.getMotd()), null, false));
+        server.setGlobalFlag(MinecraftConstants.ENCRYPT_CONNECTION, false);
+        server.setGlobalFlag(MinecraftConstants.SHOULD_AUTHENTICATE, false);
+        server.setGlobalFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY, (ServerInfoBuilder) session -> new ServerStatusInfo(Component.text(this.config.getMotd()), new PlayerInfo(10, 0, new ArrayList<>()), new VersionInfo(MinecraftCodec.CODEC.getMinecraftVersion(), MinecraftCodec.CODEC.getProtocolVersion()), null, false));
         server.setGlobalFlag(MinecraftConstants.SERVER_LOGIN_HANDLER_KEY, (ServerLoginHandler) session -> {
             GameProfile profile = session.getFlag(MinecraftConstants.PROFILE_KEY);
             System.out.println(profile.getName() + " logged in");
-            if (AuthManager.getInstance().getLoginPlayers().get(profile.getName()) == null) {
+
+            // The client can only be sent game packets from here on, so this is when the bedrock server is joined
+            Player player = getPlayerByName(profile.getName());
+            if (player != null && player.getJavaSession() == session) {
+                player.connect();
+            } else {
                 session.addListener(new AuthServer(session, profile.getName()));
             }
         });
@@ -145,16 +180,21 @@ public class ProxyServer {
             @Override
             public void sessionRemoved(SessionRemovedEvent event) {
                 GameProfile profile = event.getSession().getFlag(MinecraftConstants.PROFILE_KEY);
-                Player player = getPlayerByName(profile.getName());
-                if (AuthManager.getInstance().getLoginPlayers().get(player.getUsername())) {
-                    AuthManager.getInstance().getLoginPlayers().remove(player.getUsername());
+                if (profile == null) {
+                    // Server list ping
+                    return;
                 }
-                if (AuthManager.getInstance().getTimers().get(player.getUsername()) != null) {
-                    AuthManager.getInstance().getTimers().get(player.getUsername()).cancel();
-                    AuthManager.getInstance().getTimers().remove(player.getUsername());
+
+                Thread loginThread = AuthManager.getInstance().getLoginThreads().remove(profile.getName());
+                if (loginThread != null) {
+                    loginThread.interrupt();
                 }
                 System.out.println(profile.getName() + " logged out");
-                player.disconnect("logged out");
+
+                Player player = getPlayerByName(profile.getName());
+                if (player != null && player.getJavaSession() == event.getSession()) {
+                    player.disconnect("logged out");
+                }
             }
         });
 

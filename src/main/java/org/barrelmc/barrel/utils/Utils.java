@@ -1,22 +1,15 @@
 package org.barrelmc.barrel.utils;
 
-import com.github.steveice10.mc.protocol.data.game.chunk.BitStorage;
-import com.github.steveice10.mc.protocol.data.game.chunk.DataPalette;
-import com.github.steveice10.mc.protocol.data.game.chunk.palette.SingletonPalette;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import org.barrelmc.barrel.network.converter.BlockConverter;
+import org.barrelmc.barrel.server.ProxyServer;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftTypes;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 
 import java.security.SignatureException;
 
 public class Utils {
-
-    public static byte[] toByteArray(long value) {
-        byte[] result = new byte[8];
-        for (int i = 7; i >= 0; i--) {
-            result[i] = (byte) (int) (value & 0xFFL);
-            value >>= 8L;
-        }
-
-        return result;
-    }
 
     public static String lengthCutter(String bedrockName, int length) {
         if (bedrockName == null) {
@@ -30,16 +23,43 @@ public class Utils {
         }
     }
 
-    public static void fillPalette(DataPalette dataPalette) {
-        fillPalette(dataPalette, 0);
+    public static ChunkSection createChunkSection() {
+        ProxyServer proxyServer = ProxyServer.getInstance();
+        return new ChunkSection(0, BlockConverter.getJavaBlockStateCount(), proxyServer.getDefaultBiomeId(), proxyServer.getBiomeCount());
     }
 
-    public static void fillPalette(DataPalette dataPalette, int state) {
-        BitStorage bitStorage = dataPalette.getStorage();
-        dataPalette.setPalette(new SingletonPalette(0));
-        for (int i = 0; i < bitStorage.getSize(); i++) {
-            bitStorage.set(i, state);
+    public static ChunkSection[] createChunkSections() {
+        ChunkSection[] chunkSections = new ChunkSection[ProxyServer.getInstance().getOverworldSectionCount()];
+        for (int i = 0; i < chunkSections.length; i++) {
+            chunkSections[i] = createChunkSection();
         }
+
+        return chunkSections;
+    }
+
+    public static byte[] writeChunkSections(ChunkSection[] chunkSections) {
+        ByteBuf byteBuf = Unpooled.buffer();
+        for (ChunkSection chunkSection : chunkSections) {
+            // The block count kept by ChunkSection#setBlock is off once its palette has been resized
+            int blockCount = 0;
+            int fluidCount = 0;
+            for (int i = 0; i < 4096; i++) {
+                int javaStateId = chunkSection.getBlock(i & 15, i >> 8, i >> 4 & 15);
+                if (javaStateId != 0) {
+                    blockCount++;
+                }
+                if (BlockConverter.isJavaFluid(javaStateId)) {
+                    fluidCount++;
+                }
+            }
+
+            MinecraftTypes.writeChunkSection(byteBuf, new ChunkSection(blockCount, fluidCount, chunkSection.getBlockData(), chunkSection.getBiomeData()));
+        }
+
+        byte[] chunkData = new byte[byteBuf.readableBytes()];
+        byteBuf.readBytes(chunkData);
+        byteBuf.release();
+        return chunkData;
     }
 
     public static byte[] DERToJOSE(byte[] derSignature, Utils.AlgorithmType algorithmType) throws SignatureException {

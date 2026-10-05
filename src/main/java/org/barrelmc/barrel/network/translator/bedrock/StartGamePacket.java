@@ -1,48 +1,63 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
-import com.github.steveice10.mc.protocol.data.game.entity.EntityEvent;
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.entity.ClientboundEntityEventPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
-import com.nukkitx.math.vector.Vector2f;
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.protocol.bedrock.BedrockPacket;
+import net.kyori.adventure.key.Key;
 import org.barrelmc.barrel.network.translator.TranslatorUtils;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
 import org.barrelmc.barrel.server.ProxyServer;
+import org.cloudburstmc.math.vector.Vector2f;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.EntityEvent;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
+import org.geysermc.mcprotocollib.protocol.data.game.level.notify.GameEvent;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundLoginPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundEntityEventPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundGameEventPacket;
 
 public class StartGamePacket implements BedrockPacketTranslator {
 
     @Override
     public void translate(BedrockPacket pk, Player player) {
-        com.nukkitx.protocol.bedrock.packet.StartGamePacket packet = (com.nukkitx.protocol.bedrock.packet.StartGamePacket) pk;
+        org.cloudburstmc.protocol.bedrock.packet.StartGamePacket packet = (org.cloudburstmc.protocol.bedrock.packet.StartGamePacket) pk;
 
         player.setRuntimeEntityId(packet.getRuntimeEntityId());
         player.setOldPosition(packet.getPlayerPosition());
-        player.setPosition(packet.getPlayerPosition());
         player.setLastServerPosition(packet.getPlayerPosition());
         player.setLastServerRotation(packet.getRotation());
-
         player.setStartGamePacketCache(packet);
-
         player.setGameMode(packet.getPlayerGameType());
 
         ClientboundLoginPacket serverJoinGamePacket = new ClientboundLoginPacket(
                 (int) packet.getRuntimeEntityId(), false,
-                TranslatorUtils.translateGamemodeToJE(packet.getPlayerGameType()),
-                TranslatorUtils.translateGamemodeToJE(packet.getPlayerGameType()),
-                3, new String[]{"minecraft:overworld", "minecraft:the_nether", "minecraft:the_end"}, ProxyServer.getInstance().getDimensionTag(),
-                "minecraft:overworld", "minecraft:overworld", 100,
-                10, 16, 16, false, true, false, false, null
+                new Key[]{Key.key("minecraft:overworld"), Key.key("minecraft:the_nether"), Key.key("minecraft:the_end")},
+                10, 16, 16, false, true, false,
+                new PlayerSpawnInfo(
+                        ProxyServer.getInstance().getOverworldId(), Key.key("minecraft:overworld"), 100,
+                        TranslatorUtils.translateGamemodeToJE(packet.getPlayerGameType()),
+                        TranslatorUtils.translateGamemodeToJE(packet.getPlayerGameType()),
+                        false, false, null, 0, 63
+                ),
+                false, false
         );
-
         player.getJavaSession().send(serverJoinGamePacket);
+        // The client has no world to center on before it received the login packet
+        player.setPosition(packet.getPlayerPosition());
 
         Vector3f position = packet.getPlayerPosition();
         Vector2f rotation = packet.getRotation();
-        ClientboundPlayerPositionPacket serverPlayerPositionRotationPacket = new ClientboundPlayerPositionPacket(position.getX(), position.getY(), position.getZ(), rotation.getY(), rotation.getX(), 0, false);
+        ClientboundPlayerPositionPacket serverPlayerPositionRotationPacket = new ClientboundPlayerPositionPacket(0, position.getX(), position.getY(), position.getZ(), 0, 0, 0, rotation.getY(), rotation.getX());
         player.getJavaSession().send(serverPlayerPositionRotationPacket);
-        player.getJavaSession().send(new ClientboundEntityEventPacket((int) packet.getRuntimeEntityId(), EntityEvent.PLAYER_OP_PERMISSION_LEVEL_0));
+        player.getJavaSession().send(new ClientboundEntityEventPacket((int) packet.getRuntimeEntityId(), EntityEvent.PLAYER_SET_NO_PERMISSIONS));
+        // The client stays on the loading screen until it is told that the chunks are coming
+        player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.LEVEL_CHUNKS_LOAD_START, null));
+
+        // The client already sent its render distance before it joined the game
+        RequestChunkRadiusPacket chunkRadiusPacket = new RequestChunkRadiusPacket();
+        chunkRadiusPacket.setRadius(player.getRenderDistance());
+        chunkRadiusPacket.setMaxRadius(player.getRenderDistance());
+        player.getBedrockSession().sendPacket(chunkRadiusPacket);
     }
 }

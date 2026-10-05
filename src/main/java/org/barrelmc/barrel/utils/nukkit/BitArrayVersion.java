@@ -35,7 +35,7 @@ public enum BitArrayVersion {
     }
 
     public BitArray createPalette(int size) {
-        return this.createPalette(size, new int[this.getWordsForSize(size)]);
+        return this.createPalette(size, new int[this == V0 ? 0 : this.getWordsForSize(size)]);
     }
 
     public byte getId() {

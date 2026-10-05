@@ -1,12 +1,12 @@
 package org.barrelmc.barrel.network.translator.java;
 
-import com.github.steveice10.mc.protocol.codec.MinecraftPacket;
-import com.github.steveice10.mc.protocol.data.game.ClientCommand;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.protocol.bedrock.packet.RespawnPacket;
 import org.barrelmc.barrel.network.translator.interfaces.JavaPacketTranslator;
 import org.barrelmc.barrel.player.Player;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.packet.RespawnPacket;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.ClientCommand;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
 
 public class ClientCommandPacket implements JavaPacketTranslator {
 
@@ -14,13 +14,14 @@ public class ClientCommandPacket implements JavaPacketTranslator {
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundClientCommandPacket packet = (ServerboundClientCommandPacket) pk;
 
-        if (packet.getRequest() == ClientCommand.RESPAWN) {
+        if (packet.getRequest() == ClientCommand.PERFORM_RESPAWN) {
             RespawnPacket respawnPacket = new RespawnPacket();
 
             respawnPacket.setPosition(Vector3f.from(0, 0, 0));
             respawnPacket.setRuntimeEntityId(player.getRuntimeEntityId());
             respawnPacket.setState(RespawnPacket.State.CLIENT_READY);
-            player.getBedrockClient().getSession().sendPacket(respawnPacket);
+
+            player.getBedrockSession().sendPacket(respawnPacket);
         }
     }
 }

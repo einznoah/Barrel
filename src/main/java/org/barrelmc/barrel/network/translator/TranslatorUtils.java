@@ -5,8 +5,8 @@
 
 package org.barrelmc.barrel.network.translator;
 
-import com.github.steveice10.mc.protocol.data.game.entity.player.GameMode;
-import com.nukkitx.protocol.bedrock.data.GameType;
+import org.cloudburstmc.protocol.bedrock.data.GameType;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 
 public class TranslatorUtils {
 

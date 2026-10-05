@@ -1,14 +1,13 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
-import com.nimbusds.jwt.SignedJWT;
-import com.nukkitx.protocol.bedrock.BedrockPacket;
-import com.nukkitx.protocol.bedrock.packet.ClientToServerHandshakePacket;
-import com.nukkitx.protocol.bedrock.util.EncryptionUtils;
+import com.alibaba.fastjson.JSONObject;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ClientToServerHandshakePacket;
+import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
 
 import javax.crypto.SecretKey;
-import java.net.URI;
 import java.security.interfaces.ECPublicKey;
 import java.util.Base64;
 
@@ -22,20 +21,21 @@ public class ServerToClientHandshakePacket implements BedrockPacketTranslator {
     @Override
     public void translate(BedrockPacket pk, Player player) {
         try {
-            SignedJWT saltJwt = SignedJWT.parse(((com.nukkitx.protocol.bedrock.packet.ServerToClientHandshakePacket) pk).getJwt());
-            URI x5u = saltJwt.getHeader().getX509CertURL();
-            ECPublicKey serverKey = EncryptionUtils.generateKey(x5u.toASCIIString());
+            String[] saltJwt = ((org.cloudburstmc.protocol.bedrock.packet.ServerToClientHandshakePacket) pk).getJwt().split("\\.");
+            JSONObject header = JSONObject.parseObject(new String(Base64.getUrlDecoder().decode(saltJwt[0])));
+            JSONObject payload = JSONObject.parseObject(new String(Base64.getUrlDecoder().decode(saltJwt[1])));
+            ECPublicKey serverKey = EncryptionUtils.parseKey(header.getString("x5u"));
             SecretKey key = EncryptionUtils.getSecretKey(
                     player.getPrivateKey(),
                     serverKey,
-                    Base64.getDecoder().decode(saltJwt.getJWTClaimsSet().getStringClaim("salt"))
+                    Base64.getDecoder().decode(payload.getString("salt"))
             );
-            player.getBedrockClient().getSession().enableEncryption(key);
+            player.getBedrockSession().enableEncryption(key);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
         ClientToServerHandshakePacket clientToServerHandshake = new ClientToServerHandshakePacket();
-        player.getBedrockClient().getSession().sendPacketImmediately(clientToServerHandshake);
+        player.getBedrockSession().sendPacketImmediately(clientToServerHandshake);
     }
 }

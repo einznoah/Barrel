@@ -1,6 +1,6 @@
 package org.barrelmc.barrel.network.translator.interfaces;
 
-import com.nukkitx.protocol.bedrock.BedrockPacket;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.barrelmc.barrel.player.Player;
 
 public interface BedrockPacketTranslator {

@@ -1,10 +1,10 @@
 package org.barrelmc.barrel.network.translator.java;
 
-import com.github.steveice10.mc.protocol.codec.MinecraftPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundChatPacket;
-import com.nukkitx.protocol.bedrock.packet.TextPacket;
 import org.barrelmc.barrel.network.translator.interfaces.JavaPacketTranslator;
 import org.barrelmc.barrel.player.Player;
+import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 
 public class ChatPacket implements JavaPacketTranslator {
 
@@ -15,10 +15,12 @@ public class ChatPacket implements JavaPacketTranslator {
 
         textPacket.setType(TextPacket.Type.CHAT);
         textPacket.setNeedsTranslation(false);
-        textPacket.setSourceName(chatPacket.getMessage());
+        textPacket.setSourceName(player.getUsername());
         textPacket.setMessage(chatPacket.getMessage());
-        textPacket.setXuid("");
+        textPacket.setXuid(player.getXuid());
         textPacket.setPlatformChatId("");
-        player.getBedrockClient().getSession().sendPacket(textPacket);
+        textPacket.setFilteredMessage("");
+
+        player.getBedrockSession().sendPacket(textPacket);
     }
 }

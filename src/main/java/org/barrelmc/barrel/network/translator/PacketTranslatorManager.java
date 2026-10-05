@@ -1,37 +1,33 @@
 package org.barrelmc.barrel.network.translator;
 
-import com.github.steveice10.mc.protocol.codec.MinecraftPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundChatPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.ServerboundClientInformationPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.inventory.ServerboundSeenAdvancementsPacket;
-import com.github.steveice10.mc.protocol.packet.ingame.serverbound.player.*;
-import com.github.steveice10.packetlib.packet.Packet;
-import com.nukkitx.protocol.bedrock.BedrockPacket;
-import com.nukkitx.protocol.bedrock.packet.*;
+import io.netty.util.ReferenceCountUtil;
 import lombok.Getter;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.network.translator.interfaces.JavaPacketTranslator;
 import org.barrelmc.barrel.network.translator.java.*;
 import org.barrelmc.barrel.network.translator.java.PlayerActionPacket;
+import org.barrelmc.barrel.network.translator.java.PlayerInputPacket;
 import org.barrelmc.barrel.player.Player;
+import org.cloudburstmc.protocol.bedrock.packet.*;
+import org.geysermc.mcprotocollib.network.packet.Packet;
+import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
+import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSeenAdvancementsPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 public class PacketTranslatorManager {
 
-    private final ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
-            Runtime.getRuntime().availableProcessors(),
-            Integer.MAX_VALUE,
-            60,
-            TimeUnit.SECONDS,
-            new SynchronousQueue<>(),
-            new ThreadPoolExecutor.CallerRunsPolicy()
-    );
+    // A single thread, the java client has to receive the translated packets in the order the bedrock server sent them
+    private final ExecutorService threadPoolExecutor = Executors.newSingleThreadExecutor();
 
     @Getter
     private final Map<Class<? extends Packet>, JavaPacketTranslator> javaTranslators = new HashMap<>();
@@ -52,7 +48,18 @@ public class PacketTranslatorManager {
             if (translator.immediate()) {
                 translator.translate(pk, player);
             } else {
-                threadPoolExecutor.execute(() -> translator.translate(pk, player));
+                // Netty releases the packet as soon as this method returns
+                ReferenceCountUtil.retain(pk);
+                boolean accepted = this.execute(() -> {
+                    try {
+                        translator.translate(pk, player);
+                    } finally {
+                        ReferenceCountUtil.release(pk);
+                    }
+                });
+                if (!accepted) {
+                    ReferenceCountUtil.release(pk);
+                }
             }
         }
     }
@@ -61,8 +68,22 @@ public class PacketTranslatorManager {
         JavaPacketTranslator translator = javaTranslators.get(pk.getClass());
 
         if (translator != null) {
-            threadPoolExecutor.execute(() -> translator.translate(pk, player));
+            this.execute(() -> translator.translate(pk, player));
         }
+    }
+
+    private boolean execute(Runnable translation) {
+        try {
+            threadPoolExecutor.execute(translation);
+            return true;
+        } catch (RejectedExecutionException e) {
+            // The player disconnected
+            return false;
+        }
+    }
+
+    public void shutdown() {
+        threadPoolExecutor.shutdown();
     }
 
     private void registerDefaultPackets() {
@@ -83,6 +104,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(SetDisplayObjectivePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetDisplayObjectivePacket());
         bedrockTranslators.put(SetScorePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetScorePacket());
         bedrockTranslators.put(SetTimePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetTimePacket());
+        bedrockTranslators.put(SyncWorldClocksPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SyncWorldClocksPacket());
         bedrockTranslators.put(StartGamePacket.class, new org.barrelmc.barrel.network.translator.bedrock.StartGamePacket());
         bedrockTranslators.put(TakeItemEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TakeItemEntityPacket());
         bedrockTranslators.put(TextPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TextPacket());
@@ -103,7 +125,8 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundMovePlayerPosRotPacket.class, new MovePlayerPosRotPacket());
         javaTranslators.put(ServerboundMovePlayerRotPacket.class, new MovePlayerRotPacket());
         javaTranslators.put(ServerboundPlayerCommandPacket.class, new PlayerCommandPacket());
-        javaTranslators.put(ServerboundSwingPacket.class, new SwingPacket());
+        javaTranslators.put(ServerboundPlayerInputPacket.class, new PlayerInputPacket());
+        javaTranslators.put(ServerboundPunchPacket.class, new SwingPacket());
         javaTranslators.put(ServerboundClientCommandPacket.class, new ClientCommandPacket());
         javaTranslators.put(ServerboundClientInformationPacket.class, new ClientInformationPacket());
         javaTranslators.put(ServerboundPlayerActionPacket.class, new PlayerActionPacket());
