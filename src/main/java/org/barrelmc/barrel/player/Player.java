@@ -56,6 +56,7 @@ import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -138,8 +139,10 @@ public class Player extends Vector3 {
     private final List<PlayerBlockActionData> playerAuthInputActions = new ObjectArrayList<>();
 
     @Getter
-    @Setter
-    private int hotbarSlot = 0;
+    private final Inventory inventory = new Inventory(this);
+    // The names the bedrock server gave its item ids
+    @Getter
+    private final Map<Integer, ItemDefinition> itemDefinitions = new ConcurrentHashMap<>();
 
     @Getter
     @Setter
@@ -196,7 +199,7 @@ public class Player extends Vector3 {
                         session.setCodec(codec);
                         // The default limits are too low for what a server sends
                         session.getPeer().getCodecHelper().setEncodingSettings(EncodingSettings.CLIENT);
-                        // Barrel does not keep the block and item palettes, runtime ids are translated as they are
+                        // Barrel does not keep the block palette, runtime ids are translated as they are
                         session.getPeer().getCodecHelper().setBlockDefinitions(new DefinitionRegistry<>() {
                             @Override
                             public BlockDefinition getDefinition(int runtimeId) {
@@ -211,7 +214,8 @@ public class Player extends Vector3 {
                         session.getPeer().getCodecHelper().setItemDefinitions(new DefinitionRegistry<>() {
                             @Override
                             public ItemDefinition getDefinition(int runtimeId) {
-                                return new SimpleItemDefinition("", runtimeId, false);
+                                ItemDefinition itemDefinition = itemDefinitions.get(runtimeId);
+                                return itemDefinition == null ? new SimpleItemDefinition("", runtimeId, false) : itemDefinition;
                             }
 
                             @Override

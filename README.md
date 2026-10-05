@@ -10,7 +10,8 @@
 
 ## Need implemented
 
-- Inventory
+- Crafting
+- Furnaces, anvils and the other containers that are not a chest, dispenser or hopper
 - And More...
 
 ## Credits

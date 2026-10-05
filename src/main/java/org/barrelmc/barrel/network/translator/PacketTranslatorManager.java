@@ -5,6 +5,7 @@ import lombok.Getter;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.network.translator.interfaces.JavaPacketTranslator;
 import org.barrelmc.barrel.network.translator.java.*;
+import org.barrelmc.barrel.network.translator.java.ContainerClosePacket;
 import org.barrelmc.barrel.network.translator.java.PlayerActionPacket;
 import org.barrelmc.barrel.network.translator.java.PlayerInputPacket;
 import org.barrelmc.barrel.player.Player;
@@ -14,7 +15,10 @@ import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSeenAdvancementsPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSetCreativeModeSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
@@ -117,6 +121,14 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(SetSpawnPositionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetSpawnPositionPacket());
         bedrockTranslators.put(UpdateAbilitiesPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateAbilitiesPacket());
         bedrockTranslators.put(NetworkSettingsPacket.class, new org.barrelmc.barrel.network.translator.bedrock.NetworkSettingsPacket());
+        bedrockTranslators.put(ItemComponentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ItemComponentPacket());
+        bedrockTranslators.put(CreativeContentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CreativeContentPacket());
+        bedrockTranslators.put(InventoryContentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventoryContentPacket());
+        bedrockTranslators.put(InventorySlotPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventorySlotPacket());
+        bedrockTranslators.put(ItemStackResponsePacket.class, new org.barrelmc.barrel.network.translator.bedrock.ItemStackResponsePacket());
+        bedrockTranslators.put(PlayerHotbarPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerHotbarPacket());
+        bedrockTranslators.put(ContainerOpenPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerOpenPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.ContainerClosePacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerClosePacket());
 
         // Java packets
         javaTranslators.put(ServerboundChatPacket.class, new ChatPacket());
@@ -132,5 +144,10 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundPlayerActionPacket.class, new PlayerActionPacket());
         javaTranslators.put(ServerboundSeenAdvancementsPacket.class, new SeenAdvancementsPacket());
         javaTranslators.put(ServerboundPlayerAbilitiesPacket.class, new PlayerAbilitiesPacket());
+        javaTranslators.put(ServerboundContainerClickPacket.class, new ContainerClickPacket());
+        javaTranslators.put(ServerboundContainerClosePacket.class, new ContainerClosePacket());
+        javaTranslators.put(ServerboundSetCreativeModeSlotPacket.class, new SetCreativeModeSlotPacket());
+        javaTranslators.put(ServerboundUseItemOnPacket.class, new UseItemOnPacket());
+        javaTranslators.put(ServerboundUseItemPacket.class, new UseItemPacket());
     }
 }

@@ -6,12 +6,10 @@ import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.protocol.bedrock.data.*;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerAction;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundBlockChangedAckPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerActionPacket;
 
 public class PlayerActionPacket implements JavaPacketTranslator {
-
-    private static final int ACTION_CLICK_BLOCK = 0;
-    private static final int ACTION_CLICK_AIR = 1;
 
     @Override
     public void translate(MinecraftPacket pk, Player player) {
@@ -22,6 +20,14 @@ public class PlayerActionPacket implements JavaPacketTranslator {
         PlayerAction action = playerActionPacket.getAction();
         if (action == PlayerAction.START_DIGGING && player.getGameMode() == GameType.CREATIVE) {
             action = PlayerAction.FINISH_DIGGING;
+        }
+        switch (action) {
+            case START_DIGGING:
+            case CANCEL_DIGGING:
+            case FINISH_DIGGING:
+                // The client keeps the blocks it expects to have changed until the server acknowledged its action
+                player.getJavaSession().send(new ClientboundBlockChangedAckPacket(playerActionPacket.getSequence()));
+                break;
         }
         switch (action) {
             case START_DIGGING:
@@ -73,6 +79,16 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                     blockActionData.setFace(playerActionPacket.getFace().ordinal());
                     player.getPlayerAuthInputActions().add(blockActionData);
                 }
+                break;
+            case DROP_ITEM:
+            case DROP_ITEM_STACK:
+                player.getInventory().dropItem(player.getInventory().getHeldItemSlot(), action == PlayerAction.DROP_ITEM_STACK);
+                player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());
+                break;
+            case SWAP_HANDS:
+                player.getInventory().swapSlots(player.getInventory().getHeldItemSlot(), player.getInventory().getOffhandSlot());
+                player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());
+                player.getInventory().sendSlot(player.getInventory().getOffhandSlot());
                 break;
         }
     }
