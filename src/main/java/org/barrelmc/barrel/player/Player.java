@@ -87,6 +87,8 @@ public class Player extends Vector3 {
     private String username;
     @Getter
     private String xuid;
+    // The id of the player at the service the accounts are kept by, a number in hexadecimal
+    private String playFabId = "";
     @Getter
     private String UUID;
 
@@ -201,6 +203,7 @@ public class Player extends Vector3 {
             java.util.UUID offlineUuid = java.util.UUID.nameUUIDFromBytes(("OfflinePlayer:" + this.username).getBytes(StandardCharsets.UTF_8));
             this.UUID = offlineUuid.toString();
             this.xuid = Long.toString(offlineUuid.getMostSignificantBits() >>> 14);
+            this.playFabId = Long.toHexString(offlineUuid.getLeastSignificantBits());
         } else {
             this.xboxAccount = AuthManager.getInstance().getXboxAccount(loginPacket.getUsername());
         }
@@ -293,30 +296,44 @@ public class Player extends Vector3 {
         this.privateKey = (ECPrivateKey) ecdsa384KeyPair.getPrivate();
 
         MinecraftMultiplayerToken token = this.xboxAccount.getMinecraftMultiplayerToken().getUpToDate();
-        MinecraftCertificateChain certificates = this.xboxAccount.getMinecraftCertificateChain().getUpToDate();
         this.username = token.getDisplayName();
         this.xuid = token.getXuid();
         this.UUID = token.getUuid().toString();
+        String playFabId = parseJwt(token.getToken(), 1).getString("mid");
+        this.playFabId = playFabId == null ? "" : playFabId;
 
-        // The certificates of the account are led by one the client signs itself, which names the key the next
-        // one was signed with
-        String publicKeyBase64 = Base64.getEncoder().encodeToString(this.publicKey.getEncoded());
-        String certificateHeader = new String(Base64.getUrlDecoder().decode(certificates.getMojangJwt().split("\\.")[0]), StandardCharsets.UTF_8);
-
-        JSONObject certificate = new JSONObject();
-        certificate.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
-        certificate.put("nbf", Instant.now().getEpochSecond() - TimeUnit.HOURS.toSeconds(6));
-        certificate.put("identityPublicKey", JSONObject.parseObject(certificateHeader).getString("x5u"));
-        certificate.put("certificateAuthority", true);
-
-        JSONObject jwtHeader = new JSONObject();
-        jwtHeader.put("alg", "ES384");
-        jwtHeader.put("x5u", publicKeyBase64);
-
-        loginPacket.setAuthPayload(new LoginPayload(AuthType.FULL, Arrays.asList(generateJwt(jwtHeader, certificate), certificates.getMojangJwt(), certificates.getIdentityJwt()), token.getToken()));
+        loginPacket.setAuthPayload(new LoginPayload(AuthType.FULL, this.getCertificateChain(), token.getToken()));
         loginPacket.setClientJwt(this.getSkinData());
         loginPacket.setProtocolVersion(ProxyServer.getInstance().getBedrockPacketCodec().getProtocolVersion());
         return loginPacket;
+    }
+
+    private static JSONObject parseJwt(String jwt, int part) {
+        return JSONObject.parseObject(new String(Base64.getUrlDecoder().decode(jwt.split("\\.")[part]), StandardCharsets.UTF_8));
+    }
+
+    // The certificates servers went by before there were tokens. A server does not take a login without any, but
+    // goes by the token: if the certificates of the account can not be had, it is given one that is nothing
+    private List<String> getCertificateChain() {
+        try {
+            MinecraftCertificateChain certificates = this.xboxAccount.getMinecraftCertificateChain().getUpToDate();
+
+            // They are led by one the client signs itself, which names the key the next one was signed with
+            JSONObject certificate = new JSONObject();
+            certificate.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
+            certificate.put("nbf", Instant.now().getEpochSecond() - TimeUnit.HOURS.toSeconds(6));
+            certificate.put("identityPublicKey", parseJwt(certificates.getMojangJwt(), 0).getString("x5u"));
+            certificate.put("certificateAuthority", true);
+
+            JSONObject jwtHeader = new JSONObject();
+            jwtHeader.put("alg", "ES384");
+            jwtHeader.put("x5u", Base64.getEncoder().encodeToString(this.publicKey.getEncoded()));
+
+            return Arrays.asList(generateJwt(jwtHeader, certificate), certificates.getMojangJwt(), certificates.getIdentityJwt());
+        } catch (Exception e) {
+            System.out.println("The certificates of the xbox account of " + this.javaUsername + " can not be had, it joins without them: " + e);
+            return Collections.singletonList("..");
+        }
     }
 
     public LoginPacket getLoginPacket() {
@@ -334,7 +351,7 @@ public class Player extends Vector3 {
         token.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
         token.put("nbf", Instant.now().getEpochSecond() - TimeUnit.HOURS.toSeconds(6));
         token.put("ipt", "");
-        token.put("mid", "");
+        token.put("mid", this.playFabId);
         token.put("tid", "");
         token.put("cpk", publicKeyBase64);
         token.put("xid", this.xuid);
@@ -361,10 +378,10 @@ public class Player extends Vector3 {
         JSONObject skinData = new JSONObject();
 
         skinData.put("AnimatedImageData", new JSONArray());
-        skinData.put("ArmSize", "");
+        skinData.put("ArmSize", "wide");
         skinData.put("CapeData", "");
         skinData.put("CapeId", "");
-        skinData.put("PlayFabId", java.util.UUID.randomUUID().toString());
+        skinData.put("PlayFabId", this.playFabId);
         skinData.put("CapeImageHeight", 0);
         skinData.put("CapeImageWidth", 0);
         skinData.put("CapeOnClassicSkin", false);
@@ -408,6 +425,10 @@ public class Player extends Vector3 {
         skinData.put("IsEditorMode", false);
         skinData.put("TrustedSkin", true);
         skinData.put("SkinGeometryDataEngineVersion", Base64.getEncoder().encodeToString(ProxyServer.getInstance().getBedrockPacketCodec().getMinecraftVersion().getBytes()));
+        skinData.put("PartyId", "");
+        skinData.put("IsPartyLeader", false);
+        // Clients send this since 1.26.40, a server does not take a login without it
+        skinData.put("ProfileHash", "");
 
         return generateJwt(jwtHeader, skinData);
     }
