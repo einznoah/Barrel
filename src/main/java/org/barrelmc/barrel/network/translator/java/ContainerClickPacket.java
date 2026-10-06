@@ -16,6 +16,9 @@ public class ContainerClickPacket implements JavaPacketTranslator {
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundContainerClickPacket packet = (ServerboundContainerClickPacket) pk;
         Inventory inventory = player.getInventory();
+        if (packet.getContainerId() == 0) {
+            inventory.openInventory();
+        }
         Inventory.Slot slot = inventory.getJavaSlot(packet.getContainerId(), packet.getSlot());
 
         switch (packet.getAction()) {

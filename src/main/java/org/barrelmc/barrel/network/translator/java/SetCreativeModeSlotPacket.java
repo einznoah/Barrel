@@ -20,6 +20,7 @@ public class SetCreativeModeSlotPacket implements JavaPacketTranslator {
         }
 
         if (player.getGameMode() == GameType.CREATIVE) {
+            player.getInventory().openInventory();
             player.getInventory().setCreativeItem(slot, packet.getClickedItem());
         } else {
             player.getInventory().sendSlot(slot);

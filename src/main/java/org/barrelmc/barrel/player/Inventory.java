@@ -51,6 +51,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.response.ItemS
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.ItemUseTransaction;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerClosePacket;
+import org.cloudburstmc.protocol.bedrock.packet.InteractPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerSetDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ItemStackRequestPacket;
@@ -144,6 +145,11 @@ public class Inventory {
     private final ItemData[] ui = new ItemData[SMITHING_TEMPLATE_SLOT + 1];
     private ItemData[] container = null;
     private int containerId = ContainerId.NONE;
+    // Whether the java client uses its own inventory, whether the server was told that it is open, and the id the
+    // server gave it
+    private boolean inventoryOpen;
+    private boolean inventoryRequested;
+    private Integer inventoryWindowId;
     private ContainerType containerType = null;
     // The slots of the open container in the order java has them, null as long as the client is not shown it
     private List<Slot> containerSlots = null;
@@ -632,6 +638,44 @@ public class Inventory {
         this.player.getJavaSession().send(new ClientboundContainerSetDataPacket(JAVA_CONTAINER_WINDOW, javaProperty, value));
     }
 
+    // A java client opens its own inventory without telling the server. A bedrock client tells, and a server of
+    // mojang only lets a player move its items while it knows of an inventory that is open
+    public void openInventory() {
+        if (this.containerId != ContainerId.NONE) {
+            return;
+        }
+
+        this.inventoryOpen = true;
+        if (!this.inventoryRequested) {
+            this.inventoryRequested = true;
+            InteractPacket interactPacket = new InteractPacket();
+            interactPacket.setAction(InteractPacket.Action.OPEN_INVENTORY);
+            interactPacket.setRuntimeEntityId(this.player.getRuntimeEntityId());
+            this.player.getBedrockSession().sendPacket(interactPacket);
+        }
+    }
+
+    public void onBedrockInventoryOpen(int windowId) {
+        this.inventoryWindowId = windowId;
+        if (!this.inventoryOpen) {
+            // The java client closed its inventory before the server answered
+            this.closeInventory();
+        }
+    }
+
+    private void closeInventory() {
+        this.inventoryOpen = false;
+        if (this.inventoryRequested && this.inventoryWindowId != null) {
+            ContainerClosePacket containerClosePacket = new ContainerClosePacket();
+            containerClosePacket.setId((byte) (int) this.inventoryWindowId);
+            containerClosePacket.setServerInitiated(false);
+            containerClosePacket.setType(ContainerType.INVENTORY);
+            this.player.getBedrockSession().sendPacket(containerClosePacket);
+            this.inventoryRequested = false;
+            this.inventoryWindowId = null;
+        }
+    }
+
     // Tells the bedrock server that the container it opened is closed
     private void closeContainer() {
         if (this.containerId != ContainerId.NONE) {
@@ -660,6 +704,11 @@ public class Inventory {
 
     public void onBedrockContainerClose(int containerId, boolean serverInitiated) {
         if (containerId != this.containerId) {
+            if (serverInitiated && this.inventoryWindowId != null && containerId == this.inventoryWindowId) {
+                // The server closed the inventory of the player and waits for the client to confirm
+                this.closeInventory();
+                this.player.getJavaSession().send(new ClientboundContainerClosePacket(0));
+            }
             return;
         }
 
@@ -695,6 +744,8 @@ public class Inventory {
 
         if (windowId == JAVA_CONTAINER_WINDOW) {
             this.closeContainer();
+        } else {
+            this.closeInventory();
         }
         this.sendContents();
     }
@@ -853,6 +904,9 @@ public class Inventory {
         boolean craftingTable = this.containerType == ContainerType.WORKBENCH && this.containerSlots != null;
         if (recipe == null || windowId != (craftingTable ? JAVA_CONTAINER_WINDOW : 0)) {
             return;
+        }
+        if (windowId == 0) {
+            this.openInventory();
         }
 
         // Which ingredient goes where in the grid
@@ -1760,6 +1814,7 @@ public class Inventory {
 
         Slot repairedSlot = this.pendingRepairs.remove(response.getRequestId());
         if (response.getResult() != ItemStackResponseStatus.OK) {
+            System.out.println("The bedrock server did not take a change of the inventory: " + response.getResult() + " [player " + this.player.getJavaUsername() + "]");
             for (Map.Entry<Slot, ItemData> change : changes.entrySet()) {
                 change.getKey().contents()[change.getKey().index()] = change.getValue();
             }
