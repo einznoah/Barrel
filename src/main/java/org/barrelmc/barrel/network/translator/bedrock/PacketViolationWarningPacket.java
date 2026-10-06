@@ -19,6 +19,7 @@ public class PacketViolationWarningPacket implements BedrockPacketTranslator {
         String packetName = definition == null ? "an unknown packet" : definition.getFactory().get().getClass().getSimpleName();
         String warning = "The bedrock server did not accept " + packetName + " (id " + packet.getPacketCauseId() + "): " + packet.getType() + ", " + packet.getSeverity() + ", " + packet.getContext();
         System.out.println(warning + " [player " + player.getJavaUsername() + "]");
+        System.out.println("The login of " + player.getJavaUsername() + " was made of: " + player.getLoginDescription());
         player.getJavaSession().send(new ClientboundSystemChatPacket(Component.text("§c" + warning), false));
     }
 

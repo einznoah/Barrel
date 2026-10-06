@@ -18,12 +18,26 @@ import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.barrelmc.barrel.network.converter.JavaRegistries;
 import org.barrelmc.barrel.server.ProxyServer;
 
+import java.io.InputStream;
+import java.util.Properties;
+
 public class Barrel {
 
     public static String DATA_PATH = System.getProperty("user.dir") + "/";
 
+    // Tells a jar that was built again from one that was not
+    private static String getBuildTime() {
+        try (InputStream inputStream = Barrel.class.getClassLoader().getResourceAsStream("build.properties")) {
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            return properties.getProperty("buildTime");
+        } catch (Exception e) {
+            return "at an unknown time";
+        }
+    }
+
     public static void main(String[] args) {
-        System.out.println("Starting Barrel Proxy software");
+        System.out.println("Starting Barrel Proxy software, built " + getBuildTime());
         BlockConverter.init();
         ItemConverter.init();
         EnchantmentConverter.init();

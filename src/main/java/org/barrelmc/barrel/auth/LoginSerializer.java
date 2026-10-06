@@ -20,7 +20,8 @@ public class LoginSerializer extends LoginSerializer_v818 {
         JSONObject connectionRequest = new JSONObject();
         // Counted from 0, the first type of the library is for a type that is not known
         connectionRequest.put("AuthenticationType", loginPayload.authType().ordinal() - 1);
-        connectionRequest.put("Certificate", certificate.toJSONString());
+        // With the line break the json writer of the game ends what it writes with
+        connectionRequest.put("Certificate", certificate.toJSONString() + "\n");
         connectionRequest.put("Token", loginPayload.token());
         return connectionRequest.toJSONString();
     }

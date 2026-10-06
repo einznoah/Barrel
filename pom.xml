@@ -8,6 +8,11 @@
     <artifactId>Barrel</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
+    <properties>
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+        <buildTime>${maven.build.timestamp} UTC</buildTime>
+    </properties>
+
     <repositories>
         <repository>
             <id>opencollab-release</id>
@@ -64,6 +69,23 @@
     </dependencies>
 
     <build>
+        <resources>
+            <!-- Only the file the time of the build is written into is filtered, the others are data -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>build.properties</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>build.properties</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

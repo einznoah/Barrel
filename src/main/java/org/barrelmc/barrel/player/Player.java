@@ -14,7 +14,6 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
-import net.raphimc.minecraftauth.bedrock.model.MinecraftCertificateChain;
 import net.raphimc.minecraftauth.bedrock.BedrockAuthManager;
 import net.raphimc.minecraftauth.bedrock.model.MinecraftMultiplayerToken;
 import org.barrelmc.barrel.auth.LoginPayload;
@@ -89,6 +88,12 @@ public class Player extends Vector3 {
     private String xuid;
     // The id of the player at the service the accounts are kept by, a number in hexadecimal
     private String playFabId = "";
+    @Getter
+    private String loginDescription = "";
+
+    // Servers went by a chain of certificates before there were tokens. A client of this version sends one that
+    // is nothing in its place, a server does not take a login that has none at all
+    private static final List<String> NO_CERTIFICATES = Collections.singletonList("..");
     @Getter
     private String UUID;
 
@@ -302,8 +307,10 @@ public class Player extends Vector3 {
         String playFabId = parseJwt(token.getToken(), 1).getString("mid");
         this.playFabId = playFabId == null ? "" : playFabId;
 
-        loginPacket.setAuthPayload(new LoginPayload(AuthType.FULL, this.getCertificateChain(), token.getToken()));
-        loginPacket.setClientJwt(this.getSkinData());
+        JSONObject clientData = this.getClientData();
+        this.describeLogin(AuthType.FULL, NO_CERTIFICATES, token.getToken(), clientData);
+        loginPacket.setAuthPayload(new LoginPayload(AuthType.FULL, NO_CERTIFICATES, token.getToken()));
+        loginPacket.setClientJwt(this.signClientData(clientData));
         loginPacket.setProtocolVersion(ProxyServer.getInstance().getBedrockPacketCodec().getProtocolVersion());
         return loginPacket;
     }
@@ -312,28 +319,15 @@ public class Player extends Vector3 {
         return JSONObject.parseObject(new String(Base64.getUrlDecoder().decode(jwt.split("\\.")[part]), StandardCharsets.UTF_8));
     }
 
-    // The certificates servers went by before there were tokens. A server does not take a login without any, but
-    // goes by the token: if the certificates of the account can not be had, it is given one that is nothing
-    private List<String> getCertificateChain() {
-        try {
-            MinecraftCertificateChain certificates = this.xboxAccount.getMinecraftCertificateChain().getUpToDate();
-
-            // They are led by one the client signs itself, which names the key the next one was signed with
-            JSONObject certificate = new JSONObject();
-            certificate.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
-            certificate.put("nbf", Instant.now().getEpochSecond() - TimeUnit.HOURS.toSeconds(6));
-            certificate.put("identityPublicKey", parseJwt(certificates.getMojangJwt(), 0).getString("x5u"));
-            certificate.put("certificateAuthority", true);
-
-            JSONObject jwtHeader = new JSONObject();
-            jwtHeader.put("alg", "ES384");
-            jwtHeader.put("x5u", Base64.getEncoder().encodeToString(this.publicKey.getEncoded()));
-
-            return Arrays.asList(generateJwt(jwtHeader, certificate), certificates.getMojangJwt(), certificates.getIdentityJwt());
-        } catch (Exception e) {
-            System.out.println("The certificates of the xbox account of " + this.javaUsername + " can not be had, it joins without them: " + e);
-            return Collections.singletonList("..");
+    // What a login is made of without what is in it, for when a server does not take it
+    private void describeLogin(AuthType authType, List<String> certificates, String token, JSONObject clientData) {
+        StringBuilder fields = new StringBuilder();
+        for (Map.Entry<String, Object> field : clientData.entrySet()) {
+            Object value = field.getValue();
+            fields.append(' ').append(field.getKey()).append(value instanceof String ? ":" + ((String) value).length() : value instanceof Collection ? "[]" : "=" + value);
         }
+        this.loginDescription = "type " + authType + ", certificates " + certificates + ", token header " + parseJwt(token, 0).keySet() + " claims " + parseJwt(token, 1).keySet()
+                + ", protocol " + ProxyServer.getInstance().getBedrockPacketCodec().getProtocolVersion() + ", client data:" + fields;
     }
 
     public LoginPacket getLoginPacket() {
@@ -362,19 +356,24 @@ public class Player extends Vector3 {
         jwtHeader.put("alg", "ES384");
         jwtHeader.put("x5u", publicKeyBase64);
 
-        loginPacket.setAuthPayload(new LoginPayload(AuthType.SELF_SIGNED, Collections.singletonList(""), generateJwt(jwtHeader, token)));
-        loginPacket.setClientJwt(this.getSkinData());
+        JSONObject clientData = this.getClientData();
+        String signedToken = generateJwt(jwtHeader, token);
+        this.describeLogin(AuthType.SELF_SIGNED, NO_CERTIFICATES, signedToken, clientData);
+        loginPacket.setAuthPayload(new LoginPayload(AuthType.SELF_SIGNED, NO_CERTIFICATES, signedToken));
+        loginPacket.setClientJwt(this.signClientData(clientData));
         loginPacket.setProtocolVersion(ProxyServer.getInstance().getBedrockPacketCodec().getProtocolVersion());
         return loginPacket;
     }
 
-    private String getSkinData() {
-        String publicKeyBase64 = Base64.getEncoder().encodeToString(this.publicKey.getEncoded());
-
+    private String signClientData(JSONObject clientData) {
         JSONObject jwtHeader = new JSONObject();
         jwtHeader.put("alg", "ES384");
-        jwtHeader.put("x5u", publicKeyBase64);
+        jwtHeader.put("x5u", Base64.getEncoder().encodeToString(this.publicKey.getEncoded()));
+        return generateJwt(jwtHeader, clientData);
+    }
 
+    // What a client tells about itself and its skin when it joins
+    private JSONObject getClientData() {
         JSONObject skinData = new JSONObject();
 
         skinData.put("AnimatedImageData", new JSONArray());
@@ -430,7 +429,7 @@ public class Player extends Vector3 {
         // Clients send this since 1.26.40, a server does not take a login without it
         skinData.put("ProfileHash", "");
 
-        return generateJwt(jwtHeader, skinData);
+        return skinData;
     }
 
     private String generateJwt(JSONObject jwtHeader, JSONObject chain) {
