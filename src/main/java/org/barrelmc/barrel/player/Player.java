@@ -61,6 +61,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public class Player extends Vector3 {
@@ -253,6 +254,9 @@ public class Player extends Vector3 {
                 .channelFactory(RakChannelFactory.client(NioDatagramChannel.class))
                 .group(ProxyServer.getInstance().getBedrockEventLoopGroup())
                 .option(RakChannelOption.RAK_PROTOCOL_VERSION, codec.getRaknetProtocolVersion())
+                // A server tells its connections apart by this. The library leaves it at 0, and a server of mojang
+                // does not take a second connection with a number that is connected already
+                .option(RakChannelOption.RAK_GUID, ThreadLocalRandom.current().nextLong())
                 .handler(new BedrockClientInitializer() {
                     @Override
                     protected void initSession(BedrockClientSession session) {

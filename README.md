@@ -92,6 +92,8 @@ is kept, and saved as a file in the `accounts` folder next to the jar.
 - The Nether and the End, a change of dimension is not told to the Java client
 - Riding: boats, minecarts and animals
 - Sounds and most particles
+- Light: every place is as bright as under the open sky, also caves. A Bedrock server does not send light and the
+  proxy does not work it out yet
 - Biomes, every place has the same one
 - Forms, boss bars, and the resource packs of a server (the server is told the client has them)
 - And More...
