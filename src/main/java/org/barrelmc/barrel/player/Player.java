@@ -14,8 +14,10 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
+import net.raphimc.minecraftauth.bedrock.model.MinecraftCertificateChain;
 import net.raphimc.minecraftauth.bedrock.BedrockAuthManager;
 import net.raphimc.minecraftauth.bedrock.model.MinecraftMultiplayerToken;
+import org.barrelmc.barrel.auth.LoginPayload;
 import org.barrelmc.barrel.auth.AuthManager;
 import org.barrelmc.barrel.config.Config;
 import org.barrelmc.barrel.entity.Entity;
@@ -33,8 +35,6 @@ import org.cloudburstmc.protocol.bedrock.BedrockClientSession;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.data.*;
 import org.cloudburstmc.protocol.bedrock.data.auth.AuthType;
-import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
-import org.cloudburstmc.protocol.bedrock.data.auth.TokenPayload;
 import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.definitions.SimpleItemDefinition;
@@ -293,11 +293,27 @@ public class Player extends Vector3 {
         this.privateKey = (ECPrivateKey) ecdsa384KeyPair.getPrivate();
 
         MinecraftMultiplayerToken token = this.xboxAccount.getMinecraftMultiplayerToken().getUpToDate();
+        MinecraftCertificateChain certificates = this.xboxAccount.getMinecraftCertificateChain().getUpToDate();
         this.username = token.getDisplayName();
         this.xuid = token.getXuid();
         this.UUID = token.getUuid().toString();
 
-        loginPacket.setAuthPayload(new TokenPayload(token.getToken(), AuthType.FULL));
+        // The certificates of the account are led by one the client signs itself, which names the key the next
+        // one was signed with
+        String publicKeyBase64 = Base64.getEncoder().encodeToString(this.publicKey.getEncoded());
+        String certificateHeader = new String(Base64.getUrlDecoder().decode(certificates.getMojangJwt().split("\\.")[0]), StandardCharsets.UTF_8);
+
+        JSONObject certificate = new JSONObject();
+        certificate.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
+        certificate.put("nbf", Instant.now().getEpochSecond() - TimeUnit.HOURS.toSeconds(6));
+        certificate.put("identityPublicKey", JSONObject.parseObject(certificateHeader).getString("x5u"));
+        certificate.put("certificateAuthority", true);
+
+        JSONObject jwtHeader = new JSONObject();
+        jwtHeader.put("alg", "ES384");
+        jwtHeader.put("x5u", publicKeyBase64);
+
+        loginPacket.setAuthPayload(new LoginPayload(AuthType.FULL, Arrays.asList(generateJwt(jwtHeader, certificate), certificates.getMojangJwt(), certificates.getIdentityJwt()), token.getToken()));
         loginPacket.setClientJwt(this.getSkinData());
         loginPacket.setProtocolVersion(ProxyServer.getInstance().getBedrockPacketCodec().getProtocolVersion());
         return loginPacket;
@@ -312,24 +328,24 @@ public class Player extends Vector3 {
 
         String publicKeyBase64 = Base64.getEncoder().encodeToString(this.publicKey.getEncoded());
 
-        JSONObject chain = new JSONObject();
-        chain.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
-        chain.put("identityPublicKey", publicKeyBase64);
-        chain.put("nbf", Instant.now().getEpochSecond() - TimeUnit.HOURS.toSeconds(6));
-
-        JSONObject extraData = new JSONObject();
-        extraData.put("identity", this.UUID);
-        extraData.put("displayName", this.username);
-        extraData.put("XUID", this.xuid);
-        chain.put("extraData", extraData);
+        // A client that is not signed in makes the token of an account itself. Before 1.26.10 it was a certificate
+        JSONObject token = new JSONObject();
+        token.put("aud", "api://auth-minecraft-services/multiplayer");
+        token.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
+        token.put("nbf", Instant.now().getEpochSecond() - TimeUnit.HOURS.toSeconds(6));
+        token.put("ipt", "");
+        token.put("mid", "");
+        token.put("tid", "");
+        token.put("cpk", publicKeyBase64);
+        token.put("xid", this.xuid);
+        token.put("xname", this.username);
+        token.put("leguuid", this.UUID);
 
         JSONObject jwtHeader = new JSONObject();
         jwtHeader.put("alg", "ES384");
         jwtHeader.put("x5u", publicKeyBase64);
 
-        String jwt = generateJwt(jwtHeader, chain);
-
-        loginPacket.setAuthPayload(new CertificateChainPayload(Collections.singletonList(jwt), AuthType.SELF_SIGNED));
+        loginPacket.setAuthPayload(new LoginPayload(AuthType.SELF_SIGNED, Collections.singletonList(""), generateJwt(jwtHeader, token)));
         loginPacket.setClientJwt(this.getSkinData());
         loginPacket.setProtocolVersion(ProxyServer.getInstance().getBedrockPacketCodec().getProtocolVersion());
         return loginPacket;

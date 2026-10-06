@@ -10,6 +10,7 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
+import org.barrelmc.barrel.auth.LoginSerializer;
 import org.barrelmc.barrel.Barrel;
 import org.barrelmc.barrel.auth.AuthManager;
 import org.barrelmc.barrel.auth.server.AuthServer;
@@ -23,6 +24,7 @@ import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketDefinition;
 import org.cloudburstmc.protocol.bedrock.codec.v2193.Bedrock_v2193;
 import org.cloudburstmc.protocol.bedrock.data.PacketRecipient;
+import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PacketViolationWarningPacket;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.auth.SessionService;
@@ -60,7 +62,7 @@ public class ProxyServer {
     @Getter
     private final Map<String, Player> onlinePlayers = new ConcurrentHashMap<>();
     @Getter
-    private final BedrockCodec bedrockPacketCodec = acceptViolationWarnings(Bedrock_v2193.CODEC);
+    private final BedrockCodec bedrockPacketCodec = acceptViolationWarnings(Bedrock_v2193.CODEC).toBuilder().updateSerializer(LoginPacket.class, new LoginSerializer()).build();
     @Getter
     private final EventLoopGroup bedrockEventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
