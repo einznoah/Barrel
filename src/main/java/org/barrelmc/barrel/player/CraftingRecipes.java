@@ -5,35 +5,71 @@
 
 package org.barrelmc.barrel.player;
 
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import net.kyori.adventure.key.Key;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.ShapedRecipeData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.ShapelessRecipeData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.SmithingTransformRecipeData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.crafting.recipe.SmithingTrimRecipeData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.DefaultDescriptor;
 import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.DeferredDescriptor;
 import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.ItemDescriptor;
 import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.ItemDescriptorWithCount;
 import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.ItemTagDescriptor;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.HolderSet;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.Ingredient;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.ItemStackSlotDisplay;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundUpdateRecipesPacket;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-// A bedrock server leaves it to the client to find the recipe for what is in a crafting grid
+// A bedrock server leaves it to the client to find the recipe for what is in a crafting grid or a crafting station
 public class CraftingRecipes {
 
     private static final String CRAFTING_TABLE_TAG = "crafting_table";
+    private static final String STONECUTTER_TAG = "stonecutter";
     // The data value of an ingredient that can have any
     private static final int ANY_DATA = 32767;
 
+    // The sets of items a java client is told about, it only lets these be put in a smithing table. The other ones
+    // are named after the tag of the bedrock recipes they are the ingredients of
+    public static final String JAVA_SMITHING_TEMPLATES = "smithing_template";
+    public static final String JAVA_SMITHING_BASES = "smithing_base";
+    public static final String JAVA_SMITHING_ADDITIONS = "smithing_addition";
+    private static final Map<String, String> JAVA_ITEM_SETS = Map.of("furnace", "furnace_input", "blast_furnace", "blast_furnace_input", "smoker", "smoker_input", "campfire", "campfire_input");
+
     private final List<ShapedRecipeData> shapedRecipes = new ArrayList<>();
     private final List<ShapelessRecipeData> shapelessRecipes = new ArrayList<>();
+    private final List<Cut> cuts = new ArrayList<>();
+    private final List<SmithingTransformRecipeData> smithingTransforms = new ArrayList<>();
+    private final List<SmithingTrimRecipeData> smithingTrims = new ArrayList<>();
+    private final Map<String, Set<Integer>> javaItemSets = new HashMap<>();
 
     public record Match(int networkId, List<ItemData> results) {
     }
 
-    public void setRecipes(List<ShapedRecipeData> shapedRecipes, List<ShapelessRecipeData> shapelessRecipes) {
+    // What a stonecutter makes of one of the java items
+    public record Cut(Set<Integer> javaItemIds, int networkId, ItemData result) {
+    }
+
+    // The result is null for a trim, which is the item that is trimmed
+    public record Smithing(int networkId, ItemData result) {
+    }
+
+    public void setRecipes(List<ShapedRecipeData> shapedRecipes, List<ShapelessRecipeData> shapelessRecipes, List<SmithingTransformRecipeData> smithingTransforms, List<SmithingTrimRecipeData> smithingTrims) {
         this.shapedRecipes.clear();
         this.shapelessRecipes.clear();
+        this.cuts.clear();
+        this.smithingTransforms.clear();
+        this.smithingTrims.clear();
+        this.javaItemSets.clear();
 
         for (ShapedRecipeData recipe : shapedRecipes) {
             if (CRAFTING_TABLE_TAG.equals(recipe.getTag()) && !recipe.getResults().isEmpty()) {
@@ -41,10 +77,108 @@ public class CraftingRecipes {
             }
         }
         for (ShapelessRecipeData recipe : shapelessRecipes) {
-            if (CRAFTING_TABLE_TAG.equals(recipe.getTag()) && !recipe.getResults().isEmpty()) {
+            if (recipe.getResults().isEmpty() || recipe.getTag() == null) {
+                continue;
+            }
+
+            if (CRAFTING_TABLE_TAG.equals(recipe.getTag())) {
                 this.shapelessRecipes.add(recipe);
+            } else if (recipe.getIngredients().size() == 1) {
+                Set<Integer> javaItemIds = getJavaItemIds(recipe.getIngredients().get(0));
+                if (STONECUTTER_TAG.equals(recipe.getTag()) && !javaItemIds.isEmpty()) {
+                    this.cuts.add(new Cut(javaItemIds, recipe.getNetId(), recipe.getResults().get(0)));
+                } else if (JAVA_ITEM_SETS.containsKey(recipe.getTag())) {
+                    this.getJavaItemSet(JAVA_ITEM_SETS.get(recipe.getTag())).addAll(javaItemIds);
+                }
             }
         }
+
+        this.smithingTransforms.addAll(smithingTransforms);
+        this.smithingTrims.addAll(smithingTrims);
+        for (SmithingTransformRecipeData recipe : smithingTransforms) {
+            this.addSmithingItems(recipe.getTemplate(), recipe.getBase(), recipe.getAddition());
+        }
+        for (SmithingTrimRecipeData recipe : smithingTrims) {
+            this.addSmithingItems(recipe.getTemplate(), recipe.getBase(), recipe.getAddition());
+        }
+    }
+
+    private Set<Integer> getJavaItemSet(String name) {
+        return this.javaItemSets.computeIfAbsent(name, key -> new LinkedHashSet<>());
+    }
+
+    private void addSmithingItems(ItemDescriptorWithCount template, ItemDescriptorWithCount base, ItemDescriptorWithCount addition) {
+        this.getJavaItemSet(JAVA_SMITHING_TEMPLATES).addAll(getJavaItemIds(template));
+        this.getJavaItemSet(JAVA_SMITHING_BASES).addAll(getJavaItemIds(base));
+        this.getJavaItemSet(JAVA_SMITHING_ADDITIONS).addAll(getJavaItemIds(addition));
+    }
+
+    private static Set<Integer> getJavaItemIds(ItemDescriptorWithCount ingredient) {
+        Set<Integer> javaItemIds = new LinkedHashSet<>();
+        ItemDescriptor descriptor = ingredient.getDescriptor();
+        if (descriptor instanceof DefaultDescriptor) {
+            DefaultDescriptor defaultDescriptor = (DefaultDescriptor) descriptor;
+            if (defaultDescriptor.getItemId() != null) {
+                javaItemIds.addAll(ItemConverter.getJavaItemIds(defaultDescriptor.getItemId().getIdentifier(), isAnyData(defaultDescriptor.getAuxValue()) ? null : defaultDescriptor.getAuxValue()));
+            }
+        } else if (descriptor instanceof ItemTagDescriptor) {
+            for (String bedrockName : ItemConverter.BEDROCK_ITEM_TAGS.getOrDefault(((ItemTagDescriptor) descriptor).getItemTag(), Set.of())) {
+                javaItemIds.addAll(ItemConverter.getJavaItemIds(bedrockName, null));
+            }
+        } else if (descriptor instanceof DeferredDescriptor) {
+            DeferredDescriptor deferredDescriptor = (DeferredDescriptor) descriptor;
+            javaItemIds.addAll(ItemConverter.getJavaItemIds(deferredDescriptor.getFullName(), isAnyData(deferredDescriptor.getAuxValue()) ? null : deferredDescriptor.getAuxValue()));
+        }
+        return javaItemIds;
+    }
+
+    // What a java client is not sent the recipes for: it shows what a stonecutter can make of an item itself, and
+    // only lets the items of the smithing recipes be put in a smithing table
+    public ClientboundUpdateRecipesPacket toJavaRecipes() {
+        Map<Key, int[]> itemSets = new HashMap<>();
+        for (Map.Entry<String, Set<Integer>> itemSet : this.javaItemSets.entrySet()) {
+            itemSets.put(Key.key(itemSet.getKey()), itemSet.getValue().stream().mapToInt(Integer::intValue).toArray());
+        }
+
+        List<ClientboundUpdateRecipesPacket.SelectableRecipe> stonecutterRecipes = new ArrayList<>();
+        for (Cut cut : this.cuts) {
+            stonecutterRecipes.add(new ClientboundUpdateRecipesPacket.SelectableRecipe(new Ingredient(new HolderSet(new IntArrayList(cut.javaItemIds()))), new ItemStackSlotDisplay(ItemConverter.bedrockToJavaItem(cut.result()))));
+        }
+        return new ClientboundUpdateRecipesPacket(itemSets, stonecutterRecipes);
+    }
+
+    // What a stonecutter can make of the item, in the order the java client shows it. The client tells which one
+    // was picked by its place in this list
+    public List<Cut> getCuts(ItemData item) {
+        List<Cut> cuts = new ArrayList<>();
+        if (!ItemConverter.isEmpty(item)) {
+            int javaItemId = ItemConverter.bedrockToJavaItemId(item);
+            for (Cut cut : this.cuts) {
+                if (cut.javaItemIds().contains(javaItemId)) {
+                    cuts.add(cut);
+                }
+            }
+        }
+        return cuts;
+    }
+
+    // Whether a java client lets the item be put in the slot of a smithing table these items are for
+    public boolean isSmithingItem(String javaItemSet, ItemData item) {
+        return this.getJavaItemSet(javaItemSet).contains(ItemConverter.bedrockToJavaItemId(item));
+    }
+
+    public Smithing findSmithing(ItemData template, ItemData base, ItemData addition) {
+        for (SmithingTransformRecipeData recipe : this.smithingTransforms) {
+            if (matches(recipe.getTemplate(), template) && matches(recipe.getBase(), base) && matches(recipe.getAddition(), addition)) {
+                return new Smithing(recipe.getNetId(), recipe.getResult());
+            }
+        }
+        for (SmithingTrimRecipeData recipe : this.smithingTrims) {
+            if (matches(recipe.getTemplate(), template) && matches(recipe.getBase(), base) && matches(recipe.getAddition(), addition)) {
+                return new Smithing(recipe.getNetId(), null);
+            }
+        }
+        return null;
     }
 
     // The grid is given row by row
@@ -132,7 +266,11 @@ public class CraftingRecipes {
         return ingredient.getCount() <= 0 && ItemConverter.isEmpty(item);
     }
 
+    private static boolean isAnyData(int data) {
+        return data == ANY_DATA || data == -1;
+    }
+
     private static boolean matchesData(int data, ItemData item) {
-        return data == ANY_DATA || data == -1 || data == item.getDamage();
+        return isAnyData(data) || data == item.getDamage();
     }
 }

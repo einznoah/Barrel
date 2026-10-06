@@ -10,7 +10,7 @@
 
 ## Need implemented
 
-- Stonecutters, smithing tables, grindstones, looms, cartography tables, beacons and villager trading
+- Beacons and villager trading
 - The recipe book
 - Health, hunger and respawning
 - And More...

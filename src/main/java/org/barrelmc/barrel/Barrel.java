@@ -11,9 +11,11 @@
 
 package org.barrelmc.barrel;
 
+import org.barrelmc.barrel.network.converter.BannerConverter;
 import org.barrelmc.barrel.network.converter.BlockConverter;
 import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
+import org.barrelmc.barrel.network.converter.JavaRegistries;
 import org.barrelmc.barrel.server.ProxyServer;
 
 public class Barrel {
@@ -25,6 +27,8 @@ public class Barrel {
         BlockConverter.init();
         ItemConverter.init();
         EnchantmentConverter.init();
+        JavaRegistries.init();
+        BannerConverter.init();
         new ProxyServer(DATA_PATH);
     }
 }

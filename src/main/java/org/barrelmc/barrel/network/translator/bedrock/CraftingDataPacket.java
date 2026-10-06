@@ -16,7 +16,8 @@ public class CraftingDataPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.CraftingDataPacket packet = (org.cloudburstmc.protocol.bedrock.packet.CraftingDataPacket) pk;
 
-        // A java client is not sent the recipes, it is told what a crafting grid makes instead
+        // A java client is told what a crafting grid makes instead of being sent the recipes, apart from the few it
+        // has a use of its own for
         List<ShapedRecipeData> shapedRecipes = new ArrayList<>(packet.getShapedData());
         List<ShapelessRecipeData> shapelessRecipes = new ArrayList<>(packet.getShapelessData());
         // Where the recipes were before the packet had a list for every kind
@@ -27,6 +28,7 @@ public class CraftingDataPacket implements BedrockPacketTranslator {
                 shapelessRecipes.add((ShapelessRecipeData) recipe);
             }
         }
-        player.getInventory().getCraftingRecipes().setRecipes(shapedRecipes, shapelessRecipes);
+        player.getInventory().getCraftingRecipes().setRecipes(shapedRecipes, shapelessRecipes, packet.getSmithingTransformData(), packet.getSmithingTrimData());
+        player.getJavaSession().send(player.getInventory().getCraftingRecipes().toJavaRecipes());
     }
 }

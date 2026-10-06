@@ -7,6 +7,7 @@ package org.barrelmc.barrel.player;
 
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
+import org.barrelmc.barrel.network.converter.BannerConverter;
 import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.cloudburstmc.math.vector.Vector3f;
@@ -30,6 +31,8 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.ItemSt
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.TextProcessingEventOrigin;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.ConsumeAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftCreativeAction;
+import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftGrindstoneAction;
+import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftLoomAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftRecipeAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftRecipeOptionalAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftResultsDeprecatedAction;
@@ -70,6 +73,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntFunction;
 
 public class Inventory {
 
@@ -80,6 +84,17 @@ public class Inventory {
     private static final int CURSOR_SLOT = 0;
     private static final int ANVIL_INPUT_SLOT = 1;
     private static final int ANVIL_MATERIAL_SLOT = 2;
+    private static final int STONECUTTER_INPUT_SLOT = 3;
+    private static final int LOOM_INPUT_SLOT = 9;
+    private static final int LOOM_DYE_SLOT = 10;
+    private static final int LOOM_MATERIAL_SLOT = 11;
+    private static final int CARTOGRAPHY_INPUT_SLOT = 12;
+    private static final int CARTOGRAPHY_ADDITIONAL_SLOT = 13;
+    private static final int GRINDSTONE_INPUT_SLOT = 16;
+    private static final int GRINDSTONE_ADDITIONAL_SLOT = 17;
+    private static final int SMITHING_INPUT_SLOT = 51;
+    private static final int SMITHING_MATERIAL_SLOT = 52;
+    private static final int SMITHING_TEMPLATE_SLOT = 53;
     private static final int ENCHANTING_INPUT_SLOT = 14;
     private static final int ENCHANTING_MATERIAL_SLOT = 15;
     private static final int CRAFTING_GRID_SLOT = 28;
@@ -108,7 +123,7 @@ public class Inventory {
     private final ItemData[] items = new ItemData[36];
     private final ItemData[] armor = new ItemData[4];
     private final ItemData[] offhand = new ItemData[1];
-    private final ItemData[] ui = new ItemData[CREATED_OUTPUT_SLOT + 1];
+    private final ItemData[] ui = new ItemData[SMITHING_TEMPLATE_SLOT + 1];
     private ItemData[] container = null;
     private int containerId = ContainerId.NONE;
     private ContainerType containerType = null;
@@ -118,7 +133,10 @@ public class Inventory {
     // What the crafting grid or the anvil makes. Bedrock clients work that out themselves, java clients are told
     private final ItemData[] result = new ItemData[1];
     private final CraftingRecipes craftingRecipes = new CraftingRecipes();
-    private CraftingRecipes.Match craftingMatch = null;
+    private Craft craft = null;
+    // Which of the things a stonecutter or a loom offers was picked, and what the stonecutter offered them for
+    private int selectedButton = -1;
+    private ItemData stonecutterInput = ItemData.AIR;
     private List<EnchantOptionData> enchantOptions = Collections.emptyList();
     private String anvilName = "";
 
@@ -145,6 +163,11 @@ public class Inventory {
 
     public Inventory(Player player) {
         this.player = player;
+    }
+
+    // What the crafting grid or the open crafting station makes, and what the server is asked to make it with: the
+    // action of the station, and how many items of which slots one of them takes
+    private record Craft(ItemData result, IntFunction<ItemStackRequestAction> action, Map<Slot, Integer> ingredients, int maxCrafts, String text, boolean repaired) {
     }
 
     public record Slot(ContainerSlotType type, int networkSlot, ItemData[] contents, int index) {
@@ -257,6 +280,17 @@ public class Inventory {
             case ANVIL_MATERIAL:
             case ENCHANTING_INPUT:
             case ENCHANTING_MATERIAL:
+            case STONECUTTER_INPUT:
+            case SMITHING_TABLE_INPUT:
+            case SMITHING_TABLE_MATERIAL:
+            case SMITHING_TABLE_TEMPLATE:
+            case GRINDSTONE_INPUT:
+            case GRINDSTONE_ADDITIONAL:
+            case LOOM_INPUT:
+            case LOOM_DYE:
+            case LOOM_MATERIAL:
+            case CARTOGRAPHY_INPUT:
+            case CARTOGRAPHY_ADDITIONAL:
             case CREATED_OUTPUT:
                 return slot >= 0 && slot < this.ui.length ? this.uiSlot(type, slot) : null;
             default:
@@ -385,6 +419,11 @@ public class Inventory {
             case WORKBENCH:
             case ENCHANTMENT:
             case ANVIL:
+            case STONECUTTER:
+            case SMITHING_TABLE:
+            case GRINDSTONE:
+            case LOOM:
+            case CARTOGRAPHY:
                 // What is put in these is held by the player
                 this.openJavaContainer(0);
                 break;
@@ -461,6 +500,43 @@ public class Inventory {
                 slots.add(this.uiSlot(ContainerSlotType.ANVIL_MATERIAL, ANVIL_MATERIAL_SLOT));
                 slots.add(this.getResultSlot());
                 break;
+            case STONECUTTER:
+                javaContainerType = org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.STONECUTTER;
+                title = "container.stonecutter";
+                slots.add(this.uiSlot(ContainerSlotType.STONECUTTER_INPUT, STONECUTTER_INPUT_SLOT));
+                slots.add(this.getResultSlot());
+                break;
+            case SMITHING_TABLE:
+                // Java has the template first
+                javaContainerType = org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.SMITHING;
+                title = "container.upgrade";
+                slots.add(this.uiSlot(ContainerSlotType.SMITHING_TABLE_TEMPLATE, SMITHING_TEMPLATE_SLOT));
+                slots.add(this.uiSlot(ContainerSlotType.SMITHING_TABLE_INPUT, SMITHING_INPUT_SLOT));
+                slots.add(this.uiSlot(ContainerSlotType.SMITHING_TABLE_MATERIAL, SMITHING_MATERIAL_SLOT));
+                slots.add(this.getResultSlot());
+                break;
+            case GRINDSTONE:
+                javaContainerType = org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.GRINDSTONE;
+                title = "container.grindstone_title";
+                slots.add(this.uiSlot(ContainerSlotType.GRINDSTONE_INPUT, GRINDSTONE_INPUT_SLOT));
+                slots.add(this.uiSlot(ContainerSlotType.GRINDSTONE_ADDITIONAL, GRINDSTONE_ADDITIONAL_SLOT));
+                slots.add(this.getResultSlot());
+                break;
+            case LOOM:
+                javaContainerType = org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.LOOM;
+                title = "container.loom";
+                slots.add(this.uiSlot(ContainerSlotType.LOOM_INPUT, LOOM_INPUT_SLOT));
+                slots.add(this.uiSlot(ContainerSlotType.LOOM_DYE, LOOM_DYE_SLOT));
+                slots.add(this.uiSlot(ContainerSlotType.LOOM_MATERIAL, LOOM_MATERIAL_SLOT));
+                slots.add(this.getResultSlot());
+                break;
+            case CARTOGRAPHY:
+                javaContainerType = org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.CARTOGRAPHY;
+                title = "container.cartography_table";
+                slots.add(this.uiSlot(ContainerSlotType.CARTOGRAPHY_INPUT, CARTOGRAPHY_INPUT_SLOT));
+                slots.add(this.uiSlot(ContainerSlotType.CARTOGRAPHY_ADDITIONAL, CARTOGRAPHY_ADDITIONAL_SLOT));
+                slots.add(this.getResultSlot());
+                break;
             default:
                 if (size % 9 != 0 || size < 9 || size > 54) {
                     this.closeContainer();
@@ -480,6 +556,8 @@ public class Inventory {
         this.containerSlots = slots;
         this.enchantOptions = Collections.emptyList();
         this.anvilName = "";
+        this.selectedButton = -1;
+        this.stonecutterInput = ItemData.AIR;
 
         this.player.getJavaSession().send(new ClientboundOpenScreenPacket(JAVA_CONTAINER_WINDOW, javaContainerType, Component.translatable(title)));
         if (this.containerType == ContainerType.FURNACE || this.containerType == ContainerType.BLAST_FURNACE || this.containerType == ContainerType.SMOKER) {
@@ -722,6 +800,24 @@ public class Inventory {
                 return isIn(item, "minecraft:lapis_lazuli");
             case ENCHANTING_INPUT:
                 return !isIn(item, "minecraft:lapis_lazuli") && slot.isEmpty();
+            case STONECUTTER_INPUT:
+                return !this.craftingRecipes.getCuts(item).isEmpty();
+            case SMITHING_TABLE_TEMPLATE:
+                return this.craftingRecipes.isSmithingItem(CraftingRecipes.JAVA_SMITHING_TEMPLATES, item);
+            case SMITHING_TABLE_INPUT:
+                return this.craftingRecipes.isSmithingItem(CraftingRecipes.JAVA_SMITHING_BASES, item);
+            case SMITHING_TABLE_MATERIAL:
+                return this.craftingRecipes.isSmithingItem(CraftingRecipes.JAVA_SMITHING_ADDITIONS, item);
+            case LOOM_INPUT:
+                return BannerConverter.isBanner(item);
+            case LOOM_DYE:
+                return BannerConverter.getDyeColor(item) != -1;
+            case LOOM_MATERIAL:
+                return !BannerConverter.isBanner(item) && !BannerConverter.getLoomPatterns(item).isEmpty();
+            case CARTOGRAPHY_INPUT:
+                return isIn(item, "minecraft:filled_map");
+            case CARTOGRAPHY_ADDITIONAL:
+                return isIn(item, "minecraft:empty_map", "minecraft:paper", "minecraft:glass_pane");
             case FURNACE_RESULT:
             case CRAFTING_INPUT:
                 // A java client does not fill a crafting grid with a shift click
@@ -836,20 +932,38 @@ public class Inventory {
     }
 
     // Stacks of the same item are filled up before an empty slot is used
-    private void quickMove(Slot source, List<Slot> targets) {
+    private Slot quickMove(Slot source, List<Slot> targets) {
+        Slot firstTarget = null;
         for (Slot target : targets) {
             if (!source.isEmpty() && !target.isEmpty() && canStack(source.get(), target.get())) {
                 int count = Math.min(source.get().getCount(), ItemConverter.getMaxStackSize(target.get()) - target.get().getCount());
                 if (count > 0) {
                     this.move(source, target, count);
+                    firstTarget = firstTarget == null ? target : firstTarget;
                 }
             }
         }
         for (Slot target : targets) {
             if (!source.isEmpty() && target.isEmpty()) {
-                this.move(source, target, source.get().getCount());
+                // More than a stack can have been crafted at once
+                this.move(source, target, Math.min(source.get().getCount(), ItemConverter.getMaxStackSize(source.get())));
+                firstTarget = firstTarget == null ? target : firstTarget;
             }
         }
+        return firstTarget;
+    }
+
+    // How many of the item the inventory of the player has room for
+    private int getRoom(ItemData item) {
+        int room = 0;
+        for (Slot slot : this.getPlayerSlots(false)) {
+            if (slot.isEmpty()) {
+                room += ItemConverter.getMaxStackSize(item);
+            } else if (canStack(item, slot.get())) {
+                room += Math.max(0, ItemConverter.getMaxStackSize(item) - slot.get().getCount());
+            }
+        }
+        return room;
     }
 
     // A double click collects the items that stack with the one on the cursor, starting with the incomplete stacks
@@ -963,66 +1077,202 @@ public class Inventory {
     }
 
     private void updateResult() {
-        if (this.containerType == ContainerType.ANVIL && this.containerSlots != null) {
-            this.updateAnvilResult();
-            return;
+        ContainerType station = this.containerSlots == null ? ContainerType.NONE : this.containerType;
+        switch (station) {
+            case ANVIL:
+                this.craft = this.getAnvilCraft();
+                break;
+            case STONECUTTER:
+                this.craft = this.getStonecutterCraft();
+                break;
+            case SMITHING_TABLE:
+                this.craft = this.getSmithingCraft();
+                break;
+            case GRINDSTONE:
+                this.craft = this.getGrindstoneCraft();
+                break;
+            case LOOM:
+                this.craft = this.getLoomCraft();
+                break;
+            case CARTOGRAPHY:
+                this.craft = this.getCartographyCraft();
+                break;
+            default:
+                // The grid of the inventory can hold something while a container that has none is open
+                this.craft = this.getGridCraft();
+                break;
         }
+        this.result[0] = this.craft == null ? ItemData.AIR : this.craft.result();
+    }
 
+    private Craft getGridCraft() {
         List<Slot> grid = this.getCraftingGrid();
         ItemData[] gridItems = new ItemData[grid.size()];
         for (int slot = 0; slot < gridItems.length; slot++) {
             gridItems[slot] = grid.get(slot).get();
         }
-        this.craftingMatch = this.craftingRecipes.find(gridItems, gridItems.length == 9 ? 3 : 2);
-        this.result[0] = this.craftingMatch == null ? ItemData.AIR : this.craftingMatch.results().get(0);
+        CraftingRecipes.Match match = this.craftingRecipes.find(gridItems, gridItems.length == 9 ? 3 : 2);
+        if (match == null) {
+            return null;
+        }
+
+        Map<Slot, Integer> ingredients = new LinkedHashMap<>();
+        int maxCrafts = Integer.MAX_VALUE;
+        for (Slot slot : grid) {
+            if (!slot.isEmpty()) {
+                ingredients.put(slot, 1);
+                maxCrafts = Math.min(maxCrafts, slot.get().getCount());
+            }
+        }
+        return new Craft(match.results().get(0), crafts -> new CraftRecipeAction(match.networkId(), crafts), ingredients, maxCrafts, null, false);
     }
 
-    // A click on what the crafting grid or the anvil makes
+    private void selectButton(int button) {
+        if (button != this.selectedButton) {
+            this.selectedButton = button;
+            this.player.getJavaSession().send(new ClientboundContainerSetDataPacket(JAVA_CONTAINER_WINDOW, 0, button));
+        }
+    }
+
+    private Craft getStonecutterCraft() {
+        Slot input = this.uiSlot(ContainerSlotType.STONECUTTER_INPUT, STONECUTTER_INPUT_SLOT);
+        // Like a java server, which forgets what was picked once another kind of item is put in
+        if (input.isEmpty() != ItemConverter.isEmpty(this.stonecutterInput) || (!input.isEmpty() && (input.get().getDefinition().getRuntimeId() != this.stonecutterInput.getDefinition().getRuntimeId() || input.get().getDamage() != this.stonecutterInput.getDamage()))) {
+            this.selectButton(-1);
+        }
+        this.stonecutterInput = input.get();
+
+        List<CraftingRecipes.Cut> cuts = this.craftingRecipes.getCuts(input.get());
+        if (this.selectedButton < 0 || this.selectedButton >= cuts.size()) {
+            return null;
+        }
+        CraftingRecipes.Cut cut = cuts.get(this.selectedButton);
+        return new Craft(cut.result(), crafts -> new CraftRecipeAction(cut.networkId(), crafts), Map.of(input, 1), input.get().getCount(), null, false);
+    }
+
+    private Craft getSmithingCraft() {
+        Slot template = this.uiSlot(ContainerSlotType.SMITHING_TABLE_TEMPLATE, SMITHING_TEMPLATE_SLOT);
+        Slot base = this.uiSlot(ContainerSlotType.SMITHING_TABLE_INPUT, SMITHING_INPUT_SLOT);
+        Slot addition = this.uiSlot(ContainerSlotType.SMITHING_TABLE_MATERIAL, SMITHING_MATERIAL_SLOT);
+        CraftingRecipes.Smithing smithing = this.craftingRecipes.findSmithing(template.get(), base.get(), addition.get());
+        if (smithing == null) {
+            return null;
+        }
+
+        ItemData smithedItem = smithing.result() == null ? Workstations.trim(base.get(), template.get(), addition.get()) : Workstations.transform(base.get(), smithing.result());
+        if (smithedItem == null) {
+            return null;
+        }
+        Map<Slot, Integer> ingredients = new LinkedHashMap<>();
+        ingredients.put(base, 1);
+        ingredients.put(addition, 1);
+        ingredients.put(template, 1);
+        return new Craft(smithedItem, crafts -> new CraftRecipeAction(smithing.networkId(), crafts), ingredients, 1, null, false);
+    }
+
+    private Craft getGrindstoneCraft() {
+        Slot input = this.uiSlot(ContainerSlotType.GRINDSTONE_INPUT, GRINDSTONE_INPUT_SLOT);
+        Slot additional = this.uiSlot(ContainerSlotType.GRINDSTONE_ADDITIONAL, GRINDSTONE_ADDITIONAL_SLOT);
+        ItemData groundItem = Workstations.grind(input.get(), additional.get(), this.getItemDefinition("minecraft:book"));
+        if (groundItem == null) {
+            return null;
+        }
+
+        Map<Slot, Integer> ingredients = new LinkedHashMap<>();
+        for (Slot slot : List.of(input, additional)) {
+            if (!slot.isEmpty()) {
+                ingredients.put(slot, slot.get().getCount());
+            }
+        }
+        return new Craft(groundItem, crafts -> new CraftGrindstoneAction(0, crafts, 0), ingredients, 1, null, true);
+    }
+
+    private Craft getLoomCraft() {
+        Slot banner = this.uiSlot(ContainerSlotType.LOOM_INPUT, LOOM_INPUT_SLOT);
+        Slot dye = this.uiSlot(ContainerSlotType.LOOM_DYE, LOOM_DYE_SLOT);
+        Slot patternItem = this.uiSlot(ContainerSlotType.LOOM_MATERIAL, LOOM_MATERIAL_SLOT);
+        int color = BannerConverter.getDyeColor(dye.get());
+        if (!BannerConverter.isBanner(banner.get()) || color == -1) {
+            this.selectButton(-1);
+            return null;
+        }
+
+        // A java client picks what a pattern item gives by itself
+        List<String> patterns = BannerConverter.getLoomPatterns(patternItem.get());
+        if (patterns.size() == 1) {
+            this.selectButton(0);
+        } else if (this.selectedButton >= patterns.size() || BannerConverter.getPatternCount(banner.get()) >= BannerConverter.MAX_PATTERNS) {
+            this.selectButton(-1);
+        }
+        String pattern = this.selectedButton < 0 ? null : patterns.get(this.selectedButton);
+        if (pattern == null || BannerConverter.getPatternCount(banner.get()) >= BannerConverter.MAX_PATTERNS) {
+            return null;
+        }
+
+        Map<Slot, Integer> ingredients = new LinkedHashMap<>();
+        ingredients.put(banner, 1);
+        ingredients.put(dye, 1);
+        ItemData wovenBanner = BannerConverter.addPattern(banner.get().toBuilder().count(1).build(), pattern, color);
+        return new Craft(wovenBanner, crafts -> new CraftLoomAction(pattern, crafts), ingredients, 1, null, false);
+    }
+
+    private Craft getCartographyCraft() {
+        Slot map = this.uiSlot(ContainerSlotType.CARTOGRAPHY_INPUT, CARTOGRAPHY_INPUT_SLOT);
+        Slot additional = this.uiSlot(ContainerSlotType.CARTOGRAPHY_ADDITIONAL, CARTOGRAPHY_ADDITIONAL_SLOT);
+        ItemData drawnMap = Workstations.drawMap(map.get(), additional.get());
+        if (drawnMap == null) {
+            return null;
+        }
+
+        Map<Slot, Integer> ingredients = new LinkedHashMap<>();
+        ingredients.put(map, 1);
+        ingredients.put(additional, 1);
+        return new Craft(drawnMap, crafts -> new CraftRecipeOptionalAction(0, 0), ingredients, 1, getCustomName(map.get()), false);
+    }
+
+    // A click on what the crafting grid or the open crafting station makes
     public void takeResult(boolean asManyAsPossible) {
         this.updateResult();
-        if (this.containerType == ContainerType.ANVIL && this.containerSlots != null) {
-            this.takeAnvilResult();
-            return;
-        }
-        if (this.craftingMatch == null) {
+        Craft craft = this.craft;
+        if (craft == null) {
             return;
         }
 
-        ItemData craftedItem = this.craftingMatch.results().get(0);
-        List<Slot> grid = this.getCraftingGrid();
+        ItemData craftedItem = craft.result();
         Slot cursorSlot = this.getCursorSlot();
         int crafts = 1;
         if (asManyAsPossible) {
-            // A shift click, limited to one stack
-            crafts = Math.max(1, ItemConverter.getMaxStackSize(craftedItem) / craftedItem.getCount());
-            for (Slot slot : grid) {
-                if (!slot.isEmpty()) {
-                    crafts = Math.min(crafts, slot.get().getCount());
-                }
+            // A shift click, which makes as many as there is room for in the inventory
+            crafts = Math.min(craft.maxCrafts(), this.getRoom(craftedItem) / craftedItem.getCount());
+            if (crafts < 1) {
+                return;
             }
         } else if (!cursorSlot.isEmpty() && (!canStack(cursorSlot.get(), craftedItem) || cursorSlot.get().getCount() + craftedItem.getCount() > ItemConverter.getMaxStackSize(craftedItem))) {
             return;
         }
 
-        this.requestActions.add(new CraftRecipeAction(this.craftingMatch.networkId(), crafts));
-        this.requestActions.add(new CraftResultsDeprecatedAction(this.craftingMatch.results().toArray(new ItemData[0]), crafts));
-        for (Slot slot : grid) {
-            if (!slot.isEmpty()) {
-                this.requestActions.add(new ConsumeAction(crafts, slot.toNetwork()));
-                this.change(slot, this.withCount(slot.get(), slot.get().getCount() - crafts));
-            }
+        this.requestText = craft.text();
+        this.requestActions.add(craft.action().apply(crafts));
+        this.requestActions.add(new CraftResultsDeprecatedAction(new ItemData[]{craftedItem}, crafts));
+        for (Map.Entry<Slot, Integer> ingredient : craft.ingredients().entrySet()) {
+            // The server can use up another number of them, of what an anvil repairs with for example, and tells
+            Slot slot = ingredient.getKey();
+            int count = Math.min(slot.get().getCount(), ingredient.getValue() * crafts);
+            this.requestActions.add(new ConsumeAction(count, slot.toNetwork()));
+            this.change(slot, this.withCount(slot.get(), slot.get().getCount() - count));
         }
 
         Slot createdOutput = this.createOutput(craftedItem, craftedItem.getCount() * crafts);
+        Slot destination = cursorSlot;
         if (asManyAsPossible) {
             List<Slot> targets = this.getPlayerSlots(false);
             Collections.reverse(targets);
-            this.quickMove(createdOutput, targets);
-            if (!createdOutput.isEmpty()) {
-                this.drop(createdOutput, createdOutput.get().getCount());
-            }
+            destination = this.quickMove(createdOutput, targets);
         } else {
             this.move(createdOutput, cursorSlot, createdOutput.get().getCount());
+        }
+        if (craft.repaired() && destination != null) {
+            this.pendingRepairs.put(this.requestId, destination);
         }
         this.sendRequest();
     }
@@ -1071,8 +1321,13 @@ public class Inventory {
         return null;
     }
 
-    // A button of the enchanting table
+    // A button of the enchanting table, or one of the things a stonecutter or a loom offers
     public void clickButton(int button) {
+        if (this.containerSlots != null && (this.containerType == ContainerType.STONECUTTER || this.containerType == ContainerType.LOOM)) {
+            this.selectButton(button);
+            this.sendContents();
+            return;
+        }
         if (this.containerType != ContainerType.ENCHANTMENT || this.containerSlots == null || button < 0 || button >= this.enchantOptions.size()) {
             return;
         }
@@ -1128,15 +1383,14 @@ public class Inventory {
     // The bedrock server does not tell what an anvil makes, a bedrock client works that out itself. The client is
     // shown the item with its new name and the enchantments of both items. How much a repair mends is only known
     // once the server answered, and the levels shown are those of a rename, a repair can cost more
-    private void updateAnvilResult() {
+    private Craft getAnvilCraft() {
         ItemData input = this.ui[ANVIL_INPUT_SLOT];
         ItemData material = this.ui[ANVIL_MATERIAL_SLOT];
         // Without a name the item loses the one it was given before
         boolean renamed = !ItemConverter.isEmpty(input) && !this.anvilName.equals(getCustomName(input));
         int cost = 0;
-        if (ItemConverter.isEmpty(input) || (!renamed && ItemConverter.isEmpty(material))) {
-            this.result[0] = ItemData.AIR;
-        } else {
+        ItemData anvilResult = null;
+        if (!ItemConverter.isEmpty(input) && (renamed || !ItemConverter.isEmpty(material))) {
             NbtMap tag = input.getTag() == null ? NbtMap.EMPTY : input.getTag();
             if (renamed) {
                 NbtMapBuilder display = tag.getCompound("display", NbtMap.EMPTY).toBuilder();
@@ -1167,34 +1421,20 @@ public class Inventory {
                 }
             }
 
-            this.result[0] = input.toBuilder().tag(tag.isEmpty() ? null : tag).build();
+            anvilResult = input.toBuilder().tag(tag.isEmpty() ? null : tag).build();
             cost = getRepairCost(input) + getRepairCost(material) + (renamed ? 1 : 0) + (ItemConverter.isEmpty(material) ? 0 : 1);
         }
         this.player.getJavaSession().send(new ClientboundContainerSetDataPacket(JAVA_CONTAINER_WINDOW, 0, cost));
-    }
-
-    private void takeAnvilResult() {
-        Slot input = this.uiSlot(ContainerSlotType.ANVIL_INPUT, ANVIL_INPUT_SLOT);
-        Slot material = this.uiSlot(ContainerSlotType.ANVIL_MATERIAL, ANVIL_MATERIAL_SLOT);
-        Slot cursorSlot = this.getCursorSlot();
-        ItemData anvilResult = this.result[0];
-        if (ItemConverter.isEmpty(anvilResult) || !cursorSlot.isEmpty()) {
-            return;
+        if (anvilResult == null) {
+            return null;
         }
 
-        this.requestText = this.anvilName;
-        this.requestActions.add(new CraftRecipeOptionalAction(0, 0));
-        this.requestActions.add(new CraftResultsDeprecatedAction(new ItemData[]{anvilResult}, 1));
-        this.requestActions.add(new ConsumeAction(input.get().getCount(), input.toNetwork()));
-        this.change(input, ItemData.AIR);
-        if (!material.isEmpty()) {
-            // The server decides how much of the material is used up and tells in its answer
-            this.requestActions.add(new ConsumeAction(1, material.toNetwork()));
-            this.change(material, this.withCount(material.get(), material.get().getCount() - 1));
+        Map<Slot, Integer> ingredients = new LinkedHashMap<>();
+        ingredients.put(this.uiSlot(ContainerSlotType.ANVIL_INPUT, ANVIL_INPUT_SLOT), input.getCount());
+        if (!ItemConverter.isEmpty(material)) {
+            ingredients.put(this.uiSlot(ContainerSlotType.ANVIL_MATERIAL, ANVIL_MATERIAL_SLOT), 1);
         }
-        this.move(this.createOutput(anvilResult, anvilResult.getCount()), cursorSlot, anvilResult.getCount());
-        this.pendingRepairs.put(this.requestId, cursorSlot);
-        this.sendRequest();
+        return new Craft(anvilResult, crafts -> new CraftRecipeOptionalAction(0, 0), ingredients, 1, this.anvilName, true);
     }
 
     private ItemData withCount(ItemData item, int count) {

@@ -13,7 +13,9 @@ import org.barrelmc.barrel.utils.FileManager;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.geysermc.mcprotocollib.protocol.data.game.Holder;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.ArmorTrim;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantments;
@@ -35,6 +37,8 @@ public class ItemConverter {
     // How long the java items that are eaten or drunk take to be
     public static final HashMap<Integer, Integer> JAVA_ITEM_CONSUME_TICKS = new HashMap<>();
     private static final HashMap<String, Integer> JAVA_ITEM_IDS = new HashMap<>();
+    // All the java items of a bedrock item, keyed like the bedrock items above and by the name alone
+    private static final HashMap<String, List<Integer>> BEDROCK_ITEM_TO_JAVA_ITEMS = new HashMap<>();
     // The data of these bedrock items is the potion they hold
     private static final Set<String> BEDROCK_POTIONS = Set.of("minecraft:potion", "minecraft:splash_potion", "minecraft:lingering_potion");
     // An arrow is tipped with the potion its data is one more than
@@ -62,6 +66,10 @@ public class ItemConverter {
 
             JAVA_ITEM_TO_BEDROCK_ITEM.put(javaItemId, bedrockItem);
             JAVA_ITEM_IDS.put(javaName, javaItemId);
+            BEDROCK_ITEM_TO_JAVA_ITEMS.computeIfAbsent(bedrockName, key -> new ArrayList<>()).add(javaItemId);
+            if (itemEntry.has("bedrock_data")) {
+                BEDROCK_ITEM_TO_JAVA_ITEMS.computeIfAbsent(bedrockItem, key -> new ArrayList<>()).add(javaItemId);
+            }
             // A few java items are the same item on bedrock, the one with the same name is the closest
             if (javaName.equals(bedrockName)) {
                 BEDROCK_ITEM_TO_JAVA_ITEM.put(bedrockItem, javaItemId);
@@ -125,6 +133,15 @@ public class ItemConverter {
         }
 
         return javaItemId == null ? unknownJavaItem : javaItemId;
+    }
+
+    // The java items an ingredient of a bedrock recipe can be, whatever its data is if it is not given
+    public static List<Integer> getJavaItemIds(String bedrockName, Integer bedrockData) {
+        List<Integer> javaItemIds = bedrockData == null ? null : BEDROCK_ITEM_TO_JAVA_ITEMS.get(bedrockName + ":" + bedrockData);
+        if (javaItemIds == null) {
+            javaItemIds = BEDROCK_ITEM_TO_JAVA_ITEMS.get(bedrockName);
+        }
+        return javaItemIds == null ? new ArrayList<>() : javaItemIds;
     }
 
     // Name of the bedrock item, followed by its data if several java items share it
@@ -208,6 +225,22 @@ public class ItemConverter {
                     boolean stored = item.getDefinition().getIdentifier().equals("minecraft:enchanted_book");
                     components.put(stored ? DataComponentTypes.STORED_ENCHANTMENTS : DataComponentTypes.ENCHANTMENTS, new ItemEnchantments(enchantments));
                 }
+            }
+
+            if (tag.containsKey("Patterns", NbtType.LIST)) {
+                components.put(DataComponentTypes.BANNER_PATTERNS, BannerConverter.bedrockToJavaPatterns(tag));
+            }
+            NbtMap trim = tag.getCompound("Trim", null);
+            if (trim != null) {
+                int javaMaterialId = JavaRegistries.getId(JavaRegistries.TRIM_MATERIAL, "minecraft:" + trim.getString("Material"));
+                int javaPatternId = JavaRegistries.getId(JavaRegistries.TRIM_PATTERN, "minecraft:" + trim.getString("Pattern"));
+                if (javaMaterialId != -1 && javaPatternId != -1) {
+                    components.put(DataComponentTypes.TRIM, new ArmorTrim(Holder.ofId(javaMaterialId), Holder.ofId(javaPatternId)));
+                }
+            }
+            if (tag.containsKey("map_uuid", NbtType.LONG)) {
+                // What is on a map is not translated, this only tells the client that the item is a map that was drawn
+                components.put(DataComponentTypes.MAP_ID, (int) tag.getLong("map_uuid"));
             }
 
             NbtMap display = tag.getCompound("display", null);
