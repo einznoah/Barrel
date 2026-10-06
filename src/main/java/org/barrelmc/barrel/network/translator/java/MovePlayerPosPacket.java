@@ -20,6 +20,7 @@ public class MovePlayerPosPacket implements JavaPacketTranslator {
             return;
         }
 
+        player.getInput().setCollisions(packet.isOnGround(), packet.isHorizontalCollision());
         player.setOldPosition(player.getVector3f());
         player.setPosition(packet.getX(), packet.getY(), packet.getZ());
         if (player.getStartGamePacketCache().getAuthoritativeMovementMode() == AuthoritativeMovementMode.CLIENT) {

@@ -73,11 +73,28 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                         player.getPlayerAuthInputActions().add(blockActionData);
                     }
                     player.setDiggingStatus(PlayerActionType.BLOCK_PREDICT_DESTROY);
+                    boolean serverBreaksBlocks = player.getStartGamePacketCache().isServerAuthoritativeBlockBreaking();
+                    if (serverBreaksBlocks) {
+                        // A server that breaks the block itself is told that the player went on to the end
+                        blockActionData = new PlayerBlockActionData();
+                        blockActionData.setAction(PlayerActionType.BLOCK_CONTINUE_DESTROY);
+                        blockActionData.setBlockPosition(blockPos);
+                        blockActionData.setFace(playerActionPacket.getFace().ordinal());
+                        player.getPlayerAuthInputActions().add(blockActionData);
+                    }
                     blockActionData = new PlayerBlockActionData();
                     blockActionData.setAction(PlayerActionType.BLOCK_PREDICT_DESTROY);
                     blockActionData.setBlockPosition(blockPos);
                     blockActionData.setFace(playerActionPacket.getFace().ordinal());
                     player.getPlayerAuthInputActions().add(blockActionData);
+                    if (serverBreaksBlocks) {
+                        // And that it is not breaking a block anymore
+                        blockActionData = new PlayerBlockActionData();
+                        blockActionData.setAction(PlayerActionType.ABORT_BREAK);
+                        blockActionData.setBlockPosition(blockPos);
+                        blockActionData.setFace(0);
+                        player.getPlayerAuthInputActions().add(blockActionData);
+                    }
                 }
                 break;
             case DROP_ITEM:

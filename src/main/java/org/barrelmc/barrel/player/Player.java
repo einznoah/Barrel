@@ -39,7 +39,6 @@ import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.definitions.SimpleItemDefinition;
 import org.cloudburstmc.protocol.bedrock.netty.initializer.BedrockClientInitializer;
 import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
-import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 import org.cloudburstmc.protocol.bedrock.packet.RequestNetworkSettingsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
 import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
@@ -109,7 +108,6 @@ public class Player extends Vector3 {
     @Getter
     private StartGamePacket startGamePacketCache;
 
-    private boolean tickPlayerInputStarted = false;
     private final ScheduledExecutorService playerInputExecutor = Executors.newScheduledThreadPool(1);
 
     @Setter
@@ -134,6 +132,11 @@ public class Player extends Vector3 {
     @Setter
     @Getter
     private boolean isSprinting = false;
+    @Setter
+    @Getter
+    private boolean flying = false;
+    @Getter
+    private final PlayerInput input = new PlayerInput(this);
     @Setter
     @Getter
     private PlayerActionType diggingStatus;
@@ -233,15 +236,7 @@ public class Player extends Vector3 {
     }
 
     public void startSendingPlayerInput() {
-        if (!tickPlayerInputStarted) {
-            tickPlayerInputStarted = true;
-
-            PlayerAuthInputThread playerAuthInputThread = new PlayerAuthInputThread();
-            playerAuthInputThread.player = this;
-            playerAuthInputThread.tick = getStartGamePacketCache().getCurrentTick();
-
-            playerInputExecutor.scheduleAtFixedRate(playerAuthInputThread, 0, 50, TimeUnit.MILLISECONDS);
-        }
+        this.input.start(getStartGamePacketCache().getCurrentTick());
     }
 
     public void connect() {
@@ -511,66 +506,5 @@ public class Player extends Vector3 {
             this.javaSession.send(new ClientboundSetChunkCacheCenterPacket((int) x >> 4, (int) z >> 4));
         }
         super.setPosition(x, y, z);
-    }
-}
-
-class PlayerAuthInputThread implements Runnable {
-    public Player player;
-    public long tick;
-
-    public void run() {
-        try {
-            if (player.getBedrockSession().isConnected()) {
-                ++tick;
-
-                PlayerAuthInputPacket pk = new PlayerAuthInputPacket();
-
-                pk.setPosition(player.getVector3f());
-                pk.setRotation(Vector3f.from(player.getPitch(), player.getYaw(), player.getYaw()));
-                pk.setMotion(Vector2f.ZERO);
-                pk.setInputInteractionModel(InputInteractionModel.CROSSHAIR);
-                pk.setInputMode(InputMode.MOUSE);
-                pk.setPlayMode(ClientPlayMode.SCREEN);
-                pk.setVrGazeDirection(null);
-                pk.setInteractRotation(Vector2f.from(player.getPitch(), player.getYaw()));
-                pk.setTick(tick);
-                pk.setDelta(Vector3f.from(player.getVector3f().getX() - player.getOldPosition().getX(), player.getVector3f().getY() - player.getOldPosition().getY(), player.getVector3f().getZ() - player.getOldPosition().getZ()));
-                pk.setAnalogMoveVector(Vector2f.ZERO);
-                pk.setRawMoveVector(Vector2f.ZERO);
-                pk.setCameraOrientation(player.getDirectionVector());
-                pk.setItemStackRequest(null);
-
-                pk.getInputData().addAll(player.getPlayerAuthInputData());
-                pk.getPlayerActions().addAll(player.getPlayerAuthInputActions());
-
-                if (player.isSneaking()) {
-                    pk.getInputData().add(PlayerAuthInputData.SNEAKING);
-                }
-                if (player.isSprinting()) {
-                    pk.getInputData().add(PlayerAuthInputData.SPRINTING);
-                }
-                if (player.getDiggingStatus() == PlayerActionType.START_BREAK) {
-                    pk.getInputData().add(PlayerAuthInputData.PERFORM_BLOCK_ACTIONS);
-
-                    PlayerBlockActionData blockActionData = new PlayerBlockActionData();
-                    blockActionData.setAction(PlayerActionType.CONTINUE_BREAK);
-                    blockActionData.setBlockPosition(player.getDiggingPosition());
-                    blockActionData.setFace(player.getDiggingFace().ordinal());
-                    pk.getPlayerActions().add(blockActionData);
-                }
-
-                player.getBedrockSession().sendPacketImmediately(pk);
-
-                player.getPlayerAuthInputData().removeAll(player.getPlayerAuthInputData());
-                player.getPlayerAuthInputActions().removeAll(player.getPlayerAuthInputActions());
-
-                if (player.getInventory().tickItemUse()) {
-                    // The inventory belongs to the thread that translates the packets
-                    player.getPacketTranslatorManager().execute(() -> player.getInventory().finishUsingItem());
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

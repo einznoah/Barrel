@@ -14,6 +14,7 @@ public class MovePlayerRotPacket implements JavaPacketTranslator {
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundMovePlayerRotPacket packet = (ServerboundMovePlayerRotPacket) pk;
 
+        player.getInput().setCollisions(packet.isOnGround(), packet.isHorizontalCollision());
         player.setRotation(packet.getYaw(), packet.getPitch());
         if (player.getStartGamePacketCache().getAuthoritativeMovementMode() == AuthoritativeMovementMode.CLIENT) {
             MovePlayerPacket movePlayerPacket = new MovePlayerPacket();

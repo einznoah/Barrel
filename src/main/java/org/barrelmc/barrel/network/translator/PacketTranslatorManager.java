@@ -16,6 +16,7 @@ import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientTickEndPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerButtonClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
@@ -111,6 +112,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(LevelEventPacket.class, new org.barrelmc.barrel.network.translator.bedrock.LevelEventPacket());
         bedrockTranslators.put(MoveEntityAbsolutePacket.class, new org.barrelmc.barrel.network.translator.bedrock.MoveEntityAbsolutePacket());
         bedrockTranslators.put(MovePlayerPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MovePlayerPacket());
+        bedrockTranslators.put(CorrectPlayerMovePredictionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CorrectPlayerMovePredictionPacket());
         bedrockTranslators.put(PlayerListPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerListPacket());
         bedrockTranslators.put(RemoveEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.RemoveEntityPacket());
         bedrockTranslators.put(RemoveObjectivePacket.class, new org.barrelmc.barrel.network.translator.bedrock.RemoveObjectivePacket());
@@ -166,6 +168,8 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundMovePlayerPosPacket.class, new MovePlayerPosPacket());
         javaTranslators.put(ServerboundMovePlayerPosRotPacket.class, new MovePlayerPosRotPacket());
         javaTranslators.put(ServerboundMovePlayerRotPacket.class, new MovePlayerRotPacket());
+        javaTranslators.put(ServerboundMovePlayerStatusOnlyPacket.class, new MovePlayerStatusOnlyPacket());
+        javaTranslators.put(ServerboundClientTickEndPacket.class, new ClientTickEndPacket());
         javaTranslators.put(ServerboundPlayerCommandPacket.class, new PlayerCommandPacket());
         javaTranslators.put(ServerboundPlayerInputPacket.class, new PlayerInputPacket());
         javaTranslators.put(ServerboundPunchPacket.class, new SwingPacket());

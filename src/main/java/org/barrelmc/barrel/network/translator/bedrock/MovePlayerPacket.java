@@ -18,6 +18,9 @@ public class MovePlayerPacket implements BedrockPacketTranslator {
         if (packet.getRuntimeEntityId() == player.getRuntimeEntityId()) {
             player.getJavaSession().send(new ClientboundPlayerPositionPacket(1, position.getX(), position.getY() - 1.62, position.getZ(), 0, 0, 0, rotation.getY(), rotation.getX()));
             player.setPosition(position.getX(), position.getY() - 1.62, position.getZ());
+            if (packet.getMode() == org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket.Mode.TELEPORT || packet.getMode() == org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket.Mode.RESPAWN) {
+                player.getInput().setTeleported();
+            }
             player.setLastServerPosition(position);
             player.setLastServerRotation(rotation.toVector2());
         } else {

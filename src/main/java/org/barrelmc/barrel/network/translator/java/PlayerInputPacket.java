@@ -5,7 +5,6 @@ import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
 import org.cloudburstmc.protocol.bedrock.data.PlayerActionType;
-import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerActionPacket;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
@@ -16,6 +15,7 @@ public class PlayerInputPacket implements JavaPacketTranslator {
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundPlayerInputPacket packet = (ServerboundPlayerInputPacket) pk;
 
+        player.getInput().setKeys(packet);
         // The client no longer sends a player command when it starts or stops sneaking
         if (packet.isShift() == player.isSneaking()) {
             return;
@@ -29,9 +29,8 @@ public class PlayerInputPacket implements JavaPacketTranslator {
             playerActionPacket.setFace(0);
             playerActionPacket.setRuntimeEntityId(player.getRuntimeEntityId());
             player.getBedrockSession().sendPacket(playerActionPacket);
-        } else {
-            player.getPlayerAuthInputData().add(packet.isShift() ? PlayerAuthInputData.START_SNEAKING : PlayerAuthInputData.STOP_SNEAKING);
         }
+        // A server that moves the player itself is told with what is pressed
         player.setSneaking(packet.isShift());
     }
 }

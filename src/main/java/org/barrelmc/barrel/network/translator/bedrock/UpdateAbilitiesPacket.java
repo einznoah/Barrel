@@ -23,6 +23,7 @@ public class UpdateAbilitiesPacket implements BedrockPacketTranslator {
             for (AbilityLayer abilityLayer : packet.getAbilityLayers().toArray(new AbilityLayer[0])) {
                 if (abilityLayer.getLayerType() == AbilityLayer.Type.BASE) {
                     Set<Ability> abilityValues = abilityLayer.getAbilityValues();
+                    player.setFlying(abilityValues.contains(Ability.FLYING));
                     if (abilityValues.contains(Ability.NO_CLIP) && player.getGameMode() == GameType.CREATIVE) {
                         player.setGameMode(GameType.SURVIVAL_VIEWER);
                         player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, TranslatorUtils.translateGamemodeToJE(GameType.SURVIVAL_VIEWER)));
