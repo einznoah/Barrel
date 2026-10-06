@@ -19,6 +19,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.Serverbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerButtonClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundPlaceRecipePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundRenameItemPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSelectTradePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSeenAdvancementsPacket;
@@ -148,6 +149,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(MobEffectPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MobEffectPacket());
         bedrockTranslators.put(RespawnPacket.class, new org.barrelmc.barrel.network.translator.bedrock.RespawnPacket());
         bedrockTranslators.put(UpdateTradePacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateTradePacket());
+        bedrockTranslators.put(UnlockedRecipesPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UnlockedRecipesPacket());
 
         // Java packets
         javaTranslators.put(ServerboundChatPacket.class, new ChatPacket());
@@ -168,6 +170,7 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundContainerButtonClickPacket.class, new ContainerButtonClickPacket());
         javaTranslators.put(ServerboundRenameItemPacket.class, new RenameItemPacket());
         javaTranslators.put(ServerboundSelectTradePacket.class, new SelectTradePacket());
+        javaTranslators.put(ServerboundPlaceRecipePacket.class, new PlaceRecipePacket());
         javaTranslators.put(ServerboundSetCreativeModeSlotPacket.class, new SetCreativeModeSlotPacket());
         javaTranslators.put(ServerboundUseItemOnPacket.class, new UseItemOnPacket());
         javaTranslators.put(ServerboundUseItemPacket.class, new UseItemPacket());

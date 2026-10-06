@@ -30,5 +30,6 @@ public class CraftingDataPacket implements BedrockPacketTranslator {
         }
         player.getInventory().getCraftingRecipes().setRecipes(shapedRecipes, shapelessRecipes, packet.getSmithingTransformData(), packet.getSmithingTrimData());
         player.getJavaSession().send(player.getInventory().getCraftingRecipes().toJavaRecipes());
+        player.getInventory().sendRecipeBook();
     }
 }

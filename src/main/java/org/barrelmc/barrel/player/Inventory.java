@@ -19,10 +19,13 @@ import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerId;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerSlotType;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType;
+import org.cloudburstmc.protocol.bedrock.data.inventory.CreativeItemCategory;
 import org.cloudburstmc.protocol.bedrock.data.inventory.CreativeItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.CreativeItemGroup;
 import org.cloudburstmc.protocol.bedrock.data.inventory.EnchantData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.EnchantOptionData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.FullContainerName;
+import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.ItemDescriptorWithCount;
 import org.cloudburstmc.protocol.bedrock.data.inventory.HandSlot;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.ItemStackRequest;
@@ -52,8 +55,12 @@ import org.cloudburstmc.protocol.bedrock.packet.ContainerSetDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ItemStackRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MobEquipmentPacket;
+import org.cloudburstmc.protocol.bedrock.packet.UnlockedRecipesPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.VillagerTrade;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.RecipeDisplay;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipeBookAddPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipeBookRemovePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundSetHeldSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerClosePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
@@ -61,6 +68,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.C
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundMerchantOffersPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundOpenScreenPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundPlaceGhostRecipePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetCursorItemPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetPlayerInventoryPacket;
 
@@ -68,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +120,13 @@ public class Inventory {
     // The bedrock items the server is told about when the player lets go of them
     private static final Set<String> BEDROCK_RELEASED_ITEMS = Set.of("minecraft:bow", "minecraft:crossbow", "minecraft:trident");
 
+    // The tabs of the java recipe book, by their place among the kinds of recipes java has
+    private static final int JAVA_RECIPES_BUILDING_BLOCKS = 0;
+    private static final int JAVA_RECIPES_EQUIPMENT = 2;
+    private static final int JAVA_RECIPES_MISC = 3;
+    // A slot of the crafting grid is not given more of an ingredient than a stack holds
+    private static final int MAX_PLACED_INGREDIENTS = 64;
+
     // Data of the java furnace and enchanting table windows
     private static final int JAVA_FURNACE_LIT_TIME = 0;
     private static final int JAVA_FURNACE_LIT_DURATION = 1;
@@ -152,6 +168,9 @@ public class Inventory {
 
     // Keyed like the bedrock items of the ItemConverter
     private final Map<String, CreativeItemData> creativeItems = new HashMap<>();
+    private List<CreativeItemGroup> creativeGroups = Collections.emptyList();
+    // The names of the recipes the server unlocked for the player, null as long as it did not tell which
+    private Set<String> unlockedRecipes = null;
 
     private int requestId = -1;
     private final List<ItemStackRequestAction> requestActions = new ArrayList<>();
@@ -767,7 +786,8 @@ public class Inventory {
         this.player.getBedrockSession().sendPacket(inventoryTransactionPacket);
     }
 
-    public void setCreativeItems(List<CreativeItemData> creativeItems) {
+    public void setCreativeItems(List<CreativeItemData> creativeItems, List<CreativeItemGroup> creativeGroups) {
+        this.creativeGroups = creativeGroups;
         this.creativeItems.clear();
         for (CreativeItemData creativeItem : creativeItems) {
             String bedrockName = creativeItem.getItem().getDefinition().getIdentifier();
@@ -778,6 +798,156 @@ public class Inventory {
 
     public CraftingRecipes getCraftingRecipes() {
         return this.craftingRecipes;
+    }
+
+    // The tab of the java recipe book a recipe is on, after the tab of the creative inventory of bedrock what it
+    // makes is on. That has none for redstone
+    private int getJavaRecipeCategory(ItemData result) {
+        String bedrockName = result.getDefinition().getIdentifier();
+        CreativeItemData creativeItem = this.creativeItems.getOrDefault(bedrockName + ":" + result.getDamage(), this.creativeItems.get(bedrockName));
+        CreativeItemCategory category = creativeItem == null || creativeItem.getGroupId() < 0 || creativeItem.getGroupId() >= this.creativeGroups.size() ? null : this.creativeGroups.get(creativeItem.getGroupId()).getCategory();
+        return category == CreativeItemCategory.CONSTRUCTION ? JAVA_RECIPES_BUILDING_BLOCKS : category == CreativeItemCategory.EQUIPMENT ? JAVA_RECIPES_EQUIPMENT : JAVA_RECIPES_MISC;
+    }
+
+    // The java client is sent the recipes the server unlocked for the player, all of them if it did not tell which
+    public void sendRecipeBook() {
+        if (this.craftingRecipes.hasBookRecipes()) {
+            this.player.getJavaSession().send(new ClientboundRecipeBookAddPacket(this.craftingRecipes.toJavaRecipeBook(this.unlockedRecipes, this::getJavaRecipeCategory, false), true));
+        }
+    }
+
+    public void setUnlockedRecipes(UnlockedRecipesPacket.ActionType action, List<String> recipes) {
+        switch (action) {
+            case INITIALLY_UNLOCKED:
+                this.unlockedRecipes = new HashSet<>(recipes);
+                this.sendRecipeBook();
+                break;
+            case NEWLY_UNLOCKED:
+                // Nothing new for a client that is shown all of them
+                if (this.unlockedRecipes != null) {
+                    List<String> newRecipes = new ArrayList<>(recipes);
+                    newRecipes.removeAll(this.unlockedRecipes);
+                    this.unlockedRecipes.addAll(newRecipes);
+                    this.player.getJavaSession().send(new ClientboundRecipeBookAddPacket(this.craftingRecipes.toJavaRecipeBook(newRecipes, this::getJavaRecipeCategory, true), false));
+                }
+                break;
+            case REMOVE_UNLOCKED:
+                if (this.unlockedRecipes != null) {
+                    this.unlockedRecipes.removeAll(recipes);
+                    this.player.getJavaSession().send(new ClientboundRecipeBookRemovePacket(this.craftingRecipes.getBookRecipeIds(recipes)));
+                }
+                break;
+            case REMOVE_ALL:
+                this.unlockedRecipes = new HashSet<>();
+                this.sendRecipeBook();
+                break;
+            default:
+                break;
+        }
+    }
+
+    // The java client picked a recipe of its recipe book. A java server puts what the recipe takes in the crafting
+    // grid, once more with every click, or shows where it would go if the player does not have it
+    public void placeRecipe(int windowId, int recipeId, boolean asManyAsPossible) {
+        CraftingRecipes.BookRecipe recipe = this.craftingRecipes.getBookRecipe(recipeId);
+        boolean craftingTable = this.containerType == ContainerType.WORKBENCH && this.containerSlots != null;
+        if (recipe == null || windowId != (craftingTable ? JAVA_CONTAINER_WINDOW : 0)) {
+            return;
+        }
+
+        // Which ingredient goes where in the grid
+        List<Slot> grid = this.getCraftingGrid();
+        int gridSize = craftingTable ? 3 : 2;
+        ItemDescriptorWithCount[] layout = new ItemDescriptorWithCount[grid.size()];
+        if (recipe.width() > gridSize || recipe.height() > gridSize || (recipe.width() == 0 && recipe.ingredients().size() > grid.size())) {
+            return;
+        }
+        for (int ingredient = 0; ingredient < recipe.ingredients().size(); ingredient++) {
+            int slot = recipe.width() == 0 ? ingredient : ingredient / recipe.width() * gridSize + ingredient % recipe.width();
+            layout[slot] = CraftingRecipes.matches(recipe.ingredients().get(ingredient), ItemData.AIR) ? null : recipe.ingredients().get(ingredient);
+        }
+
+        // How many of each, one more than there are of it if the grid holds the recipe already
+        ItemData[] gridItems = new ItemData[grid.size()];
+        int crafts = asManyAsPossible ? Integer.MAX_VALUE : 1;
+        for (int slot = 0; slot < gridItems.length; slot++) {
+            gridItems[slot] = grid.get(slot).get();
+        }
+        CraftingRecipes.Match match = this.craftingRecipes.find(gridItems, gridSize);
+        if (match != null && match.networkId() == recipeId && !asManyAsPossible) {
+            crafts = Integer.MAX_VALUE;
+            for (Slot slot : grid) {
+                crafts = slot.isEmpty() ? crafts : Math.min(crafts, slot.get().getCount() + 1);
+            }
+        }
+
+        // What is in the grid goes back first
+        for (Slot slot : grid) {
+            if (!slot.isEmpty()) {
+                this.quickMove(slot, this.getPlayerSlots(false));
+            }
+        }
+
+        Map<Slot, Map<Slot, Integer>> moves = null;
+        for (int count = Math.min(crafts, MAX_PLACED_INGREDIENTS); count >= 1 && moves == null; count--) {
+            moves = this.findIngredients(grid, layout, count);
+        }
+        if (moves == null) {
+            RecipeDisplay display = this.craftingRecipes.toJavaDisplay(recipe);
+            if (display != null) {
+                this.player.getJavaSession().send(new ClientboundPlaceGhostRecipePacket(windowId, display));
+            }
+        } else {
+            for (Map.Entry<Slot, Map<Slot, Integer>> gridSlot : moves.entrySet()) {
+                for (Map.Entry<Slot, Integer> source : gridSlot.getValue().entrySet()) {
+                    this.move(source.getKey(), gridSlot.getKey(), source.getValue());
+                }
+            }
+        }
+        this.sendRequest();
+        this.sendContents();
+    }
+
+    // Which items of the inventory to put in the grid for a recipe, the given number of each. A slot of the grid
+    // takes items of one kind. Returns null if the player does not have them
+    private Map<Slot, Map<Slot, Integer>> findIngredients(List<Slot> grid, ItemDescriptorWithCount[] layout, int count) {
+        Map<Slot, Integer> left = new HashMap<>();
+        for (Slot slot : this.getPlayerSlots(false)) {
+            left.put(slot, slot.get().getCount());
+        }
+
+        Map<Slot, Map<Slot, Integer>> moves = new LinkedHashMap<>();
+        for (int gridSlot = 0; gridSlot < layout.length; gridSlot++) {
+            if (layout[gridSlot] == null) {
+                continue;
+            }
+
+            Map<Slot, Integer> sources = null;
+            for (Slot first : this.getPlayerSlots(false)) {
+                if (left.get(first) <= 0 || !CraftingRecipes.matches(layout[gridSlot], first.get()) || count > ItemConverter.getMaxStackSize(first.get())) {
+                    continue;
+                }
+                // All of this kind there is, if that is enough
+                Map<Slot, Integer> taken = new LinkedHashMap<>();
+                int missing = count;
+                for (Slot slot : this.getPlayerSlots(false)) {
+                    if (missing > 0 && left.get(slot) > 0 && canStack(first.get(), slot.get())) {
+                        taken.put(slot, Math.min(missing, left.get(slot)));
+                        missing -= taken.get(slot);
+                    }
+                }
+                if (missing == 0) {
+                    sources = taken;
+                    break;
+                }
+            }
+            if (sources == null) {
+                return null;
+            }
+            sources.forEach((slot, taken) -> left.merge(slot, -taken, Integer::sum));
+            moves.put(grid.get(gridSlot), sources);
+        }
+        return moves;
     }
 
     // The slots of the player a shift clicked item goes to, in the order a java server fills them

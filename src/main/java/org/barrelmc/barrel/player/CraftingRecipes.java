@@ -20,21 +20,35 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.ItemDescripto
 import org.cloudburstmc.protocol.bedrock.data.inventory.descriptor.ItemTagDescriptor;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.HolderSet;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.Ingredient;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.RecipeDisplay;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.RecipeDisplayEntry;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.ShapedCraftingRecipeDisplay;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.ShapelessCraftingRecipeDisplay;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.CompositeSlotDisplay;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.EmptySlotDisplay;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.ItemSlotDisplay;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.ItemStackSlotDisplay;
+import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.slot.SlotDisplay;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipeBookAddPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundUpdateRecipesPacket;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 
 // A bedrock server leaves it to the client to find the recipe for what is in a crafting grid or a crafting station
 public class CraftingRecipes {
 
     private static final String CRAFTING_TABLE_TAG = "crafting_table";
     private static final String STONECUTTER_TAG = "stonecutter";
+    private static final String JAVA_CRAFTING_TABLE = "minecraft:crafting_table";
     // The data value of an ingredient that can have any
     private static final int ANY_DATA = 32767;
 
@@ -51,8 +65,14 @@ public class CraftingRecipes {
     private final List<SmithingTransformRecipeData> smithingTransforms = new ArrayList<>();
     private final List<SmithingTrimRecipeData> smithingTrims = new ArrayList<>();
     private final Map<String, Set<Integer>> javaItemSets = new HashMap<>();
+    // The recipes of the crafting grid by the id the server knows them by, which the java client is told too
+    private final Map<Integer, BookRecipe> bookRecipes = new LinkedHashMap<>();
 
     public record Match(int networkId, List<ItemData> results) {
+    }
+
+    // A recipe as the recipe book has it. One that has no shape has no width
+    public record BookRecipe(int networkId, String id, int width, int height, List<ItemDescriptorWithCount> ingredients, ItemData result) {
     }
 
     // What a stonecutter makes of one of the java items
@@ -70,10 +90,12 @@ public class CraftingRecipes {
         this.smithingTransforms.clear();
         this.smithingTrims.clear();
         this.javaItemSets.clear();
+        this.bookRecipes.clear();
 
         for (ShapedRecipeData recipe : shapedRecipes) {
             if (CRAFTING_TABLE_TAG.equals(recipe.getTag()) && !recipe.getResults().isEmpty()) {
                 this.shapedRecipes.add(recipe);
+                this.bookRecipes.put(recipe.getNetId(), new BookRecipe(recipe.getNetId(), recipe.getId(), recipe.getWidth(), recipe.getHeight(), recipe.getIngredients(), recipe.getResults().get(0)));
             }
         }
         for (ShapelessRecipeData recipe : shapelessRecipes) {
@@ -83,6 +105,7 @@ public class CraftingRecipes {
 
             if (CRAFTING_TABLE_TAG.equals(recipe.getTag())) {
                 this.shapelessRecipes.add(recipe);
+                this.bookRecipes.put(recipe.getNetId(), new BookRecipe(recipe.getNetId(), recipe.getId(), 0, 0, recipe.getIngredients(), recipe.getResults().get(0)));
             } else if (recipe.getIngredients().size() == 1) {
                 Set<Integer> javaItemIds = getJavaItemIds(recipe.getIngredients().get(0));
                 if (STONECUTTER_TAG.equals(recipe.getTag()) && !javaItemIds.isEmpty()) {
@@ -145,6 +168,72 @@ public class CraftingRecipes {
             stonecutterRecipes.add(new ClientboundUpdateRecipesPacket.SelectableRecipe(new Ingredient(new HolderSet(new IntArrayList(cut.javaItemIds()))), new ItemStackSlotDisplay(ItemConverter.bedrockToJavaItem(cut.result()))));
         }
         return new ClientboundUpdateRecipesPacket(itemSets, stonecutterRecipes);
+    }
+
+    public BookRecipe getBookRecipe(int networkId) {
+        return this.bookRecipes.get(networkId);
+    }
+
+    public boolean hasBookRecipes() {
+        return !this.bookRecipes.isEmpty();
+    }
+
+    // The ids the java client knows the recipes with these names by
+    public int[] getBookRecipeIds(Collection<String> ids) {
+        return this.bookRecipes.values().stream().filter(recipe -> ids.contains(recipe.id())).mapToInt(BookRecipe::networkId).toArray();
+    }
+
+    // How a recipe is shown in the recipe book. Returns null if java has none of the items an ingredient can be
+    public RecipeDisplay toJavaDisplay(BookRecipe recipe) {
+        List<SlotDisplay> ingredients = new ArrayList<>();
+        for (ItemDescriptorWithCount ingredient : recipe.ingredients()) {
+            Set<Integer> javaItemIds = getJavaItemIds(ingredient);
+            if (matches(ingredient, ItemData.AIR)) {
+                ingredients.add(EmptySlotDisplay.INSTANCE);
+            } else if (javaItemIds.isEmpty()) {
+                return null;
+            } else if (javaItemIds.size() == 1) {
+                ingredients.add(new ItemSlotDisplay(javaItemIds.iterator().next()));
+            } else {
+                List<SlotDisplay> items = new ArrayList<>();
+                for (int javaItemId : javaItemIds) {
+                    items.add(new ItemSlotDisplay(javaItemId));
+                }
+                ingredients.add(new CompositeSlotDisplay(items));
+            }
+        }
+
+        SlotDisplay result = new ItemStackSlotDisplay(ItemConverter.bedrockToJavaItem(recipe.result()));
+        SlotDisplay craftingTable = new ItemSlotDisplay(ItemConverter.getJavaItemId(JAVA_CRAFTING_TABLE));
+        if (recipe.width() > 0) {
+            return new ShapedCraftingRecipeDisplay(recipe.width(), recipe.height(), ingredients, result, craftingTable);
+        }
+        ingredients.removeIf(ingredient -> ingredient == EmptySlotDisplay.INSTANCE);
+        return new ShapelessCraftingRecipeDisplay(ingredients, result, craftingTable);
+    }
+
+    // The recipes of the recipe book: the ones with these names, or all of them without names. The tab a recipe is
+    // on is one of java, which bedrock recipes do not have
+    public List<ClientboundRecipeBookAddPacket.Entry> toJavaRecipeBook(Collection<String> ids, ToIntFunction<ItemData> javaCategories, boolean notify) {
+        List<ClientboundRecipeBookAddPacket.Entry> entries = new ArrayList<>();
+        for (BookRecipe recipe : this.bookRecipes.values()) {
+            RecipeDisplay display = ids != null && !ids.contains(recipe.id()) ? null : this.toJavaDisplay(recipe);
+            if (display == null) {
+                continue;
+            }
+
+            // What the client checks the inventory of the player for, to show what can be made
+            List<HolderSet> requirements = new ArrayList<>();
+            for (ItemDescriptorWithCount ingredient : recipe.ingredients()) {
+                if (!matches(ingredient, ItemData.AIR)) {
+                    requirements.add(new HolderSet(new IntArrayList(getJavaItemIds(ingredient))));
+                }
+            }
+            // The recipes that make the same item are shown as one
+            OptionalInt group = OptionalInt.of(ItemConverter.bedrockToJavaItemId(recipe.result()));
+            entries.add(new ClientboundRecipeBookAddPacket.Entry(new RecipeDisplayEntry(recipe.networkId(), display, group, javaCategories.applyAsInt(recipe.result()), requirements), notify, notify));
+        }
+        return entries;
     }
 
     // What a stonecutter can make of the item, in the order the java client shows it. The client tells which one
@@ -245,7 +334,7 @@ public class CraftingRecipes {
         return false;
     }
 
-    private static boolean matches(ItemDescriptorWithCount ingredient, ItemData item) {
+    static boolean matches(ItemDescriptorWithCount ingredient, ItemData item) {
         ItemDescriptor descriptor = ingredient.getDescriptor();
         if (descriptor instanceof DefaultDescriptor) {
             // Compared by name, an ingredient the server named instead of numbered comes without the id of its item

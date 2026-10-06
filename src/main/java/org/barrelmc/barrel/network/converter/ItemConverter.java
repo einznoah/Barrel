@@ -156,6 +156,10 @@ public class ItemConverter {
         return javaItemId == null ? unknownJavaItem : javaItemId;
     }
 
+    public static int getJavaItemId(String javaName) {
+        return JAVA_ITEM_IDS.get(javaName);
+    }
+
     // The java items an ingredient of a bedrock recipe can be, whatever its data is if it is not given
     public static List<Integer> getJavaItemIds(String bedrockName, Integer bedrockData) {
         List<Integer> javaItemIds = bedrockData == null ? null : BEDROCK_ITEM_TO_JAVA_ITEMS.get(bedrockName + ":" + bedrockData);
