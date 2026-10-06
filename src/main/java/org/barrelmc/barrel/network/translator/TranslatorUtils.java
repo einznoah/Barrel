@@ -33,13 +33,19 @@ public class TranslatorUtils {
     private static final double PLAYER_MOVEMENT_SPEED = 0.1F;
 
     public static GameMode translateGamemodeToJE(GameType gameType) {
-        String gameTypeString = gameType.toString();
-
-        if (gameTypeString.contains("VIEWER")) {
-            return GameMode.SPECTATOR;
+        switch (gameType) {
+            case CREATIVE:
+                return GameMode.CREATIVE;
+            case ADVENTURE:
+                return GameMode.ADVENTURE;
+            case SURVIVAL_VIEWER:
+            case CREATIVE_VIEWER:
+            case SPECTATOR:
+                return GameMode.SPECTATOR;
+            default:
+                // DEFAULT is the game mode of the world, the player knows which that is
+                return GameMode.SURVIVAL;
         }
-
-        return GameMode.valueOf(gameTypeString);
     }
 
     // A java client is told how the speed of the player is made up. That of a bedrock client is a number that has

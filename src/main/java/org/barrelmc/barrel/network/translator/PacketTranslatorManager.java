@@ -122,6 +122,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(UpdateBlockPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateBlockPacket());
         bedrockTranslators.put(DisconnectPacket.class, new org.barrelmc.barrel.network.translator.bedrock.DisconnectPacket());
         bedrockTranslators.put(SetPlayerGameTypePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetPlayerGameTypePacket());
+        bedrockTranslators.put(SetDefaultGameTypePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetDefaultGameTypePacket());
         bedrockTranslators.put(ChangeDimensionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ChangeDimensionPacket());
         bedrockTranslators.put(SetEntityDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetEntityDataPacket());
         bedrockTranslators.put(SetSpawnPositionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetSpawnPositionPacket());

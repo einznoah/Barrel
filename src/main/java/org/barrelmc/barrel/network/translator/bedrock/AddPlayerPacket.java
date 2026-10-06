@@ -38,6 +38,7 @@ public class AddPlayerPacket implements BedrockPacketTranslator {
         entity.setLocation(position.getX(), position.getY(), position.getZ(), rotation.getY(), rotation.getX());
         entity.setHeadYaw(rotation.getY());
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
+        player.getEntityRuntimeIds().put(packet.getUniqueEntityId(), packet.getRuntimeEntityId());
 
         player.getJavaSession().send(new ClientboundPlayerInfoUpdatePacket(EnumSet.of(PlayerListEntryAction.ADD_PLAYER, PlayerListEntryAction.UPDATE_GAME_MODE, PlayerListEntryAction.UPDATE_LISTED, PlayerListEntryAction.UPDATE_LATENCY, PlayerListEntryAction.UPDATE_DISPLAY_NAME), new PlayerListEntry[]{new PlayerListEntry(packet.getUuid(), gameProfile, true, 10, GameMode.SURVIVAL, Component.text(Utils.lengthCutter(nameTag == null ? null : nameTag.toString(), 16)), true, 0, null, 0L, null, null)}));
         player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), packet.getUuid(), EntityType.PLAYER, position.getX(), position.getY(), position.getZ(), rotation.getY(), rotation.getX(), rotation.getY()));

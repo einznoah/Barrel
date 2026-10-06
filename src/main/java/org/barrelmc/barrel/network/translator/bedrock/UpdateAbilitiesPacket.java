@@ -19,7 +19,7 @@ public class UpdateAbilitiesPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.UpdateAbilitiesPacket packet = (org.cloudburstmc.protocol.bedrock.packet.UpdateAbilitiesPacket) pk;
 
-        if (packet.getUniqueEntityId() == player.getRuntimeEntityId()) {
+        if (packet.getUniqueEntityId() == player.getUniqueEntityId()) {
             for (AbilityLayer abilityLayer : packet.getAbilityLayers().toArray(new AbilityLayer[0])) {
                 if (abilityLayer.getLayerType() == AbilityLayer.Type.BASE) {
                     Set<Ability> abilityValues = abilityLayer.getAbilityValues();

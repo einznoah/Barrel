@@ -25,10 +25,12 @@ public class StartGamePacket implements BedrockPacketTranslator {
         org.cloudburstmc.protocol.bedrock.packet.StartGamePacket packet = (org.cloudburstmc.protocol.bedrock.packet.StartGamePacket) pk;
 
         player.setRuntimeEntityId(packet.getRuntimeEntityId());
+        player.setUniqueEntityId(packet.getUniqueEntityId());
         player.setOldPosition(packet.getPlayerPosition());
         player.setLastServerPosition(packet.getPlayerPosition());
         player.setLastServerRotation(packet.getRotation());
         player.setStartGamePacketCache(packet);
+        player.setLevelGameMode(packet.getLevelGameType());
         player.setGameMode(packet.getPlayerGameType());
 
         ClientboundLoginPacket serverJoinGamePacket = new ClientboundLoginPacket(
@@ -37,8 +39,8 @@ public class StartGamePacket implements BedrockPacketTranslator {
                 10, 16, 16, false, true, false,
                 new PlayerSpawnInfo(
                         ProxyServer.getInstance().getOverworldId(), Key.key("minecraft:overworld"), 100,
-                        TranslatorUtils.translateGamemodeToJE(packet.getPlayerGameType()),
-                        TranslatorUtils.translateGamemodeToJE(packet.getPlayerGameType()),
+                        TranslatorUtils.translateGamemodeToJE(player.getGameMode()),
+                        TranslatorUtils.translateGamemodeToJE(player.getGameMode()),
                         false, false, null, 0, 63
                 ),
                 false, false

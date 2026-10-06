@@ -82,6 +82,10 @@ public class Player extends Vector3 {
     @Setter
     @Getter
     private long runtimeEntityId;
+    // A server of mojang names an entity by this where it does not name it by its runtime id, the two are not the same
+    @Setter
+    @Getter
+    private long uniqueEntityId;
     @Getter
     private String username;
     @Getter
@@ -141,8 +145,10 @@ public class Player extends Vector3 {
     private Direction diggingFace;
 
     @Setter
-    @Getter
     private GameType gameMode = GameType.ADVENTURE;
+    // The game mode of the world, a player whose game mode is DEFAULT plays in it
+    @Setter
+    private GameType levelGameMode = GameType.SURVIVAL;
 
     @Getter
     private final Set<PlayerAuthInputData> playerAuthInputData = EnumSet.noneOf(PlayerAuthInputData.class);
@@ -154,6 +160,9 @@ public class Player extends Vector3 {
     // The entities the java client was told about, by their bedrock runtime id
     @Getter
     private final Map<Long, Entity> entities = new HashMap<>();
+    // The runtime ids of these entities by their unique id, a server removes an entity by that
+    @Getter
+    private final Map<Long, Long> entityRuntimeIds = new HashMap<>();
     // The names the bedrock server gave its item ids
     @Getter
     private final Map<Integer, ItemDefinition> itemDefinitions = new ConcurrentHashMap<>();
@@ -290,6 +299,18 @@ public class Player extends Vector3 {
                         javaSession.disconnect("Server offline " + future.cause());
                     }
                 });
+    }
+
+    public GameType getGameMode() {
+        if (this.gameMode != GameType.DEFAULT) {
+            return this.gameMode;
+        }
+        return this.levelGameMode == GameType.DEFAULT ? GameType.SURVIVAL : this.levelGameMode;
+    }
+
+    // Whether the player plays in the game mode of the world, whatever that is
+    public boolean hasLevelGameMode() {
+        return this.gameMode == GameType.DEFAULT;
     }
 
     public LoginPacket getOnlineLoginPacket() throws Exception {

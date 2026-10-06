@@ -41,6 +41,7 @@ public class AddEntityPacket implements BedrockPacketTranslator {
         entity.setLocation(position.getX(), position.getY(), position.getZ(), packet.getRotation().getY(), packet.getRotation().getX());
         entity.setHeadYaw(packet.getHeadRotation());
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
+        player.getEntityRuntimeIds().put(packet.getUniqueEntityId(), packet.getRuntimeEntityId());
 
         player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), UUID.randomUUID(), entityType, position.getX(), position.getY(), position.getZ(), Vector3d.from(motion.getX(), motion.getY(), motion.getZ()), entity.yaw, entity.pitch, entity.getHeadYaw()));
 

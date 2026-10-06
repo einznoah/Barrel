@@ -8,13 +8,16 @@ import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.level.notify.GameEvent;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundGameEventPacket;
 
-public class SetPlayerGameTypePacket implements BedrockPacketTranslator {
+public class SetDefaultGameTypePacket implements BedrockPacketTranslator {
 
     @Override
     public void translate(BedrockPacket pk, Player player) {
-        org.cloudburstmc.protocol.bedrock.packet.SetPlayerGameTypePacket packet = (org.cloudburstmc.protocol.bedrock.packet.SetPlayerGameTypePacket) pk;
+        org.cloudburstmc.protocol.bedrock.packet.SetDefaultGameTypePacket packet = (org.cloudburstmc.protocol.bedrock.packet.SetDefaultGameTypePacket) pk;
 
-        player.setGameMode(GameType.from(packet.getGamemode()));
-        player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, TranslatorUtils.translateGamemodeToJE(player.getGameMode())));
+        player.setLevelGameMode(GameType.from(packet.getGamemode()));
+        // Only a player that plays in the game mode of the world changes with it
+        if (player.hasLevelGameMode()) {
+            player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, TranslatorUtils.translateGamemodeToJE(player.getGameMode())));
+        }
     }
 }

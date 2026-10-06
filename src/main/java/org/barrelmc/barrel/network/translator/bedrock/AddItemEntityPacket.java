@@ -34,6 +34,7 @@ public class AddItemEntityPacket implements BedrockPacketTranslator {
         Entity entity = new Entity(EntityType.ITEM);
         entity.setPosition(position);
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
+        player.getEntityRuntimeIds().put(packet.getUniqueEntityId(), packet.getRuntimeEntityId());
 
         player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), UUID.randomUUID(), EntityType.ITEM, position.getX(), position.getY(), position.getZ(), Vector3d.from(motion.getX(), motion.getY(), motion.getZ()), 0, 0, 0));
         player.getJavaSession().send(new ClientboundSetEntityDataPacket((int) packet.getRuntimeEntityId(), new EntityMetadata<?, ?>[]{new ObjectEntityMetadata<>(JAVA_ITEM_METADATA, MetadataTypes.ITEM_STACK, ItemConverter.bedrockToJavaItem(packet.getItemInHand()))}));
