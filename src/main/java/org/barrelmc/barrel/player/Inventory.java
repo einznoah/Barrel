@@ -719,11 +719,17 @@ public class Inventory {
     // A java server knows by itself when the player is done eating or drinking. A bedrock server is told, by the
     // item being used a second time
     public void finishUsingItem() {
+        if (this.usedItem == null) {
+            return;
+        }
+
+        // Some servers count the time themselves, and have taken the item by now
         Slot slot = this.getHeldItemSlot();
-        if (this.usedItem != null && !slot.isEmpty() && canStack(this.usedItem, slot.get())) {
+        if (!slot.isEmpty() && canStack(this.usedItem, slot.get()) && slot.get().getCount() == this.usedItem.getCount()) {
             this.sendItemUse(slot.get());
         }
-        this.usedItem = null;
+        // Without this such a server takes the second use for the start of the next meal
+        this.releaseItem();
     }
 
     // The player stopped using the item before it was used up, which is also what shoots a bow

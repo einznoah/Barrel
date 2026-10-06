@@ -12,7 +12,6 @@
 
 - Beacons and villager trading
 - The recipe book
-- Health, hunger and respawning
 - And More...
 
 ## Credits

@@ -145,6 +145,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(CraftingDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CraftingDataPacket());
         bedrockTranslators.put(PlayerEnchantOptionsPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerEnchantOptionsPacket());
         bedrockTranslators.put(MobEffectPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MobEffectPacket());
+        bedrockTranslators.put(RespawnPacket.class, new org.barrelmc.barrel.network.translator.bedrock.RespawnPacket());
 
         // Java packets
         javaTranslators.put(ServerboundChatPacket.class, new ChatPacket());

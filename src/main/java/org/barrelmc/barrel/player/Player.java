@@ -157,6 +157,17 @@ public class Player extends Vector3 {
     @Setter
     private long overworldClockId = -1;
 
+    // What the hearts and the hunger bar of the java client show
+    @Getter
+    @Setter
+    private float health = 20;
+    @Getter
+    @Setter
+    private int food = 20;
+    @Getter
+    @Setter
+    private float saturation = 5;
+
     // The effects the player has, with their strength
     @Getter
     private final Map<Effect, Integer> effects = new HashMap<>();
