@@ -29,6 +29,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -42,6 +43,9 @@ public class PacketTranslatorManager {
     private final Map<Class<? extends Packet>, JavaPacketTranslator> javaTranslators = new HashMap<>();
     @Getter
     private final Map<Class<? extends BedrockPacket>, BedrockPacketTranslator> bedrockTranslators = new HashMap<>();
+    // What a server sends before it starts the game is not for the world: a server of mojang sends the armor of a
+    // player that has been there before, a bedrock client does not take it, and the java client is in no world yet
+    private static final Set<Class<? extends BedrockPacket>> BEFORE_GAME = Set.of(NetworkSettingsPacket.class, PlayStatusPacket.class, DisconnectPacket.class, StartGamePacket.class);
 
     private final Player player;
 
@@ -61,7 +65,9 @@ public class PacketTranslatorManager {
                 ReferenceCountUtil.retain(pk);
                 boolean accepted = this.execute(() -> {
                     try {
-                        translator.translate(pk, player);
+                        if (player.getStartGamePacketCache() != null || BEFORE_GAME.contains(pk.getClass())) {
+                            translator.translate(pk, player);
+                        }
                     } finally {
                         ReferenceCountUtil.release(pk);
                     }
