@@ -83,12 +83,15 @@ is kept, and saved as a file in the `accounts` folder next to the jar.
   stonecutters, smithing tables, grindstones, looms and cartography tables, trading with villagers
 - **The player:** health and hunger, eating, bows, potions that are drunk, thrown or linger, effects, dying and
   respawning, game modes
-- **The rest:** chat, the time of day, the scoreboard on the side, the list of players
+- **Chat and commands:** what is said, the commands of the server with their names offered while typing, and what
+  the server answers. A server sends many of its messages as the key of a text of the Bedrock client. The Java
+  client has most of these texts itself and shows them in its own language, for the others the key is shown
+- **The rest:** the time of day, the scoreboard on the side, the list of players
 
 ## Need implemented
 
 - Beacons, signs and what else a block holds
-- Commands, a message that starts with `/` is not sent as one
+- What a command takes: the Java client is told the names of the commands, not what follows them
 - The Nether and the End, a change of dimension is not told to the Java client
 - Riding: boats, minecarts and animals
 - Sounds and most particles

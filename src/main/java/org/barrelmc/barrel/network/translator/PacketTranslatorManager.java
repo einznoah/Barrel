@@ -14,6 +14,8 @@ import org.cloudburstmc.protocol.bedrock.packet.*;
 import org.geysermc.mcprotocollib.network.packet.Packet;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatCommandSignedPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientTickEndPacket;
@@ -127,6 +129,8 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(SubChunkPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SubChunkPacket());
         bedrockTranslators.put(TakeItemEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TakeItemEntityPacket());
         bedrockTranslators.put(TextPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TextPacket());
+        bedrockTranslators.put(CommandOutputPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CommandOutputPacket());
+        bedrockTranslators.put(AvailableCommandsPacket.class, new org.barrelmc.barrel.network.translator.bedrock.AvailableCommandsPacket());
         bedrockTranslators.put(PlayStatusPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayStatusPacket());
         bedrockTranslators.put(UpdateBlockPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateBlockPacket());
         // A block that changes together with an entity, sand that starts to fall for one
@@ -168,6 +172,8 @@ public class PacketTranslatorManager {
 
         // Java packets
         javaTranslators.put(ServerboundChatPacket.class, new ChatPacket());
+        javaTranslators.put(ServerboundChatCommandPacket.class, new ChatCommandPacket());
+        javaTranslators.put(ServerboundChatCommandSignedPacket.class, new ChatCommandPacket());
         javaTranslators.put(ServerboundSetCarriedItemPacket.class, new SetCarriedItemPacket());
         javaTranslators.put(ServerboundMovePlayerPosPacket.class, new MovePlayerPosPacket());
         javaTranslators.put(ServerboundMovePlayerPosRotPacket.class, new MovePlayerPosRotPacket());
