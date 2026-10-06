@@ -6,6 +6,11 @@ motd: "Barrel Proxy\nConnect to Bedrock Server"
 # Downstream server (bedrock)
 bedrockAddress: "play.venitymc.com"
 bedrockPort: 19132
+# How the bedrock server is reached (raknet|nethernet)
+# raknet is what most servers are reached over, the address and port above are those of the game.
+# With nethernet the address and port above are where the server answers to http or https, the same address a
+# bedrock client is given for such a server.
+transport: raknet
 # Use xbox login? (offline|online)
 auth: online
 

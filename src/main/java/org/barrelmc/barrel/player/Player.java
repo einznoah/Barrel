@@ -8,6 +8,8 @@ package org.barrelmc.barrel.player;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -28,6 +30,14 @@ import org.barrelmc.barrel.utils.Utils;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.barrelmc.barrel.network.nethernet.NetherNetInitializer;
+import org.barrelmc.barrel.network.nethernet.NetherNetServerTrust;
+import org.cloudburstmc.netty.channel.nethernet.NetherNetChannelFactory;
+import org.cloudburstmc.netty.channel.nethernet.config.NetherChannelOption;
+import org.cloudburstmc.netty.channel.nethernet.signaling.HttpSignalingSettings;
+import org.cloudburstmc.netty.channel.nethernet.signaling.NetherNetHTTPClientSignaling;
+import org.cloudburstmc.netty.util.nethernet.OperatorIdentity;
+import tel.schich.libdatachannel.LibDataChannelArchDetect;
 import org.cloudburstmc.netty.channel.raknet.RakChannelFactory;
 import org.cloudburstmc.netty.channel.raknet.config.RakChannelOption;
 import org.cloudburstmc.protocol.bedrock.BedrockClientSession;
@@ -51,7 +61,9 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.Clientbound
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetChunkCacheCenterPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundHelloPacket;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.interfaces.ECPrivateKey;
@@ -59,8 +71,10 @@ import java.security.interfaces.ECPublicKey;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -70,6 +84,8 @@ public class Player extends Vector3 {
     private final Session javaSession;
     @Getter
     private BedrockClientSession bedrockSession;
+    // The connection to the bedrock server, from the moment it is asked for
+    private volatile Channel bedrockChannel;
     @Getter
     private final PacketTranslatorManager packetTranslatorManager;
 
@@ -78,6 +94,15 @@ public class Player extends Vector3 {
     private ECPublicKey publicKey;
     @Getter
     private ECPrivateKey privateKey;
+    private String offlineToken;
+    // Whether the webrtc of a nethernet connection has been loaded
+    private static boolean netherNetLoaded;
+    // Where the tokens of players come from, which a nethernet server is told with the token
+    private static final String NETHERNET_AUTH_DOMAIN = "authorization.franchise.minecraft-services.net";
+    // How long a nethernet server may take to tell that it is one
+    private static final int NETHERNET_PROBE_SECONDS = 15;
+    // The kind of device the proxy says it is: the game for windows
+    private static final int DEVICE_OS = 8;
 
     @Setter
     @Getter
@@ -249,10 +274,23 @@ public class Player extends Vector3 {
     public void connect() {
         Config config = ProxyServer.getInstance().getConfig();
         BedrockCodec codec = ProxyServer.getInstance().getBedrockPacketCodec();
+        InetSocketAddress address = new InetSocketAddress(config.getBedrockAddress(), config.getBedrockPort());
+        Bootstrap bootstrap = new Bootstrap().group(ProxyServer.getInstance().getBedrockEventLoopGroup());
 
-        new Bootstrap()
-                .channelFactory(RakChannelFactory.client(NioDatagramChannel.class))
-                .group(ProxyServer.getInstance().getBedrockEventLoopGroup())
+        if (config.getTransport().equalsIgnoreCase("nethernet")) {
+            // Who joins is told before there is a connection, and asking for the token of a player can take a moment
+            CompletableFuture.runAsync(() -> {
+                try {
+                    this.connectNetherNet(bootstrap, address, codec);
+                } catch (Throwable e) {
+                    System.out.println("Could not join the server over nethernet: " + e + " [player " + this.getUsername() + "]");
+                    javaSession.disconnect("Could not join the server over nethernet: " + (e instanceof ConnectException ? e.getMessage() : e.toString()));
+                }
+            });
+            return;
+        }
+
+        bootstrap.channelFactory(RakChannelFactory.client(NioDatagramChannel.class))
                 .option(RakChannelOption.RAK_PROTOCOL_VERSION, codec.getRaknetProtocolVersion())
                 // A server tells its connections apart by this. The library leaves it at 0, and a server of mojang
                 // does not take a second connection with a number that is connected already
@@ -260,57 +298,127 @@ public class Player extends Vector3 {
                 .handler(new BedrockClientInitializer() {
                     @Override
                     protected void initSession(BedrockClientSession session) {
-                        bedrockSession = session;
-                        if (!javaSession.isConnected()) {
-                            session.disconnect();
-                            return;
-                        }
-
-                        session.setCodec(codec);
-                        // The default limits are too low for what a server sends
-                        session.getPeer().getCodecHelper().setEncodingSettings(EncodingSettings.CLIENT);
-                        // Barrel does not keep the block palette, runtime ids are translated as they are
-                        session.getPeer().getCodecHelper().setBlockDefinitions(new DefinitionRegistry<>() {
-                            @Override
-                            public BlockDefinition getDefinition(int runtimeId) {
-                                return () -> runtimeId;
-                            }
-
-                            @Override
-                            public boolean isRegistered(BlockDefinition definition) {
-                                return true;
-                            }
-                        });
-                        session.getPeer().getCodecHelper().setItemDefinitions(new DefinitionRegistry<>() {
-                            @Override
-                            public ItemDefinition getDefinition(int runtimeId) {
-                                ItemDefinition itemDefinition = itemDefinitions.get(runtimeId);
-                                return itemDefinition == null ? new SimpleItemDefinition("", runtimeId, false) : itemDefinition;
-                            }
-
-                            @Override
-                            public ItemDefinition getDefinition(String identifier) {
-                                return new SimpleItemDefinition(identifier, 0, false);
-                            }
-
-                            @Override
-                            public boolean isRegistered(ItemDefinition definition) {
-                                return true;
-                            }
-                        });
-                        session.setPacketHandler(new BedrockBatchHandler(Player.this));
-
-                        RequestNetworkSettingsPacket requestNetworkSettingsPacket = new RequestNetworkSettingsPacket();
-                        requestNetworkSettingsPacket.setProtocolVersion(codec.getProtocolVersion());
-                        session.sendPacketImmediately(requestNetworkSettingsPacket);
-                    }
-                })
-                .connect(new InetSocketAddress(config.getBedrockAddress(), config.getBedrockPort()))
-                .addListener((ChannelFutureListener) future -> {
-                    if (!future.isSuccess()) {
-                        javaSession.disconnect("Server offline " + future.cause());
+                        Player.this.initSession(session, codec);
                     }
                 });
+        this.connect(bootstrap, address);
+    }
+
+    private void connect(Bootstrap bootstrap, InetSocketAddress address) {
+        ChannelFuture connecting = bootstrap.connect(address);
+        this.bedrockChannel = connecting.channel();
+        connecting.addListener((ChannelFutureListener) future -> {
+            if (!future.isSuccess()) {
+                javaSession.disconnect("Server offline " + future.cause());
+            }
+        });
+    }
+
+    // Ends the connection to the bedrock server and waits, for no longer than the given time, until it is gone
+    public void closeBedrockConnection(long millis) {
+        Channel channel = this.bedrockChannel;
+        if (channel == null) {
+            return;
+        }
+        if (this.bedrockSession != null && this.bedrockSession.isConnected()) {
+            this.bedrockSession.disconnect();
+        } else {
+            channel.close();
+        }
+        channel.closeFuture().awaitUninterruptibly(millis);
+    }
+
+    // A server that is reached over nethernet: the address is where it answers to http, there it is asked to let the
+    // player in and tells where the connection itself goes
+    private void connectNetherNet(Bootstrap bootstrap, InetSocketAddress address, BedrockCodec codec) throws Exception {
+        synchronized (Player.class) {
+            if (!netherNetLoaded) {
+                // The webrtc a nethernet connection is made of is not written in java
+                LibDataChannelArchDetect.initialize();
+                netherNetLoaded = true;
+            }
+        }
+
+        // The game first asks a server whether it is one of nethernet, and so whether it answers to https or to
+        // http. The library would ask with more in the address than the game does, which a server of mojang
+        // answers as not found, so it is asked here and the library is told what was found
+        NetherNetHTTPClientSignaling.Probe server;
+        try {
+            server = NetherNetHTTPClientSignaling.probe(address, HttpSignalingSettings.DEFAULT).get(NETHERNET_PROBE_SECONDS, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            throw new ConnectException(e.getCause() == null || e.getCause().getMessage() == null ? e.toString() : e.getCause().getMessage());
+        }
+
+        HttpSignalingSettings settings = HttpSignalingSettings.DEFAULT.withScheme(server.scheme());
+        bootstrap.channelFactory(NetherNetChannelFactory.client(new NetherNetHTTPClientSignaling(settings)))
+                .option(NetherChannelOption.NETHER_CLIENT_IDENTITY, this.getNetherNetIdentity())
+                .option(NetherChannelOption.NETHER_CLIENT_SERVER_TRUST, NetherNetServerTrust.INSTANCE)
+                .handler(new NetherNetInitializer() {
+                    @Override
+                    protected void initSession(BedrockClientSession session) {
+                        Player.this.initSession(session, codec);
+                    }
+                });
+        this.connect(bootstrap, address);
+    }
+
+    // Who the player is, as the login tells it later: the token of the account and the key the token is for. With it
+    // the server is told that the connection is one of this player
+    private OperatorIdentity getNetherNetIdentity() throws Exception {
+        if (this.xboxAccount == null) {
+            return OperatorIdentity.fromToken(this.getOfflineKeyPair(), this.getOfflineToken(), NETHERNET_AUTH_DOMAIN);
+        }
+
+        String token = this.xboxAccount.getMinecraftMultiplayerToken().getUpToDate().getToken();
+        String issuer = parseJwt(token, 1).getString("iss");
+        String domain = issuer == null ? null : URI.create(issuer).getHost();
+        return OperatorIdentity.fromToken(this.xboxAccount.getSessionKeyPair(), token, domain == null ? NETHERNET_AUTH_DOMAIN : domain);
+    }
+
+    private void initSession(BedrockClientSession session, BedrockCodec codec) {
+        bedrockSession = session;
+        if (!javaSession.isConnected()) {
+            session.disconnect();
+            return;
+        }
+
+        session.setCodec(codec);
+        // The default limits are too low for what a server sends
+        session.getPeer().getCodecHelper().setEncodingSettings(EncodingSettings.CLIENT);
+        // Barrel does not keep the block palette, runtime ids are translated as they are
+        session.getPeer().getCodecHelper().setBlockDefinitions(new DefinitionRegistry<>() {
+            @Override
+            public BlockDefinition getDefinition(int runtimeId) {
+                return () -> runtimeId;
+            }
+
+            @Override
+            public boolean isRegistered(BlockDefinition definition) {
+                return true;
+            }
+        });
+        session.getPeer().getCodecHelper().setItemDefinitions(new DefinitionRegistry<>() {
+            @Override
+            public ItemDefinition getDefinition(int runtimeId) {
+                ItemDefinition itemDefinition = itemDefinitions.get(runtimeId);
+                return itemDefinition == null ? new SimpleItemDefinition("", runtimeId, false) : itemDefinition;
+            }
+
+            @Override
+            public ItemDefinition getDefinition(String identifier) {
+                return new SimpleItemDefinition(identifier, 0, false);
+            }
+
+            @Override
+            public boolean isRegistered(ItemDefinition definition) {
+                return true;
+            }
+        });
+        session.setPacketHandler(new BedrockBatchHandler(this));
+
+        RequestNetworkSettingsPacket requestNetworkSettingsPacket = new RequestNetworkSettingsPacket();
+        requestNetworkSettingsPacket.setProtocolVersion(codec.getProtocolVersion());
+        session.sendPacketImmediately(requestNetworkSettingsPacket);
     }
 
     public GameType getGameMode() {
@@ -361,16 +469,23 @@ public class Player extends Vector3 {
                 + ", protocol " + ProxyServer.getInstance().getBedrockPacketCodec().getProtocolVersion() + ", client data:" + fields;
     }
 
-    public LoginPacket getLoginPacket() {
-        LoginPacket loginPacket = new LoginPacket();
+    private KeyPair getOfflineKeyPair() {
+        if (this.privateKey == null) {
+            KeyPair ecdsa384KeyPair = EncryptionUtils.createKeyPair();
+            this.publicKey = (ECPublicKey) ecdsa384KeyPair.getPublic();
+            this.privateKey = (ECPrivateKey) ecdsa384KeyPair.getPrivate();
+        }
+        return new KeyPair(this.publicKey, this.privateKey);
+    }
 
-        KeyPair ecdsa384KeyPair = EncryptionUtils.createKeyPair();
-        this.publicKey = (ECPublicKey) ecdsa384KeyPair.getPublic();
-        this.privateKey = (ECPrivateKey) ecdsa384KeyPair.getPrivate();
+    // A client that is not signed in makes the token of an account itself. Before 1.26.10 it was a certificate
+    private String getOfflineToken() {
+        if (this.offlineToken != null) {
+            return this.offlineToken;
+        }
 
-        String publicKeyBase64 = Base64.getEncoder().encodeToString(this.publicKey.getEncoded());
+        String publicKeyBase64 = Base64.getEncoder().encodeToString(this.getOfflineKeyPair().getPublic().getEncoded());
 
-        // A client that is not signed in makes the token of an account itself. Before 1.26.10 it was a certificate
         JSONObject token = new JSONObject();
         token.put("aud", "api://auth-minecraft-services/multiplayer");
         token.put("exp", Instant.now().getEpochSecond() + TimeUnit.HOURS.toSeconds(6));
@@ -387,8 +502,15 @@ public class Player extends Vector3 {
         jwtHeader.put("alg", "ES384");
         jwtHeader.put("x5u", publicKeyBase64);
 
+        this.offlineToken = generateJwt(jwtHeader, token);
+        return this.offlineToken;
+    }
+
+    public LoginPacket getLoginPacket() {
+        LoginPacket loginPacket = new LoginPacket();
+
+        String signedToken = this.getOfflineToken();
         JSONObject clientData = this.getClientData();
-        String signedToken = generateJwt(jwtHeader, token);
         this.describeLogin(AuthType.SELF_SIGNED, NO_CERTIFICATES, signedToken, clientData);
         loginPacket.setAuthPayload(new LoginPayload(AuthType.SELF_SIGNED, NO_CERTIFICATES, signedToken));
         loginPacket.setClientJwt(this.signClientData(clientData));
@@ -428,7 +550,7 @@ public class Player extends Vector3 {
         // game from the store of windows 10
         skinData.put("DeviceId", java.util.UUID.randomUUID().toString().replace("-", ""));
         skinData.put("DeviceModel", "Barrel");
-        skinData.put("DeviceOS", 8);
+        skinData.put("DeviceOS", DEVICE_OS);
         skinData.put("FilterProfanity", false);
         skinData.put("GameVersion", ProxyServer.getInstance().getBedrockPacketCodec().getMinecraftVersion());
         skinData.put("GraphicsMode", 1);

@@ -36,5 +36,9 @@ public class Config {
 
     @Setter
     @Getter
+    public String transport = "raknet";
+
+    @Setter
+    @Getter
     public boolean rememberLogins = false;
 }

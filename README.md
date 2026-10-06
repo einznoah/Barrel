@@ -11,8 +11,9 @@ between the two.
 - Java 21, to build and to run
 - Maven, to build
 - Minecraft: Java Edition v26.3
-- Bedrock Edition server v26.50/v26.51 (protocol 2193) that is reached over RakNet. Worlds that are only
-  reachable over NetherNet, as those a player hosts from inside the game, are not supported.
+- Bedrock Edition server v26.50 to v26.52 (protocol 2193) that is reached over RakNet, or over NetherNet at an
+  address of its own (see [NetherNet](#nethernet)). Worlds a player hosts from inside the game, which are found
+  over Xbox Live, are not supported.
 
 ## Getting started
 
@@ -51,8 +52,22 @@ with the default config on the same machine, and join.
 | `motd` | `Barrel Proxy\nConnect to Bedrock Server` | What the server list of the Java client shows. |
 | `bedrockAddress` | `play.venitymc.com` | The address of the Bedrock server. |
 | `bedrockPort` | `19132` | The port of the Bedrock server. |
+| `transport` | `raknet` | How the Bedrock server is reached: `raknet`, as most servers are, or `nethernet`. See [NetherNet](#nethernet). |
 | `auth` | `online` | `online` signs players in to Xbox, `offline` joins with the name of the Java player for servers that do not ask for an Xbox account. |
 | `rememberLogins` | `false` | Whether a player stays signed in to Xbox, also after the proxy was restarted. See below before turning it on. |
+
+## NetherNet
+
+With `transport: nethernet` the proxy joins a server the way the game does it over NetherNet: it asks the server
+over HTTPS or HTTP to be let in, and what is played then goes over WebRTC to an address the server names.
+
+- `bedrockAddress` and `bedrockPort` are where the server answers to HTTP, the same address a Bedrock client is
+  given for it. Whether that is HTTPS or HTTP the proxy finds out itself.
+- The proxy has to reach that port over TCP, and over UDP the ports the server uses for WebRTC.
+- The WebRTC part is not written in Java. It comes with the jar for Linux, Windows and macOS, each for x86-64 and
+  ARM64.
+- A server shows a key of its own when it answers. The game asks its player once whether to trust a key it has
+  not seen before, the proxy takes the key the server shows.
 
 ## Signing in to Xbox
 
@@ -110,6 +125,9 @@ The console of the proxy tells what a Bedrock server does not like:
   secret in it.
 - `The bedrock server did not take a change of the inventory: ...` — the server did not let the player move an
   item, with the reason of the server.
+- `Could not join the server over nethernet: ...` — the server did not answer as one of NetherNet at the address
+  and port of the config, the line tells what happened instead. `Server offline ... Connection timed out` after
+  that means the server let the player in, but the connection over UDP did not come about.
 - A Java client that leaves with `Network Protocol Error` tells in its own log (`latest.log`) which packet it did
   not take, in the line that starts with `Failed to handle packet`.
 
@@ -142,6 +160,8 @@ and in [ViaBedrock](https://github.com/RaphiMC/ViaBedrock), which does the same 
 - [EZ4H](https://github.com/Project-EZ4H/EZ4H)
 - [Cloudburst Protocol](https://github.com/CloudburstMC/Protocol) and [MCProtocolLib](https://github.com/GeyserMC/MCProtocolLib),
   the packets of the two editions
+- [Cloudburst Network](https://github.com/CloudburstMC/Network) with
+  [libdatachannel](https://github.com/paullouisageneau/libdatachannel), the connections over RakNet and NetherNet
 - [MinecraftAuth](https://github.com/RaphiMC/MinecraftAuth), the sign in to Xbox
 - [Geyser](https://github.com/GeyserMC/Geyser) with its [mappings](https://github.com/GeyserMC/mappings) and the
   [mappings of ViaVersion](https://github.com/ViaVersion/Mappings), the blocks and items of the two editions

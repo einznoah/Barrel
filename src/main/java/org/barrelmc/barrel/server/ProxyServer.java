@@ -157,7 +157,21 @@ public class ProxyServer {
         return false;
     }
 
+    // When the proxy is stopped, the servers are told that their players leave. A nethernet connection that is
+    // still open would also keep the proxy from stopping at all: the webrtc it is made of waits for it
+    private void closeBedrockConnections() {
+        for (Player player : new ArrayList<>(this.onlinePlayers.values())) {
+            try {
+                player.closeBedrockConnection(2000);
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private void startServer() {
+        Runtime.getRuntime().addShutdownHook(new Thread(this::closeBedrockConnections, "Barrel shutdown"));
+
         SessionService sessionService = new SessionService();
 
         Server server = new NetworkServer(new InetSocketAddress(this.config.getBindAddress(), this.config.getPort()), MinecraftProtocol::new);
