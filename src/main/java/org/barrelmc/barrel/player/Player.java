@@ -227,6 +227,11 @@ public class Player extends Vector3 {
         ProxyServer.getInstance().getOnlinePlayers().put(loginPacket.getUsername(), this);
     }
 
+    // For what does not wait for a packet. It runs on the thread that translates the packets
+    public void runEveryTick(Runnable task) {
+        playerInputExecutor.scheduleAtFixedRate(() -> packetTranslatorManager.execute(task), 50, 50, TimeUnit.MILLISECONDS);
+    }
+
     public void startSendingPlayerInput() {
         if (!tickPlayerInputStarted) {
             tickPlayerInputStarted = true;
@@ -562,10 +567,6 @@ class PlayerAuthInputThread implements Runnable {
                 if (player.getInventory().tickItemUse()) {
                     // The inventory belongs to the thread that translates the packets
                     player.getPacketTranslatorManager().execute(() -> player.getInventory().finishUsingItem());
-                }
-                // Twice a second is often enough to ask again for what the server did not have
-                if (tick % 10 == 0 && player.getSubChunkRequests().isWaiting()) {
-                    player.getPacketTranslatorManager().execute(() -> player.getSubChunkRequests().tick());
                 }
             }
         } catch (Exception e) {

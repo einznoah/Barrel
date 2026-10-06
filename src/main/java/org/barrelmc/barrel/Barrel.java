@@ -38,6 +38,11 @@ public class Barrel {
 
     public static void main(String[] args) {
         System.out.println("Starting Barrel Proxy software, built " + getBuildTime());
+        // What a bedrock server sends at once may be more than the library takes of a client that is not known. The
+        // proxy joins the server it was told to join, and a server sends the sub chunks it was asked for at once
+        if (System.getProperty("bedrock.maxDecompressedBytes") == null) {
+            System.setProperty("bedrock.maxDecompressedBytes", String.valueOf(64 * 1024 * 1024));
+        }
         BlockConverter.init();
         ItemConverter.init();
         EnchantmentConverter.init();
