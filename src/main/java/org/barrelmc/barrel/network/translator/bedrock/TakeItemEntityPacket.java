@@ -12,6 +12,8 @@ public class TakeItemEntityPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.TakeItemEntityPacket packet = (org.cloudburstmc.protocol.bedrock.packet.TakeItemEntityPacket) pk;
 
+        player.getEntities().remove(packet.getItemRuntimeEntityId());
+
         int[] entityIds = new int[1];
         entityIds[0] = (int) packet.getItemRuntimeEntityId();
         player.getJavaSession().send(new ClientboundRemoveEntitiesPacket(entityIds));

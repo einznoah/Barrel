@@ -1,5 +1,6 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
+import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector2f;
@@ -26,7 +27,7 @@ public class PlayStatusPacket implements BedrockPacketTranslator {
 
             Vector3f pos = player.getLastServerPosition();
             Vector2f rotation = player.getLastServerRotation();
-            player.getJavaSession().send(new ClientboundPlayerPositionPacket(0, pos.getX(), pos.getY(), pos.getZ(), 0, 0, 0, rotation.getY(), rotation.getX()));
+            player.getJavaSession().send(new ClientboundPlayerPositionPacket(0, pos.getX(), pos.getY() - Entity.PLAYER_EYE_HEIGHT, pos.getZ(), 0, 0, 0, rotation.getY(), rotation.getX()));
         }
     }
 }

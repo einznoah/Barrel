@@ -6,6 +6,7 @@ import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator
 import org.barrelmc.barrel.network.translator.interfaces.JavaPacketTranslator;
 import org.barrelmc.barrel.network.translator.java.*;
 import org.barrelmc.barrel.network.translator.java.ContainerClosePacket;
+import org.barrelmc.barrel.network.translator.java.InteractPacket;
 import org.barrelmc.barrel.network.translator.java.PlayerActionPacket;
 import org.barrelmc.barrel.network.translator.java.PlayerInputPacket;
 import org.barrelmc.barrel.player.Player;
@@ -120,7 +121,15 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(SetEntityDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetEntityDataPacket());
         bedrockTranslators.put(SetSpawnPositionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetSpawnPositionPacket());
         bedrockTranslators.put(UpdateAbilitiesPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateAbilitiesPacket());
+        bedrockTranslators.put(UpdateAttributesPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateAttributesPacket());
         bedrockTranslators.put(NetworkSettingsPacket.class, new org.barrelmc.barrel.network.translator.bedrock.NetworkSettingsPacket());
+        bedrockTranslators.put(AddEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.AddEntityPacket());
+        bedrockTranslators.put(AddItemEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.AddItemEntityPacket());
+        bedrockTranslators.put(MoveEntityDeltaPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MoveEntityDeltaPacket());
+        bedrockTranslators.put(SetEntityMotionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetEntityMotionPacket());
+        bedrockTranslators.put(MobEquipmentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MobEquipmentPacket());
+        bedrockTranslators.put(MobArmorEquipmentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MobArmorEquipmentPacket());
+        bedrockTranslators.put(EntityEventPacket.class, new org.barrelmc.barrel.network.translator.bedrock.EntityEventPacket());
         bedrockTranslators.put(ItemComponentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ItemComponentPacket());
         bedrockTranslators.put(CreativeContentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CreativeContentPacket());
         bedrockTranslators.put(InventoryContentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventoryContentPacket());
@@ -149,5 +158,7 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundSetCreativeModeSlotPacket.class, new SetCreativeModeSlotPacket());
         javaTranslators.put(ServerboundUseItemOnPacket.class, new UseItemOnPacket());
         javaTranslators.put(ServerboundUseItemPacket.class, new UseItemPacket());
+        javaTranslators.put(ServerboundAttackPacket.class, new AttackPacket());
+        javaTranslators.put(ServerboundInteractPacket.class, new InteractPacket());
     }
 }

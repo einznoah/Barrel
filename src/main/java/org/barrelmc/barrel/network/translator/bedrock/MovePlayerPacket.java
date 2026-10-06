@@ -1,15 +1,12 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
+import org.barrelmc.barrel.entity.Entity;
+import org.barrelmc.barrel.network.translator.TranslatorUtils;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
-import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRotateHeadPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
-
-import java.util.Collections;
 
 public class MovePlayerPacket implements BedrockPacketTranslator {
 
@@ -24,8 +21,12 @@ public class MovePlayerPacket implements BedrockPacketTranslator {
             player.setLastServerPosition(position);
             player.setLastServerRotation(rotation.toVector2());
         } else {
-            player.getJavaSession().send(new ClientboundTeleportEntityPacket((int) packet.getRuntimeEntityId(), Vector3d.from(position.getX(), position.getY() - 1.62F, position.getZ()), Vector3d.ZERO, rotation.getY(), rotation.getX(), Collections.emptyList(), packet.isOnGround()));
-            player.getJavaSession().send(new ClientboundRotateHeadPacket((int) packet.getRuntimeEntityId(), rotation.getZ()));
+            Entity entity = player.getEntities().get(packet.getRuntimeEntityId());
+            if (entity != null) {
+                entity.setLocation(position.getX(), position.getY() - Entity.PLAYER_EYE_HEIGHT, position.getZ(), rotation.getY(), rotation.getX());
+                entity.setHeadYaw(rotation.getZ());
+                TranslatorUtils.sendEntityPosition(player, packet.getRuntimeEntityId(), entity, packet.isOnGround());
+            }
         }
     }
 }

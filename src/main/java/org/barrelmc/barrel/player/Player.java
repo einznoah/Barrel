@@ -18,6 +18,7 @@ import net.raphimc.minecraftauth.bedrock.BedrockAuthManager;
 import net.raphimc.minecraftauth.bedrock.model.MinecraftMultiplayerToken;
 import org.barrelmc.barrel.auth.AuthManager;
 import org.barrelmc.barrel.config.Config;
+import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.math.Vector3;
 import org.barrelmc.barrel.network.BedrockBatchHandler;
 import org.barrelmc.barrel.network.translator.PacketTranslatorManager;
@@ -140,6 +141,9 @@ public class Player extends Vector3 {
 
     @Getter
     private final Inventory inventory = new Inventory(this);
+    // The entities the java client was told about, by their bedrock runtime id
+    @Getter
+    private final Map<Long, Entity> entities = new HashMap<>();
     // The names the bedrock server gave its item ids
     @Getter
     private final Map<Integer, ItemDefinition> itemDefinitions = new ConcurrentHashMap<>();
@@ -151,6 +155,13 @@ public class Player extends Vector3 {
     @Getter
     @Setter
     private long overworldClockId = -1;
+
+    @Getter
+    @Setter
+    private int experienceLevel = 0;
+    @Getter
+    @Setter
+    private float experienceProgress = 0;
 
     public Player(ServerboundHelloPacket loginPacket, Session javaSession) {
         this.packetTranslatorManager = new PacketTranslatorManager(this);

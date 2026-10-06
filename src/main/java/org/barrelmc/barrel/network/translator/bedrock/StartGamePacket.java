@@ -1,6 +1,7 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
 import net.kyori.adventure.key.Key;
+import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.network.translator.TranslatorUtils;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
@@ -43,10 +44,10 @@ public class StartGamePacket implements BedrockPacketTranslator {
                 false, false
         );
         player.getJavaSession().send(serverJoinGamePacket);
+        // The server sends where the eyes of the player are
+        Vector3f position = packet.getPlayerPosition().sub(0, Entity.PLAYER_EYE_HEIGHT, 0);
         // The client has no world to center on before it received the login packet
-        player.setPosition(packet.getPlayerPosition());
-
-        Vector3f position = packet.getPlayerPosition();
+        player.setPosition(position);
         Vector2f rotation = packet.getRotation();
         ClientboundPlayerPositionPacket serverPlayerPositionRotationPacket = new ClientboundPlayerPositionPacket(0, position.getX(), position.getY(), position.getZ(), 0, 0, 0, rotation.getY(), rotation.getX());
         player.getJavaSession().send(serverPlayerPositionRotationPacket);
