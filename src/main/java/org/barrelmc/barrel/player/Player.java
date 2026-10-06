@@ -304,8 +304,6 @@ public class Player extends Vector3 {
         this.username = token.getDisplayName();
         this.xuid = token.getXuid();
         this.UUID = token.getUuid().toString();
-        String playFabId = parseJwt(token.getToken(), 1).getString("mid");
-        this.playFabId = playFabId == null ? "" : playFabId;
 
         JSONObject clientData = this.getClientData();
         this.describeLogin(AuthType.FULL, NO_CERTIFICATES, token.getToken(), clientData);
@@ -372,7 +370,10 @@ public class Player extends Vector3 {
         return generateJwt(jwtHeader, clientData);
     }
 
-    // What a client tells about itself and its skin when it joins
+    // What a client tells about itself and its skin when it joins. A server of mojang does not take a login it
+    // does not like this of, and does not say what it is. So these are the fields and the kind of values of a
+    // client that is known to be taken, no more and no less: servers do not know ThirdPartyNameOnly and PlayFabId
+    // anymore
     private JSONObject getClientData() {
         JSONObject skinData = new JSONObject();
 
@@ -380,26 +381,29 @@ public class Player extends Vector3 {
         skinData.put("ArmSize", "wide");
         skinData.put("CapeData", "");
         skinData.put("CapeId", "");
-        skinData.put("PlayFabId", this.playFabId);
         skinData.put("CapeImageHeight", 0);
         skinData.put("CapeImageWidth", 0);
         skinData.put("CapeOnClassicSkin", false);
         skinData.put("ClientEditorConnectionIntent", 0);
         skinData.put("ClientIsEditorCapable", false);
-        skinData.put("ClientRandomId", new Random().nextLong());
+        // Servers read it as a number without a sign
+        skinData.put("ClientRandomId", new Random().nextLong() >>> 1);
         skinData.put("CompatibleWithClientSideChunkGen", false);
         skinData.put("CurrentInputMode", 1);
         skinData.put("DefaultInputMode", 1);
-        skinData.put("DeviceId", java.util.UUID.randomUUID().toString());
+        // The game for windows, it writes the id of a device without dashes. There is no 7 anymore, that was the
+        // game from the store of windows 10
+        skinData.put("DeviceId", java.util.UUID.randomUUID().toString().replace("-", ""));
         skinData.put("DeviceModel", "Barrel");
-        skinData.put("DeviceOS", 7);
+        skinData.put("DeviceOS", 8);
         skinData.put("FilterProfanity", false);
         skinData.put("GameVersion", ProxyServer.getInstance().getBedrockPacketCodec().getMinecraftVersion());
-        skinData.put("GraphicsMode", 0);
-        skinData.put("GuiScale", 0);
+        skinData.put("GraphicsMode", 1);
+        skinData.put("GuiScale", -1);
         skinData.put("LanguageCode", "en_US");
         skinData.put("MaxViewDistance", this.renderDistance);
-        skinData.put("MemoryTier", 0);
+        // The highest every server knows, some count from one below
+        skinData.put("MemoryTier", 4);
         skinData.put("OverrideSkin", false);
         skinData.put("PersonaPieces", new JSONArray());
         skinData.put("PersonaSkin", false);
@@ -414,18 +418,15 @@ public class Player extends Vector3 {
         skinData.put("SkinColor", "#0");
         skinData.put("SkinData", ProxyServer.getInstance().getDefaultSkinData());
         skinData.put("SkinGeometryData", Base64.getEncoder().encodeToString(ProxyServer.getInstance().getDefaultSkinGeometry().getBytes()));
-        skinData.put("SkinId", this.UUID + ".Custom");
+        skinData.put("SkinId", java.util.UUID.randomUUID().toString());
         skinData.put("SkinImageHeight", 64);
         skinData.put("SkinImageWidth", 64);
-        skinData.put("SkinResourcePatch", "ewogICAiZ2VvbWV0cnkiIDogewogICAgICAiZGVmYXVsdCIgOiAiZ2VvbWV0cnkuaHVtYW5vaWQuY3VzdG9tIgogICB9Cn0K");
+        skinData.put("SkinResourcePatch", Base64.getEncoder().encodeToString("{\"geometry\":{\"default\":\"geometry.humanoid.custom\"}}".getBytes(StandardCharsets.UTF_8)));
         skinData.put("ThirdPartyName", this.username);
-        skinData.put("ThirdPartyNameOnly", false);
         skinData.put("UIProfile", 0);
         skinData.put("IsEditorMode", false);
-        skinData.put("TrustedSkin", true);
-        skinData.put("SkinGeometryDataEngineVersion", Base64.getEncoder().encodeToString(ProxyServer.getInstance().getBedrockPacketCodec().getMinecraftVersion().getBytes()));
-        skinData.put("PartyId", "");
-        skinData.put("IsPartyLeader", false);
+        skinData.put("TrustedSkin", false);
+        skinData.put("SkinGeometryDataEngineVersion", Base64.getEncoder().encodeToString("0.0.0".getBytes(StandardCharsets.UTF_8)));
         // Clients send this since 1.26.40, a server does not take a login without it
         skinData.put("ProfileHash", "");
 
