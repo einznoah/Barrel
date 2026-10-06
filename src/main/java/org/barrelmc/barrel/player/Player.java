@@ -157,6 +157,8 @@ public class Player extends Vector3 {
 
     @Getter
     private final Inventory inventory = new Inventory(this);
+    @Getter
+    private final SubChunkRequests subChunkRequests = new SubChunkRequests(this);
     // The entities the java client was told about, by their bedrock runtime id
     @Getter
     private final Map<Long, Entity> entities = new HashMap<>();
@@ -560,6 +562,10 @@ class PlayerAuthInputThread implements Runnable {
                 if (player.getInventory().tickItemUse()) {
                     // The inventory belongs to the thread that translates the packets
                     player.getPacketTranslatorManager().execute(() -> player.getInventory().finishUsingItem());
+                }
+                // Twice a second is often enough to ask again for what the server did not have
+                if (tick % 10 == 0 && player.getSubChunkRequests().isWaiting()) {
+                    player.getPacketTranslatorManager().execute(() -> player.getSubChunkRequests().tick());
                 }
             }
         } catch (Exception e) {

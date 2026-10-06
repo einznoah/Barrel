@@ -116,6 +116,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(SetTimePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetTimePacket());
         bedrockTranslators.put(SyncWorldClocksPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SyncWorldClocksPacket());
         bedrockTranslators.put(StartGamePacket.class, new org.barrelmc.barrel.network.translator.bedrock.StartGamePacket());
+        bedrockTranslators.put(SubChunkPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SubChunkPacket());
         bedrockTranslators.put(TakeItemEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TakeItemEntityPacket());
         bedrockTranslators.put(TextPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TextPacket());
         bedrockTranslators.put(PlayStatusPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayStatusPacket());

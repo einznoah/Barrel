@@ -25,6 +25,8 @@ public class PlayStatusPacket implements BedrockPacketTranslator {
             setLocalPlayerAsInitializedPacket.setRuntimeEntityId(player.getRuntimeEntityId());
             player.getBedrockSession().sendPacket(setLocalPlayerAsInitializedPacket);
 
+            player.getSubChunkRequests().start();
+
             Vector3f pos = player.getLastServerPosition();
             Vector2f rotation = player.getLastServerRotation();
             player.getJavaSession().send(new ClientboundPlayerPositionPacket(0, pos.getX(), pos.getY() - Entity.PLAYER_EYE_HEIGHT, pos.getZ(), 0, 0, 0, rotation.getY(), rotation.getX()));

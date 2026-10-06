@@ -31,40 +31,51 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket packet = (org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket) pk;
 
-        // TODO: Request the sub chunks when the server does not send them along
-        int subChunksLength = packet.isRequestSubChunks() ? 0 : packet.getSubChunksLength();
         ChunkSection[] chunkSections = Utils.createChunkSections();
+        if (packet.isRequestSubChunks()) {
+            // The server waits to be asked for the sub chunks, the chunk is sent when they are there
+            player.getSubChunkRequests().request(packet.getChunkX(), packet.getChunkZ(), packet.getDimension(), packet.getSubChunkLimit(), chunkSections);
+            return;
+        }
+
         boolean hashedBlockIds = player.getStartGamePacketCache().isBlockNetworkIdsHashed();
-        int minSection = ProxyServer.getInstance().getOverworldMinSection();
         // Only the bedrock overworld goes below y 0
-        int firstSection = packet.getDimension() == 0 ? 0 : -minSection;
+        int firstSection = packet.getDimension() == 0 ? 0 : -ProxyServer.getInstance().getOverworldMinSection();
 
         ByteBuf byteBuf = packet.getData();
 
-        for (int subChunkIndex = 0; subChunkIndex < subChunksLength; subChunkIndex++) {
-            int sectionIndex = firstSection + subChunkIndex;
-            int chunkVersion = byteBuf.readByte();
-            if (chunkVersion != 1 && chunkVersion != 8 && chunkVersion != 9) {
-                // TODO: Support chunk version 0 (pm 3.0.0 legacy chunk)
-                continue;
-            }
-
-            byte storageSize = 1;
-            if (chunkVersion != 1) {
-                storageSize = byteBuf.readByte();
-            }
-            if (chunkVersion == 9) {
-                sectionIndex = byteBuf.readByte() - minSection; // height
-            }
-
-            // The java world is not as high as the bedrock one, read the sub chunk anyway to get to the next one
-            ChunkSection chunkSection = sectionIndex >= 0 && sectionIndex < chunkSections.length ? chunkSections[sectionIndex] : Utils.createChunkSection();
-            networkDecodeVersionEight(byteBuf, chunkSection, storageSize, hashedBlockIds);
+        for (int subChunkIndex = 0; subChunkIndex < packet.getSubChunksLength(); subChunkIndex++) {
+            readSubChunk(byteBuf, chunkSections, firstSection + subChunkIndex, hashedBlockIds);
             //TODO: Read biome
         }
 
+        sendChunk(player, packet.getChunkX(), packet.getChunkZ(), chunkSections);
+    }
+
+    // Reads a sub chunk into the section it is for. A sub chunk that tells its height itself goes to that one
+    public static void readSubChunk(ByteBuf byteBuf, ChunkSection[] chunkSections, int sectionIndex, boolean hashedBlockIds) {
+        int chunkVersion = byteBuf.readByte();
+        if (chunkVersion != 1 && chunkVersion != 8 && chunkVersion != 9) {
+            // TODO: Support chunk version 0 (pm 3.0.0 legacy chunk)
+            return;
+        }
+
+        byte storageSize = 1;
+        if (chunkVersion != 1) {
+            storageSize = byteBuf.readByte();
+        }
+        if (chunkVersion == 9) {
+            sectionIndex = byteBuf.readByte() - ProxyServer.getInstance().getOverworldMinSection(); // height
+        }
+
+        // The java world is not as high as the bedrock one, read the sub chunk anyway to get to the next one
+        ChunkSection chunkSection = sectionIndex >= 0 && sectionIndex < chunkSections.length ? chunkSections[sectionIndex] : Utils.createChunkSection();
+        networkDecodeVersionEight(byteBuf, chunkSection, storageSize, hashedBlockIds);
+    }
+
+    public static void sendChunk(Player player, int chunkX, int chunkZ, ChunkSection[] chunkSections) {
         ClientboundLevelChunkWithLightPacket chunkPacket = new ClientboundLevelChunkWithLightPacket(
-                packet.getChunkX(), packet.getChunkZ(),
+                chunkX, chunkZ,
                 Utils.writeChunkSections(chunkSections), Collections.singletonMap(HeightmapTypes.MOTION_BLOCKING, new long[37]), new BlockEntityInfo[0],
                 new LightUpdateData(new BitSet(), new BitSet(), new BitSet(), new BitSet(), Collections.emptyList(), Collections.emptyList())
         );
@@ -72,7 +83,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         player.getJavaSession().send(chunkPacket);
     }
 
-    public void networkDecodeVersionEight(ByteBuf byteBuf, ChunkSection chunkSection, byte storageSize, boolean hashedBlockIds) {
+    public static void networkDecodeVersionEight(ByteBuf byteBuf, ChunkSection chunkSection, byte storageSize, boolean hashedBlockIds) {
         for (int storageReadIndex = 0; storageReadIndex < storageSize; storageReadIndex++) {
             if (storageReadIndex > 1) {
                 return;
