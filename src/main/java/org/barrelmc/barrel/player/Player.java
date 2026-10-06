@@ -135,6 +135,10 @@ public class Player extends Vector3 {
     @Setter
     @Getter
     private boolean flying = false;
+    // Whether the server has been told that the player is done loading the world it joined
+    @Setter
+    @Getter
+    private boolean spawned = false;
     @Getter
     private final PlayerInput input = new PlayerInput(this);
     @Setter

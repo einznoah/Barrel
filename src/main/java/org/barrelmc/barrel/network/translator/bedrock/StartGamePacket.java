@@ -9,7 +9,9 @@ import org.barrelmc.barrel.server.ProxyServer;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.cloudburstmc.protocol.bedrock.data.ServerboundLoadingScreenPacketType;
 import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ServerboundLoadingScreenPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EntityEvent;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerSpawnInfo;
 import org.geysermc.mcprotocollib.protocol.data.game.level.notify.GameEvent;
@@ -62,5 +64,11 @@ public class StartGamePacket implements BedrockPacketTranslator {
         chunkRadiusPacket.setRadius(player.getRenderDistance());
         chunkRadiusPacket.setMaxRadius(player.getRenderDistance());
         player.getBedrockSession().sendPacket(chunkRadiusPacket);
+
+        // A bedrock client shows a loading screen from here until it has spawned. A server of mojang goes by what it is
+        // told of that screen: until it is told that it has closed, no mob sees the player and nothing the player does counts
+        ServerboundLoadingScreenPacket loadingScreenPacket = new ServerboundLoadingScreenPacket();
+        loadingScreenPacket.setType(ServerboundLoadingScreenPacketType.START_LOADING_SCREEN);
+        player.getBedrockSession().sendPacket(loadingScreenPacket);
     }
 }
