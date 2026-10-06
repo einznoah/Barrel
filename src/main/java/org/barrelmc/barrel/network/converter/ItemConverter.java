@@ -16,11 +16,14 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantments;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ItemConverter {
 
@@ -28,6 +31,10 @@ public class ItemConverter {
     public static final HashMap<String, Integer> BEDROCK_ITEM_TO_JAVA_ITEM = new HashMap<>();
     public static final HashMap<Integer, String> JAVA_ITEM_TO_BEDROCK_ITEM = new HashMap<>();
     public static final HashMap<Integer, Integer> JAVA_ITEM_MAX_STACK_SIZE = new HashMap<>();
+    private static final List<String> BEDROCK_FUEL_TAGS = List.of("minecraft:coals", "minecraft:logs_that_burn", "minecraft:planks", "minecraft:wooden_slabs");
+    private static final Set<String> BEDROCK_FUELS = Set.of("minecraft:coal_block", "minecraft:lava_bucket", "minecraft:blaze_rod", "minecraft:dried_kelp_block", "minecraft:stick", "minecraft:bamboo");
+    // The bedrock items of the item tags, a recipe can ask for any item of a tag
+    public static final HashMap<String, Set<String>> BEDROCK_ITEM_TAGS = new HashMap<>();
 
     // Shown for the bedrock items java does not have
     private static int unknownJavaItem = 0;
@@ -60,6 +67,33 @@ public class ItemConverter {
                 unknownJavaItem = javaItemId;
             }
         }
+
+        jsonObject = FileManager.getJsonObjectFromResource("bedrock_item_tags.json");
+
+        assert jsonObject != null;
+
+        for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+            Set<String> bedrockItems = new HashSet<>();
+            for (JsonElement bedrockItem : entry.getValue().getAsJsonArray()) {
+                bedrockItems.add(bedrockItem.getAsString());
+            }
+            BEDROCK_ITEM_TAGS.put(entry.getKey(), bedrockItems);
+        }
+    }
+
+    // What a shift click puts in the fuel slot of a furnace. Only the common fuels, a furnace burns much more than these
+    public static boolean isBedrockFuel(ItemData item) {
+        for (String itemTag : BEDROCK_FUEL_TAGS) {
+            if (isInBedrockItemTag(item, itemTag)) {
+                return true;
+            }
+        }
+        return BEDROCK_FUELS.contains(item.getDefinition().getIdentifier());
+    }
+
+    public static boolean isInBedrockItemTag(ItemData item, String itemTag) {
+        Set<String> bedrockItems = BEDROCK_ITEM_TAGS.get(itemTag);
+        return bedrockItems != null && bedrockItems.contains(item.getDefinition().getIdentifier());
     }
 
     public static boolean isEmpty(ItemData item) {
@@ -102,7 +136,15 @@ public class ItemConverter {
                 components.put(DataComponentTypes.DAMAGE, tag.getInt("Damage"));
             }
             if (tag.containsKey("ench", NbtType.LIST)) {
-                components.put(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+                Map<Integer, Integer> enchantments = EnchantmentConverter.bedrockToJavaEnchantments(tag);
+                if (enchantments.isEmpty()) {
+                    // Enchanted with something java does not have
+                    components.put(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+                } else {
+                    // An enchanted book holds its enchantments instead of being enchanted with them
+                    boolean stored = item.getDefinition().getIdentifier().equals("minecraft:enchanted_book");
+                    components.put(stored ? DataComponentTypes.STORED_ENCHANTMENTS : DataComponentTypes.ENCHANTMENTS, new ItemEnchantments(enchantments));
+                }
             }
 
             NbtMap display = tag.getCompound("display", null);

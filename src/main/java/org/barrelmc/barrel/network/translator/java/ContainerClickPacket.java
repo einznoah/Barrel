@@ -74,7 +74,7 @@ public class ContainerClickPacket implements JavaPacketTranslator {
                 }
                 break;
             default:
-                // TODO: the crafting grid
+                // The middle button, it only does something in the creative inventory
                 break;
         }
 

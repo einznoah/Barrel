@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Regenerates src/main/resources/runtime_items.json.
+"""Regenerates src/main/resources/runtime_items.json and bedrock_item_tags.json.
 
-Run this whenever the Java version Barrel targets changes. Both inputs are in
-https://github.com/GeyserMC/mappings (use the commit for that Java version):
+Run this whenever the Java or Bedrock version Barrel targets changes. The first two inputs are
+in https://github.com/GeyserMC/mappings (use the commit for that Java version):
 
   --items       items.json (Java item -> Bedrock item)
   --components  item_data_components.json (Java item ids and their default components)
+  --item-tags   item_tags.<bedrock version>.json from https://github.com/GeyserMC/Geyser
+                (core/src/main/resources/bedrock), the items of the tags recipes ask for
 
 Bedrock item runtime ids are not in the output, every server sends its own.
 """
@@ -35,6 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--items', required=True)
     parser.add_argument('--components', required=True)
+    parser.add_argument('--item-tags', required=True)
     parser.add_argument('--output', default=os.path.join(os.path.dirname(__file__), '..', 'src', 'main', 'resources'))
     args = parser.parse_args()
 
@@ -67,7 +70,12 @@ def main():
     with open(os.path.join(args.output, 'runtime_items.json'), 'w') as file:
         json.dump(runtime_items, file, indent=2)
 
-    print('%d Java items mapped' % len(runtime_items))
+    with open(args.item_tags) as file:
+        item_tags = json.load(file)
+    with open(os.path.join(args.output, 'bedrock_item_tags.json'), 'w') as file:
+        json.dump({tag: sorted(items) for tag, items in sorted(item_tags.items())}, file, indent=2)
+
+    print('%d Java items mapped, %d Bedrock item tags' % (len(runtime_items), len(item_tags)))
 
 
 if __name__ == '__main__':

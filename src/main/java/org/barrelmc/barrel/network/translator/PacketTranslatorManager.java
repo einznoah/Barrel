@@ -16,8 +16,10 @@ import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
 import org.geysermc.mcprotocollib.protocol.packet.common.serverbound.ServerboundClientInformationPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.ServerboundClientCommandPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerButtonClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClickPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundContainerClosePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundRenameItemPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSeenAdvancementsPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSetCreativeModeSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
@@ -138,6 +140,9 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(PlayerHotbarPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerHotbarPacket());
         bedrockTranslators.put(ContainerOpenPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerOpenPacket());
         bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.ContainerClosePacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerClosePacket());
+        bedrockTranslators.put(ContainerSetDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerSetDataPacket());
+        bedrockTranslators.put(CraftingDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CraftingDataPacket());
+        bedrockTranslators.put(PlayerEnchantOptionsPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerEnchantOptionsPacket());
 
         // Java packets
         javaTranslators.put(ServerboundChatPacket.class, new ChatPacket());
@@ -155,6 +160,8 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundPlayerAbilitiesPacket.class, new PlayerAbilitiesPacket());
         javaTranslators.put(ServerboundContainerClickPacket.class, new ContainerClickPacket());
         javaTranslators.put(ServerboundContainerClosePacket.class, new ContainerClosePacket());
+        javaTranslators.put(ServerboundContainerButtonClickPacket.class, new ContainerButtonClickPacket());
+        javaTranslators.put(ServerboundRenameItemPacket.class, new RenameItemPacket());
         javaTranslators.put(ServerboundSetCreativeModeSlotPacket.class, new SetCreativeModeSlotPacket());
         javaTranslators.put(ServerboundUseItemOnPacket.class, new UseItemOnPacket());
         javaTranslators.put(ServerboundUseItemPacket.class, new UseItemPacket());

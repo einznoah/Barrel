@@ -10,8 +10,8 @@
 
 ## Need implemented
 
-- Crafting
-- Furnaces, anvils and the other containers that are not a chest, dispenser or hopper
+- Stonecutters, smithing tables, grindstones, looms, cartography tables, beacons and villager trading
+- The recipe book
 - And More...
 
 ## Credits
