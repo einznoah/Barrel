@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import org.barrelmc.barrel.network.converter.BlockConverter;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
+import org.barrelmc.barrel.player.BedrockBlocks;
 import org.barrelmc.barrel.player.Player;
 import org.barrelmc.barrel.server.ProxyServer;
 import org.barrelmc.barrel.utils.Utils;
@@ -32,9 +33,10 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket packet = (org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket) pk;
 
         ChunkSection[] chunkSections = Utils.createChunkSections();
+        BedrockBlocks.Column bedrockBlocks = player.getBedrockBlocks().startChunk(packet.getChunkX(), packet.getChunkZ());
         if (packet.isRequestSubChunks()) {
             // The server waits to be asked for the sub chunks, the chunk is sent when they are there
-            player.getSubChunkRequests().request(packet.getChunkX(), packet.getChunkZ(), packet.getDimension(), packet.getSubChunkLimit(), chunkSections);
+            player.getSubChunkRequests().request(packet.getChunkX(), packet.getChunkZ(), packet.getDimension(), packet.getSubChunkLimit(), chunkSections, bedrockBlocks);
             return;
         }
 
@@ -45,7 +47,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         ByteBuf byteBuf = packet.getData();
 
         for (int subChunkIndex = 0; subChunkIndex < packet.getSubChunksLength(); subChunkIndex++) {
-            readSubChunk(byteBuf, chunkSections, firstSection + subChunkIndex, hashedBlockIds);
+            readSubChunk(byteBuf, chunkSections, firstSection + subChunkIndex, hashedBlockIds, bedrockBlocks);
             //TODO: Read biome
         }
 
@@ -53,7 +55,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
     }
 
     // Reads a sub chunk into the section it is for. A sub chunk that tells its height itself goes to that one
-    public static void readSubChunk(ByteBuf byteBuf, ChunkSection[] chunkSections, int sectionIndex, boolean hashedBlockIds) {
+    public static void readSubChunk(ByteBuf byteBuf, ChunkSection[] chunkSections, int sectionIndex, boolean hashedBlockIds, BedrockBlocks.Column bedrockBlocks) {
         int chunkVersion = byteBuf.readByte();
         if (chunkVersion != 1 && chunkVersion != 8 && chunkVersion != 9) {
             // TODO: Support chunk version 0 (pm 3.0.0 legacy chunk)
@@ -70,7 +72,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
 
         // The java world is not as high as the bedrock one, read the sub chunk anyway to get to the next one
         ChunkSection chunkSection = sectionIndex >= 0 && sectionIndex < chunkSections.length ? chunkSections[sectionIndex] : Utils.createChunkSection();
-        networkDecodeVersionEight(byteBuf, chunkSection, storageSize, hashedBlockIds);
+        networkDecodeVersionEight(byteBuf, chunkSection, storageSize, hashedBlockIds, bedrockBlocks, sectionIndex);
     }
 
     public static void sendChunk(Player player, int chunkX, int chunkZ, ChunkSection[] chunkSections) {
@@ -83,7 +85,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         player.getJavaSession().send(chunkPacket);
     }
 
-    public static void networkDecodeVersionEight(ByteBuf byteBuf, ChunkSection chunkSection, byte storageSize, boolean hashedBlockIds) {
+    public static void networkDecodeVersionEight(ByteBuf byteBuf, ChunkSection chunkSection, byte storageSize, boolean hashedBlockIds, BedrockBlocks.Column bedrockBlocks, int sectionIndex) {
         for (int storageReadIndex = 0; storageReadIndex < storageSize; storageReadIndex++) {
             if (storageReadIndex > 1) {
                 return;
@@ -121,6 +123,11 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
                         e.printStackTrace();
                     }
                 }
+            }
+
+            if (storageReadIndex == 0 && isRuntime) {
+                // The blocks as the server has them, for what the server is told of a block later
+                bedrockBlocks.setSection(sectionIndex, bitArray, sectionPalette);
             }
 
             int index = 0;

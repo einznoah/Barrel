@@ -15,6 +15,8 @@ public class ChangeDimensionPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.ChangeDimensionPacket packet = (org.cloudburstmc.protocol.bedrock.packet.ChangeDimensionPacket) pk;
 
+        player.getBedrockBlocks().clear();
+
         // The server names the loading screen of a change of dimension, and waits to be told that it opened and closed
         if (packet.getLoadingScreenId() != null) {
             ServerboundLoadingScreenPacket loadingScreenPacket = new ServerboundLoadingScreenPacket();

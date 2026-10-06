@@ -25,6 +25,9 @@ public class BlockConverter {
 
     @Getter
     private static int javaBlockStateCount = 0;
+    // What a bedrock server calls air, by the place of the block in its list and by the hash of the block
+    private static int bedrockAirRuntimeId;
+    private static int bedrockAirHash;
 
     public static void init() {
         JsonObject jsonObject = FileManager.getJsonObjectFromResource("runtime_blocks.json");
@@ -40,6 +43,10 @@ public class BlockConverter {
             BEDROCK_BLOCK_RUNTIME_TO_JAVA_BLOCK_STATE.put(bedrockRuntimeId, javaStateId);
             BEDROCK_BLOCK_HASH_TO_JAVA_BLOCK_STATE.put(blockEntry.get("bedrock_network_id").getAsInt(), javaStateId);
             javaBlockStateCount = Math.max(javaBlockStateCount, javaStateId + 1);
+            if (bedrockName.equals("minecraft:air")) {
+                bedrockAirRuntimeId = bedrockRuntimeId;
+                bedrockAirHash = blockEntry.get("bedrock_network_id").getAsInt();
+            }
             if (bedrockName.equals("minecraft:water") || bedrockName.equals("minecraft:flowing_water")) {
                 JAVA_WATER_BLOCK.set(javaStateId);
             }
@@ -53,6 +60,10 @@ public class BlockConverter {
                 javaBlockStateCount = Math.max(javaBlockStateCount, waterlogged.getAsInt() + 1);
             }
         }
+    }
+
+    public static int getBedrockAirId(boolean hashed) {
+        return hashed ? bedrockAirHash : bedrockAirRuntimeId;
     }
 
     // Convert mc bedrock runtime block id to java block state id

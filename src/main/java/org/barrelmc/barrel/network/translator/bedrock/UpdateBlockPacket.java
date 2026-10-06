@@ -16,6 +16,7 @@ public class UpdateBlockPacket implements BedrockPacketTranslator {
 
         if (packet.getDataLayer() == 0) {
             Vector3i pos = packet.getBlockPosition();
+            player.getBedrockBlocks().setBlock(pos, packet.getDefinition().getRuntimeId());
             int blockState = BlockConverter.bedrockRuntimeToJavaStateId(packet.getDefinition().getRuntimeId(), player.getStartGamePacketCache().isBlockNetworkIdsHashed());
             BlockChangeEntry blockChangeRecord = new BlockChangeEntry(pos, blockState);
             player.getJavaSession().send(new ClientboundBlockUpdatePacket(blockChangeRecord));

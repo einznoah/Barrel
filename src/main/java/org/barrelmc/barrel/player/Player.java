@@ -166,6 +166,8 @@ public class Player extends Vector3 {
     private final Inventory inventory = new Inventory(this);
     @Getter
     private final SubChunkRequests subChunkRequests = new SubChunkRequests(this);
+    @Getter
+    private final BedrockBlocks bedrockBlocks = new BedrockBlocks(this);
     // The entities the java client was told about, by their bedrock runtime id
     @Getter
     private final Map<Long, Entity> entities = new HashMap<>();

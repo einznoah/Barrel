@@ -51,16 +51,18 @@ public class SubChunkRequests {
         private final int x;
         private final int z;
         private final ChunkSection[] sections;
+        private final BedrockBlocks.Column bedrockBlocks;
         // The heights of the sub chunks that are not there yet
         private final Set<Integer> missing = new HashSet<>();
         // The tick each of those was asked for that no answer came for yet
         private final Map<Integer, Long> asked = new HashMap<>();
         private final long since;
 
-        private PendingChunk(int x, int z, ChunkSection[] sections, long since) {
+        private PendingChunk(int x, int z, ChunkSection[] sections, BedrockBlocks.Column bedrockBlocks, long since) {
             this.x = x;
             this.z = z;
             this.sections = sections;
+            this.bedrockBlocks = bedrockBlocks;
             this.since = since;
         }
     }
@@ -84,7 +86,7 @@ public class SubChunkRequests {
 
     // A chunk came without its sub chunks. The limit is the last one that is not air, counted from the lowest,
     // there is none when it is below 0
-    public void request(int chunkX, int chunkZ, int dimension, int limit, ChunkSection[] sections) {
+    public void request(int chunkX, int chunkZ, int dimension, int limit, ChunkSection[] sections, BedrockBlocks.Column bedrockBlocks) {
         if (dimension != this.dimension) {
             this.clear();
             this.dimension = dimension;
@@ -98,7 +100,7 @@ public class SubChunkRequests {
         int height = getSubChunkCount(dimension);
         int count = limit < 0 ? height : Math.max(1, Math.min(limit + 1, height));
 
-        PendingChunk chunk = new PendingChunk(chunkX, chunkZ, sections, this.tick);
+        PendingChunk chunk = new PendingChunk(chunkX, chunkZ, sections, bedrockBlocks, this.tick);
         for (int y = first; y < first + count; y++) {
             chunk.missing.add(y);
             this.queue.add(Vector3i.from(chunkX, y, chunkZ));
@@ -210,7 +212,7 @@ public class SubChunkRequests {
                     ByteBuf data = subChunk.getData();
                     if (data != null && data.isReadable()) {
                         try {
-                            LevelChunkPacket.readSubChunk(data, chunk.sections, position.getY() - minSection, hashedBlockIds);
+                            LevelChunkPacket.readSubChunk(data, chunk.sections, position.getY() - minSection, hashedBlockIds, chunk.bedrockBlocks);
                         } catch (RuntimeException e) {
                             // What was read of it stays, as a bedrock client does it
                         }

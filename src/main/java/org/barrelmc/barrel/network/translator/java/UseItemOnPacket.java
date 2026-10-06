@@ -5,7 +5,12 @@ import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.protocol.bedrock.data.PlayerActionType;
+import org.cloudburstmc.protocol.bedrock.data.GameType;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerId;
 import org.cloudburstmc.protocol.bedrock.data.inventory.HandSlot;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryActionData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventorySource;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
 import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.ItemUseTransaction;
 import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
@@ -57,10 +62,19 @@ public class UseItemOnPacket implements JavaPacketTranslator {
         inventoryTransactionPacket.setBlockFace(packet.getFace().ordinal());
         inventoryTransactionPacket.setHotbarSlot(player.getInventory().getHeldSlot());
         inventoryTransactionPacket.setHand(HandSlot.MAINHAND);
-        inventoryTransactionPacket.setItemInHand(player.getInventory().getHeldItemSlot().get());
+        ItemData heldItem = player.getInventory().getHeldItemSlot().get();
+        // A block that is put down is one less in the hand, the server is told what the client expects
+        ItemData leftItem = heldItem;
+        if (heldItem.getBlockDefinition() != null && player.getGameMode() != GameType.CREATIVE) {
+            leftItem = heldItem.getCount() > 1 ? heldItem.toBuilder().count(heldItem.getCount() - 1).build() : ItemData.AIR;
+        }
+        inventoryTransactionPacket.getActions().add(new InventoryActionData(InventorySource.fromContainerWindowId(ContainerId.INVENTORY), player.getInventory().getHeldSlot(), heldItem, leftItem, 0));
+        inventoryTransactionPacket.setItemInHand(heldItem);
         inventoryTransactionPacket.setPlayerPosition(player.getVector3f());
         inventoryTransactionPacket.setClickPosition(Vector3f.from(packet.getCursorX(), packet.getCursorY(), packet.getCursorZ()));
-        inventoryTransactionPacket.setBlockDefinition(() -> 0);
+        // A server of mojang does not take a click on a block it has another block at
+        int clickedBlock = player.getBedrockBlocks().getBlock(packet.getPosition());
+        inventoryTransactionPacket.setBlockDefinition(() -> clickedBlock);
         inventoryTransactionPacket.setClientInteractPrediction(ItemUseTransaction.PredictedResult.SUCCESS);
 
         player.getBedrockSession().sendPacket(inventoryTransactionPacket);

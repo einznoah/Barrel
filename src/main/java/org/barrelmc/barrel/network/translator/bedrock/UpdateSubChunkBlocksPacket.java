@@ -17,6 +17,7 @@ public class UpdateSubChunkBlocksPacket implements BedrockPacketTranslator {
         boolean hashedBlockIds = player.getStartGamePacketCache().isBlockNetworkIdsHashed();
         // The extra blocks are the water a block is in, as with a single block they are left out
         for (org.cloudburstmc.protocol.bedrock.data.BlockChangeEntry block : packet.getStandardBlocks()) {
+            player.getBedrockBlocks().setBlock(block.getPosition(), block.getDefinition().getRuntimeId());
             int blockState = BlockConverter.bedrockRuntimeToJavaStateId(block.getDefinition().getRuntimeId(), hashedBlockIds);
             player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(block.getPosition(), blockState)));
         }
