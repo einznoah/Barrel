@@ -45,7 +45,8 @@ public class EntityDataConverter {
     private static final int JAVA_BABY = 16;
     private static final int JAVA_CLOUD_RADIUS = 8;
     private static final int JAVA_CLOUD_PARTICLE = 10;
-    private static final int JAVA_SHEEP_WOOL = 17;
+    // After whether it is a baby and whether it stays one, which every animal has
+    private static final int JAVA_SHEEP_WOOL = 18;
     private static final int JAVA_SHEEP_SHEARED = 0x10;
     private static final int JAVA_CREEPER_SWELLING = 16;
     private static final int JAVA_CREEPER_CHARGED = 17;
