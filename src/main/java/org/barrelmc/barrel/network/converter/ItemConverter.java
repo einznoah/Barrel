@@ -14,11 +14,14 @@ import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.geysermc.mcprotocollib.protocol.data.game.Holder;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ArmorTrim;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponentTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.DataComponents;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.ItemEnchantments;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.MobEffectDetails;
+import org.geysermc.mcprotocollib.protocol.data.game.item.component.MobEffectInstance;
 import org.geysermc.mcprotocollib.protocol.data.game.item.component.PotionContents;
 
 import java.util.ArrayList;
@@ -34,6 +37,8 @@ public class ItemConverter {
     public static final HashMap<String, Integer> BEDROCK_ITEM_TO_JAVA_ITEM = new HashMap<>();
     public static final HashMap<Integer, String> JAVA_ITEM_TO_BEDROCK_ITEM = new HashMap<>();
     public static final HashMap<Integer, Integer> JAVA_ITEM_MAX_STACK_SIZE = new HashMap<>();
+    // How much damage the java items that wear out can take
+    public static final HashMap<Integer, Integer> JAVA_ITEM_MAX_DAMAGE = new HashMap<>();
     // How long the java items that are eaten or drunk take to be
     public static final HashMap<Integer, Integer> JAVA_ITEM_CONSUME_TICKS = new HashMap<>();
     private static final HashMap<String, Integer> JAVA_ITEM_IDS = new HashMap<>();
@@ -80,6 +85,9 @@ public class ItemConverter {
             }
             if (itemEntry.has("max_stack_size")) {
                 JAVA_ITEM_MAX_STACK_SIZE.put(javaItemId, itemEntry.get("max_stack_size").getAsInt());
+            }
+            if (itemEntry.has("max_damage")) {
+                JAVA_ITEM_MAX_DAMAGE.put(javaItemId, itemEntry.get("max_damage").getAsInt());
             }
             if (itemEntry.has("consume_ticks")) {
                 JAVA_ITEM_CONSUME_TICKS.put(javaItemId, itemEntry.get("consume_ticks").getAsInt());
@@ -170,6 +178,11 @@ public class ItemConverter {
         return JAVA_ITEM_MAX_STACK_SIZE.getOrDefault(bedrockToJavaItemId(item), 64);
     }
 
+    // How much damage the item can take, 0 for the items that do not wear out
+    public static int getMaxDamage(ItemData item) {
+        return JAVA_ITEM_MAX_DAMAGE.getOrDefault(bedrockToJavaItemId(item), 0);
+    }
+
     // The ticks it takes to eat or drink the item, 0 for the items that are used in another way
     public static int getConsumeTicks(ItemData item) {
         return JAVA_ITEM_CONSUME_TICKS.getOrDefault(bedrockToJavaItemId(item), 0);
@@ -177,6 +190,12 @@ public class ItemConverter {
 
     // Returns null for a potion java does not have, which a java client shows as an uncraftable potion
     private static PotionContents getPotionContents(int bedrockPotionId) {
+        if (bedrockPotionId == PotionConverter.BEDROCK_DECAY_POTION) {
+            // Not a potion of java, but java can make a potion of any effect
+            MobEffectInstance wither = new MobEffectInstance(Effect.WITHER, new MobEffectDetails(1, PotionConverter.DECAY_TICKS, false, true, true, null));
+            return new PotionContents(-1, PotionConverter.DECAY_COLOR, new ArrayList<>(List.of(wither)), null);
+        }
+
         int javaPotionId = PotionConverter.bedrockToJavaPotionId(bedrockPotionId);
         return javaPotionId == -1 ? null : new PotionContents(javaPotionId, -1, new ArrayList<>(), null);
     }

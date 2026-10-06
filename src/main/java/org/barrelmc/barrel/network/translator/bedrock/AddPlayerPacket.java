@@ -3,6 +3,7 @@ package org.barrelmc.barrel.network.translator.bedrock;
 import net.kyori.adventure.text.Component;
 import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.network.converter.ItemConverter;
+import org.barrelmc.barrel.network.translator.TranslatorUtils;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
 import org.barrelmc.barrel.utils.Utils;
@@ -33,7 +34,7 @@ public class AddPlayerPacket implements BedrockPacketTranslator {
         GameProfile gameProfile = new GameProfile(packet.getUuid(), Utils.lengthCutter(packet.getUsername(), 16));
         CharSequence nameTag = packet.getMetadata().get(EntityDataTypes.NAME);
 
-        Entity entity = new Entity(true);
+        Entity entity = new Entity(EntityType.PLAYER);
         entity.setLocation(position.getX(), position.getY(), position.getZ(), rotation.getY(), rotation.getX());
         entity.setHeadYaw(rotation.getY());
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
@@ -43,5 +44,6 @@ public class AddPlayerPacket implements BedrockPacketTranslator {
         if (!ItemConverter.isEmpty(packet.getHand())) {
             player.getJavaSession().send(new ClientboundSetEquipmentPacket((int) packet.getRuntimeEntityId(), new Equipment[]{new Equipment(EquipmentSlot.MAIN_HAND, ItemConverter.bedrockToJavaItem(packet.getHand()))}));
         }
+        TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), EntityType.PLAYER, packet.getMetadata());
     }
 }

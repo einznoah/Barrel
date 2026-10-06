@@ -3927,12 +3927,14 @@
   "971": {
     "java_name": "minecraft:carrot_on_a_stick",
     "bedrock_name": "minecraft:carrot_on_a_stick",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 25
   },
   "972": {
     "java_name": "minecraft:warped_fungus_on_a_stick",
     "bedrock_name": "minecraft:warped_fungus_on_a_stick",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 100
   },
   "973": {
     "java_name": "minecraft:phantom_membrane",
@@ -3941,7 +3943,8 @@
   "974": {
     "java_name": "minecraft:elytra",
     "bedrock_name": "minecraft:elytra",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 432
   },
   "975": {
     "java_name": "minecraft:oak_boat",
@@ -4074,7 +4077,8 @@
   "1001": {
     "java_name": "minecraft:turtle_helmet",
     "bedrock_name": "minecraft:turtle_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 275
   },
   "1002": {
     "java_name": "minecraft:turtle_scute",
@@ -4087,12 +4091,14 @@
   "1004": {
     "java_name": "minecraft:wolf_armor",
     "bedrock_name": "minecraft:wolf_armor",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 64
   },
   "1005": {
     "java_name": "minecraft:flint_and_steel",
     "bedrock_name": "minecraft:flint_and_steel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 64
   },
   "1006": {
     "java_name": "minecraft:bowl",
@@ -4106,7 +4112,8 @@
   "1008": {
     "java_name": "minecraft:bow",
     "bedrock_name": "minecraft:bow",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 384
   },
   "1009": {
     "java_name": "minecraft:arrow",
@@ -4176,177 +4183,212 @@
   "1025": {
     "java_name": "minecraft:wooden_sword",
     "bedrock_name": "minecraft:wooden_sword",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 59
   },
   "1026": {
     "java_name": "minecraft:wooden_shovel",
     "bedrock_name": "minecraft:wooden_shovel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 59
   },
   "1027": {
     "java_name": "minecraft:wooden_pickaxe",
     "bedrock_name": "minecraft:wooden_pickaxe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 59
   },
   "1028": {
     "java_name": "minecraft:wooden_axe",
     "bedrock_name": "minecraft:wooden_axe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 59
   },
   "1029": {
     "java_name": "minecraft:wooden_hoe",
     "bedrock_name": "minecraft:wooden_hoe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 59
   },
   "1030": {
     "java_name": "minecraft:copper_sword",
     "bedrock_name": "minecraft:copper_sword",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 190
   },
   "1031": {
     "java_name": "minecraft:copper_shovel",
     "bedrock_name": "minecraft:copper_shovel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 190
   },
   "1032": {
     "java_name": "minecraft:copper_pickaxe",
     "bedrock_name": "minecraft:copper_pickaxe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 190
   },
   "1033": {
     "java_name": "minecraft:copper_axe",
     "bedrock_name": "minecraft:copper_axe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 190
   },
   "1034": {
     "java_name": "minecraft:copper_hoe",
     "bedrock_name": "minecraft:copper_hoe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 190
   },
   "1035": {
     "java_name": "minecraft:stone_sword",
     "bedrock_name": "minecraft:stone_sword",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 131
   },
   "1036": {
     "java_name": "minecraft:stone_shovel",
     "bedrock_name": "minecraft:stone_shovel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 131
   },
   "1037": {
     "java_name": "minecraft:stone_pickaxe",
     "bedrock_name": "minecraft:stone_pickaxe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 131
   },
   "1038": {
     "java_name": "minecraft:stone_axe",
     "bedrock_name": "minecraft:stone_axe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 131
   },
   "1039": {
     "java_name": "minecraft:stone_hoe",
     "bedrock_name": "minecraft:stone_hoe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 131
   },
   "1040": {
     "java_name": "minecraft:golden_sword",
     "bedrock_name": "minecraft:golden_sword",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 32
   },
   "1041": {
     "java_name": "minecraft:golden_shovel",
     "bedrock_name": "minecraft:golden_shovel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 32
   },
   "1042": {
     "java_name": "minecraft:golden_pickaxe",
     "bedrock_name": "minecraft:golden_pickaxe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 32
   },
   "1043": {
     "java_name": "minecraft:golden_axe",
     "bedrock_name": "minecraft:golden_axe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 32
   },
   "1044": {
     "java_name": "minecraft:golden_hoe",
     "bedrock_name": "minecraft:golden_hoe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 32
   },
   "1045": {
     "java_name": "minecraft:iron_sword",
     "bedrock_name": "minecraft:iron_sword",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 250
   },
   "1046": {
     "java_name": "minecraft:iron_shovel",
     "bedrock_name": "minecraft:iron_shovel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 250
   },
   "1047": {
     "java_name": "minecraft:iron_pickaxe",
     "bedrock_name": "minecraft:iron_pickaxe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 250
   },
   "1048": {
     "java_name": "minecraft:iron_axe",
     "bedrock_name": "minecraft:iron_axe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 250
   },
   "1049": {
     "java_name": "minecraft:iron_hoe",
     "bedrock_name": "minecraft:iron_hoe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 250
   },
   "1050": {
     "java_name": "minecraft:diamond_sword",
     "bedrock_name": "minecraft:diamond_sword",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 1561
   },
   "1051": {
     "java_name": "minecraft:diamond_shovel",
     "bedrock_name": "minecraft:diamond_shovel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 1561
   },
   "1052": {
     "java_name": "minecraft:diamond_pickaxe",
     "bedrock_name": "minecraft:diamond_pickaxe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 1561
   },
   "1053": {
     "java_name": "minecraft:diamond_axe",
     "bedrock_name": "minecraft:diamond_axe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 1561
   },
   "1054": {
     "java_name": "minecraft:diamond_hoe",
     "bedrock_name": "minecraft:diamond_hoe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 1561
   },
   "1055": {
     "java_name": "minecraft:netherite_sword",
     "bedrock_name": "minecraft:netherite_sword",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 2031
   },
   "1056": {
     "java_name": "minecraft:netherite_shovel",
     "bedrock_name": "minecraft:netherite_shovel",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 2031
   },
   "1057": {
     "java_name": "minecraft:netherite_pickaxe",
     "bedrock_name": "minecraft:netherite_pickaxe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 2031
   },
   "1058": {
     "java_name": "minecraft:netherite_axe",
     "bedrock_name": "minecraft:netherite_axe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 2031
   },
   "1059": {
     "java_name": "minecraft:netherite_hoe",
     "bedrock_name": "minecraft:netherite_hoe",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 2031
   },
   "1060": {
     "java_name": "minecraft:stick",
@@ -4387,142 +4429,170 @@
   "1068": {
     "java_name": "minecraft:leather_helmet",
     "bedrock_name": "minecraft:leather_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 55
   },
   "1069": {
     "java_name": "minecraft:leather_chestplate",
     "bedrock_name": "minecraft:leather_chestplate",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 80
   },
   "1070": {
     "java_name": "minecraft:leather_leggings",
     "bedrock_name": "minecraft:leather_leggings",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 75
   },
   "1071": {
     "java_name": "minecraft:leather_boots",
     "bedrock_name": "minecraft:leather_boots",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 65
   },
   "1072": {
     "java_name": "minecraft:copper_helmet",
     "bedrock_name": "minecraft:copper_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 121
   },
   "1073": {
     "java_name": "minecraft:copper_chestplate",
     "bedrock_name": "minecraft:copper_chestplate",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 176
   },
   "1074": {
     "java_name": "minecraft:copper_leggings",
     "bedrock_name": "minecraft:copper_leggings",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 165
   },
   "1075": {
     "java_name": "minecraft:copper_boots",
     "bedrock_name": "minecraft:copper_boots",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 143
   },
   "1076": {
     "java_name": "minecraft:chainmail_helmet",
     "bedrock_name": "minecraft:chainmail_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 165
   },
   "1077": {
     "java_name": "minecraft:chainmail_chestplate",
     "bedrock_name": "minecraft:chainmail_chestplate",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 240
   },
   "1078": {
     "java_name": "minecraft:chainmail_leggings",
     "bedrock_name": "minecraft:chainmail_leggings",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 225
   },
   "1079": {
     "java_name": "minecraft:chainmail_boots",
     "bedrock_name": "minecraft:chainmail_boots",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 195
   },
   "1080": {
     "java_name": "minecraft:iron_helmet",
     "bedrock_name": "minecraft:iron_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 165
   },
   "1081": {
     "java_name": "minecraft:iron_chestplate",
     "bedrock_name": "minecraft:iron_chestplate",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 240
   },
   "1082": {
     "java_name": "minecraft:iron_leggings",
     "bedrock_name": "minecraft:iron_leggings",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 225
   },
   "1083": {
     "java_name": "minecraft:iron_boots",
     "bedrock_name": "minecraft:iron_boots",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 195
   },
   "1084": {
     "java_name": "minecraft:diamond_helmet",
     "bedrock_name": "minecraft:diamond_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 363
   },
   "1085": {
     "java_name": "minecraft:diamond_chestplate",
     "bedrock_name": "minecraft:diamond_chestplate",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 528
   },
   "1086": {
     "java_name": "minecraft:diamond_leggings",
     "bedrock_name": "minecraft:diamond_leggings",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 495
   },
   "1087": {
     "java_name": "minecraft:diamond_boots",
     "bedrock_name": "minecraft:diamond_boots",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 429
   },
   "1088": {
     "java_name": "minecraft:golden_helmet",
     "bedrock_name": "minecraft:golden_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 77
   },
   "1089": {
     "java_name": "minecraft:golden_chestplate",
     "bedrock_name": "minecraft:golden_chestplate",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 112
   },
   "1090": {
     "java_name": "minecraft:golden_leggings",
     "bedrock_name": "minecraft:golden_leggings",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 105
   },
   "1091": {
     "java_name": "minecraft:golden_boots",
     "bedrock_name": "minecraft:golden_boots",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 91
   },
   "1092": {
     "java_name": "minecraft:netherite_helmet",
     "bedrock_name": "minecraft:netherite_helmet",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 407
   },
   "1093": {
     "java_name": "minecraft:netherite_chestplate",
     "bedrock_name": "minecraft:netherite_chestplate",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 592
   },
   "1094": {
     "java_name": "minecraft:netherite_leggings",
     "bedrock_name": "minecraft:netherite_leggings",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 555
   },
   "1095": {
     "java_name": "minecraft:netherite_boots",
     "bedrock_name": "minecraft:netherite_boots",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 481
   },
   "1096": {
     "java_name": "minecraft:flint",
@@ -4968,7 +5038,8 @@
   "1186": {
     "java_name": "minecraft:fishing_rod",
     "bedrock_name": "minecraft:fishing_rod",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 64
   },
   "1187": {
     "java_name": "minecraft:clock",
@@ -5304,7 +5375,8 @@
   "1255": {
     "java_name": "minecraft:shears",
     "bedrock_name": "minecraft:shears",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 238
   },
   "1256": {
     "java_name": "minecraft:melon_slice",
@@ -5794,7 +5866,8 @@
   "1374": {
     "java_name": "minecraft:mace",
     "bedrock_name": "minecraft:mace",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 500
   },
   "1375": {
     "java_name": "minecraft:item_frame",
@@ -6144,42 +6217,50 @@
   "1446": {
     "java_name": "minecraft:shield",
     "bedrock_name": "minecraft:shield",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 336
   },
   "1447": {
     "java_name": "minecraft:wooden_spear",
     "bedrock_name": "minecraft:wooden_spear",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 59
   },
   "1448": {
     "java_name": "minecraft:stone_spear",
     "bedrock_name": "minecraft:stone_spear",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 131
   },
   "1449": {
     "java_name": "minecraft:copper_spear",
     "bedrock_name": "minecraft:copper_spear",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 190
   },
   "1450": {
     "java_name": "minecraft:iron_spear",
     "bedrock_name": "minecraft:iron_spear",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 250
   },
   "1451": {
     "java_name": "minecraft:golden_spear",
     "bedrock_name": "minecraft:golden_spear",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 32
   },
   "1452": {
     "java_name": "minecraft:diamond_spear",
     "bedrock_name": "minecraft:diamond_spear",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 1561
   },
   "1453": {
     "java_name": "minecraft:netherite_spear",
     "bedrock_name": "minecraft:netherite_spear",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 2031
   },
   "1454": {
     "java_name": "minecraft:totem_of_undying",
@@ -6327,7 +6408,8 @@
   "1483": {
     "java_name": "minecraft:trident",
     "bedrock_name": "minecraft:trident",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 250
   },
   "1484": {
     "java_name": "minecraft:nautilus_shell",
@@ -6365,7 +6447,8 @@
   "1491": {
     "java_name": "minecraft:crossbow",
     "bedrock_name": "minecraft:crossbow",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 465
   },
   "1492": {
     "java_name": "minecraft:suspicious_stew",
@@ -6731,7 +6814,8 @@
   "1578": {
     "java_name": "minecraft:brush",
     "bedrock_name": "minecraft:brush",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "max_damage": 64
   },
   "1579": {
     "java_name": "minecraft:netherite_upgrade_smithing_template",

@@ -18,8 +18,9 @@ import json
 import os
 import struct
 
-# Ids of the max_stack_size and consumable data components, the first byte of their encoded form
+# Ids of the max_stack_size, max_damage and consumable data components, the first byte of their encoded form
 MAX_STACK_SIZE_COMPONENT = 1
+MAX_DAMAGE_COMPONENT = 2
 CONSUMABLE_COMPONENT = 24
 
 
@@ -66,6 +67,13 @@ def main():
             raise SystemExit('The data component ids changed, max_stack_size is no longer %d' % MAX_STACK_SIZE_COMPONENT)
         if read_var_int(max_stack_size, 1) != 64:
             entry['max_stack_size'] = read_var_int(max_stack_size, 1)
+
+        # How much damage a tool or a piece of armor takes before it breaks, an anvil mends a quarter of it at a time
+        if 'minecraft:max_damage' in java_item['components']:
+            max_damage = base64.b64decode(java_item['components']['minecraft:max_damage'])
+            if max_damage[0] != MAX_DAMAGE_COMPONENT:
+                raise SystemExit('The data component ids changed, max_damage is no longer %d' % MAX_DAMAGE_COMPONENT)
+            entry['max_damage'] = read_var_int(max_damage, 1)
 
         # What is eaten or drunk, and how long that takes. A Bedrock server is told when the player is done
         if 'minecraft:consumable' in java_item['components']:

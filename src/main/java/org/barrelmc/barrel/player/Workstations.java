@@ -4,13 +4,15 @@ import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
+import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 
 import java.util.Map;
 import java.util.Set;
 
-// What the crafting stations make. A bedrock server does not send it, a bedrock client works it out the same way
+// What the crafting stations make. A bedrock server does not send it, a bedrock client works it out the same way.
+// How damaged what an anvil or a grindstone made is, is also in the answer of the server
 public class Workstations {
 
     // The bedrock ids of the enchantments a grindstone leaves on an item
@@ -25,8 +27,107 @@ public class Workstations {
             Map.entry("minecraft:amethyst_shard", "amethyst"), Map.entry("minecraft:resin_brick", "resin")
     );
 
+    // What an anvil makes, the levels it takes for it and how many of the second item it uses up
+    public record Forged(ItemData result, int cost, int materials) {
+    }
+
     private static boolean isItem(ItemData item, String bedrockName) {
         return !ItemConverter.isEmpty(item) && item.getDefinition().getIdentifier().equals(bedrockName);
+    }
+
+    // The levels an anvil takes on top for an item it worked on before
+    private static int getRepairCost(ItemData item) {
+        return ItemConverter.isEmpty(item) || item.getTag() == null ? 0 : item.getTag().getInt("RepairCost");
+    }
+
+    private static int getDamage(ItemData item) {
+        return item.getTag() == null ? 0 : item.getTag().getInt("Damage");
+    }
+
+    public static String getCustomName(ItemData item) {
+        NbtMap display = item.getTag() == null ? null : item.getTag().getCompound("display", null);
+        return display != null && display.containsKey("Name", NbtType.STRING) ? display.getString("Name") : "";
+    }
+
+    // An anvil mends an item with what it is made of, makes one of two of a kind, puts the enchantments of a book
+    // on it and names it. Returns null if it has nothing to do. What an item is made of is not known here, the
+    // server refuses the wrong material
+    public static Forged forge(ItemData input, ItemData material, String name) {
+        if (ItemConverter.isEmpty(input)) {
+            return null;
+        }
+
+        NbtMapBuilder tag = (input.getTag() == null ? NbtMap.EMPTY : input.getTag()).toBuilder();
+        int work = 0;
+        int materials = 0;
+        if (!ItemConverter.isEmpty(material)) {
+            boolean enchantedBook = isItem(material, "minecraft:enchanted_book");
+            int maxDamage = ItemConverter.getMaxDamage(input);
+            int damage = getDamage(input);
+            if (!enchantedBook && material.getDefinition().getRuntimeId() != input.getDefinition().getRuntimeId()) {
+                // Every piece of the material mends a quarter of what the item can take
+                while (maxDamage > 0 && damage > 0 && materials < material.getCount()) {
+                    damage -= Math.min(damage, maxDamage / 4);
+                    materials++;
+                    work++;
+                }
+                if (materials == 0) {
+                    return null;
+                }
+            } else {
+                materials = 1;
+                if (!enchantedBook && maxDamage > 0) {
+                    // Two of a kind are as good as both of them together, and a little better
+                    int combinedDamage = Math.max(0, maxDamage - ((maxDamage - damage) + (maxDamage - getDamage(material)) + maxDamage * 12 / 100) + 1);
+                    if (combinedDamage < damage) {
+                        damage = combinedDamage;
+                        work += 2;
+                    }
+                }
+
+                Map<Integer, Integer> enchantments = EnchantmentConverter.getEnchantments(input.getTag());
+                for (Map.Entry<Integer, Integer> enchantment : EnchantmentConverter.getEnchantments(material.getTag()).entrySet()) {
+                    int level = enchantments.getOrDefault(enchantment.getKey(), 0);
+                    int addedLevel = Math.min(level == enchantment.getValue() ? level + 1 : Math.max(level, enchantment.getValue()), EnchantmentConverter.getMaxLevel(enchantment.getKey()));
+                    int levelCost = EnchantmentConverter.getAnvilCost(enchantment.getKey());
+                    work += (enchantedBook ? Math.max(1, levelCost / 2) : levelCost) * Math.max(0, addedLevel - level);
+                    enchantments.put(enchantment.getKey(), addedLevel);
+                }
+                if (!enchantments.isEmpty()) {
+                    tag = EnchantmentConverter.setEnchantments(tag.build(), enchantments).toBuilder();
+                }
+            }
+            if (damage != getDamage(input)) {
+                tag.putInt("Damage", damage);
+            }
+        }
+
+        boolean worked = work > 0;
+        if (!name.equals(getCustomName(input))) {
+            // Without a name the item loses the one it was given before
+            NbtMapBuilder display = (input.getTag() == null ? NbtMap.EMPTY : input.getTag()).getCompound("display", NbtMap.EMPTY).toBuilder();
+            if (name.isEmpty()) {
+                display.remove("Name");
+            } else {
+                display.putString("Name", name);
+            }
+            if (display.isEmpty()) {
+                tag.remove("display");
+            } else {
+                tag.putCompound("display", display.build());
+            }
+            work++;
+        }
+        if (work == 0) {
+            return null;
+        }
+
+        int cost = work + getRepairCost(input) + getRepairCost(material);
+        if (worked) {
+            // Working on the item again takes more levels, naming it does not
+            tag.putInt("RepairCost", Math.max(getRepairCost(input), getRepairCost(material)) * 2 + 1);
+        }
+        return new Forged(input.toBuilder().tag(tag.isEmpty() ? null : tag.build()).build(), cost, materials);
     }
 
     // A smithing table makes another item of an item, which keeps what it was enchanted with and how damaged it is

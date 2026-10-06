@@ -42,6 +42,23 @@ public class PotionConverter {
             Effect.BREATH_OF_THE_NAUTILUS
     };
 
+    // The colors of the swirls of the effects, in the order of their bedrock ids
+    private static final int[] BEDROCK_EFFECT_COLORS = {
+            0x33EBFF, 0x8BAFE0, 0xD9C043, 0x4A4217, 0xFFC700, 0xF82423, 0xA9656A, 0xFDFF84, 0x551D4A, 0xCD5CAB, 0x9146F0, 0xFF9900, 0x98DAC0,
+            0xF6F6F6, 0x1F1F23, 0xC2FF66, 0x587653, 0x484D48, 0x87A363, 0x736156, 0xF87D23, 0x2552A5, 0xF82423, 0xCEFFFF, 0x4E9331, 0x1DC2D1,
+            0xF3CFB9, 0x0B6138, 0x44FF44, 0x292721, 0x16A6A6, 0xBDC9FF, 0x78695A, 0x99FFA3, 0x8C9B8C, 0xDE4058, 0x00FFEE
+    };
+
+    // The potion of decay only bedrock has, it withers
+    public static final int BEDROCK_DECAY_POTION = 36;
+    public static final int DECAY_COLOR = BEDROCK_EFFECT_COLORS[19];
+    public static final int DECAY_TICKS = 800;
+
+    // Returns -1 for an effect that is not known
+    public static int getEffectColor(int bedrockEffectId) {
+        return bedrockEffectId >= 1 && bedrockEffectId <= BEDROCK_EFFECT_COLORS.length ? BEDROCK_EFFECT_COLORS[bedrockEffectId - 1] : -1;
+    }
+
     // Returns -1 for a potion java does not have
     public static int bedrockToJavaPotionId(int bedrockPotionId) {
         if (bedrockPotionId == BEDROCK_LONG_MUNDANE_POTION) {

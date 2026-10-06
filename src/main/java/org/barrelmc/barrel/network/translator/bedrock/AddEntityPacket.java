@@ -3,6 +3,7 @@ package org.barrelmc.barrel.network.translator.bedrock;
 import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.network.converter.EntityConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
+import org.barrelmc.barrel.network.translator.TranslatorUtils;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector3d;
@@ -28,7 +29,7 @@ public class AddEntityPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.AddEntityPacket packet = (org.cloudburstmc.protocol.bedrock.packet.AddEntityPacket) pk;
 
-        // TODO: The entity data, a sheep keeps its wool and every animal is an adult
+        // TODO: Most of the entity data, a sheep keeps its wool
         EntityType entityType = EntityConverter.bedrockToJavaEntityType(packet.getIdentifier());
         if (entityType == null) {
             return;
@@ -36,13 +37,14 @@ public class AddEntityPacket implements BedrockPacketTranslator {
 
         Vector3f position = packet.getPosition();
         Vector3f motion = packet.getMotion();
-        Entity entity = new Entity(false);
+        Entity entity = new Entity(entityType);
         entity.setLocation(position.getX(), position.getY(), position.getZ(), packet.getRotation().getY(), packet.getRotation().getX());
         entity.setHeadYaw(packet.getHeadRotation());
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
 
         player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), UUID.randomUUID(), entityType, position.getX(), position.getY(), position.getZ(), Vector3d.from(motion.getX(), motion.getY(), motion.getZ()), entity.yaw, entity.pitch, entity.getHeadYaw()));
 
+        TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), entityType, packet.getMetadata());
         if (entityType == EntityType.SPLASH_POTION || entityType == EntityType.LINGERING_POTION) {
             // A thrown potion is shown as the item it was, the bedrock server only tells which potion it holds
             Short bedrockPotionId = packet.getMetadata().get(EntityDataTypes.AUX_VALUE_DATA);

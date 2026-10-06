@@ -31,7 +31,7 @@ public class AddItemEntityPacket implements BedrockPacketTranslator {
 
         Vector3f position = packet.getPosition();
         Vector3f motion = packet.getMotion();
-        Entity entity = new Entity(false);
+        Entity entity = new Entity(EntityType.ITEM);
         entity.setPosition(position);
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
 

@@ -12,9 +12,6 @@ import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
-import org.cloudburstmc.nbt.NbtMap;
-import org.cloudburstmc.nbt.NbtMapBuilder;
-import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerId;
@@ -1233,7 +1230,7 @@ public class Inventory {
         Map<Slot, Integer> ingredients = new LinkedHashMap<>();
         ingredients.put(map, 1);
         ingredients.put(additional, 1);
-        return new Craft(drawnMap, crafts -> new CraftRecipeOptionalAction(0, 0), ingredients, 1, getCustomName(map.get()), false);
+        return new Craft(drawnMap, crafts -> new CraftRecipeOptionalAction(0, 0), ingredients, 1, Workstations.getCustomName(map.get()), false);
     }
 
     // A click on what the crafting grid or the open crafting station makes
@@ -1369,15 +1366,6 @@ public class Inventory {
         this.sendContents();
     }
 
-    private static int getRepairCost(ItemData item) {
-        return ItemConverter.isEmpty(item) || item.getTag() == null ? 0 : item.getTag().getInt("RepairCost");
-    }
-
-    private static String getCustomName(ItemData item) {
-        NbtMap display = item.getTag() == null ? null : item.getTag().getCompound("display", null);
-        return display != null && display.containsKey("Name", NbtType.STRING) ? display.getString("Name") : "";
-    }
-
     public void setAnvilName(String anvilName) {
         this.anvilName = anvilName == null ? "" : anvilName;
         if (this.containerType == ContainerType.ANVIL && this.containerSlots != null) {
@@ -1386,61 +1374,22 @@ public class Inventory {
         }
     }
 
-    // The bedrock server does not tell what an anvil makes, a bedrock client works that out itself. The client is
-    // shown the item with its new name and the enchantments of both items. How much a repair mends is only known
-    // once the server answered, and the levels shown are those of a rename, a repair can cost more
     private Craft getAnvilCraft() {
-        ItemData input = this.ui[ANVIL_INPUT_SLOT];
-        ItemData material = this.ui[ANVIL_MATERIAL_SLOT];
-        // Without a name the item loses the one it was given before
-        boolean renamed = !ItemConverter.isEmpty(input) && !this.anvilName.equals(getCustomName(input));
-        int cost = 0;
-        ItemData anvilResult = null;
-        if (!ItemConverter.isEmpty(input) && (renamed || !ItemConverter.isEmpty(material))) {
-            NbtMap tag = input.getTag() == null ? NbtMap.EMPTY : input.getTag();
-            if (renamed) {
-                NbtMapBuilder display = tag.getCompound("display", NbtMap.EMPTY).toBuilder();
-                NbtMapBuilder renamedTag = tag.toBuilder();
-                if (this.anvilName.isEmpty()) {
-                    display.remove("Name");
-                } else {
-                    display.putString("Name", this.anvilName);
-                }
-                if (display.isEmpty()) {
-                    renamedTag.remove("display");
-                } else {
-                    renamedTag.putCompound("display", display.build());
-                }
-                tag = renamedTag.build();
-            }
-
-            // An enchanted book or a second item of the same kind adds its enchantments
-            if (!ItemConverter.isEmpty(material) && (isIn(material, "minecraft:enchanted_book") || material.getDefinition().getRuntimeId() == input.getDefinition().getRuntimeId())) {
-                Map<Integer, Integer> enchantments = EnchantmentConverter.getEnchantments(tag);
-                for (Map.Entry<Integer, Integer> enchantment : EnchantmentConverter.getEnchantments(material.getTag()).entrySet()) {
-                    int level = enchantments.getOrDefault(enchantment.getKey(), 0);
-                    level = level == enchantment.getValue() ? level + 1 : Math.max(level, enchantment.getValue());
-                    enchantments.put(enchantment.getKey(), Math.min(level, EnchantmentConverter.getMaxLevel(enchantment.getKey())));
-                }
-                if (!enchantments.isEmpty()) {
-                    tag = EnchantmentConverter.setEnchantments(tag, enchantments);
-                }
-            }
-
-            anvilResult = input.toBuilder().tag(tag.isEmpty() ? null : tag).build();
-            cost = getRepairCost(input) + getRepairCost(material) + (renamed ? 1 : 0) + (ItemConverter.isEmpty(material) ? 0 : 1);
-        }
-        this.player.getJavaSession().send(new ClientboundContainerSetDataPacket(JAVA_CONTAINER_WINDOW, 0, cost));
-        if (anvilResult == null) {
+        Slot input = this.uiSlot(ContainerSlotType.ANVIL_INPUT, ANVIL_INPUT_SLOT);
+        Slot material = this.uiSlot(ContainerSlotType.ANVIL_MATERIAL, ANVIL_MATERIAL_SLOT);
+        Workstations.Forged forged = Workstations.forge(input.get(), material.get(), this.anvilName);
+        // A java client does not let the player take what the anvil made for less levels than it is told here
+        this.player.getJavaSession().send(new ClientboundContainerSetDataPacket(JAVA_CONTAINER_WINDOW, 0, forged == null ? 0 : forged.cost()));
+        if (forged == null) {
             return null;
         }
 
         Map<Slot, Integer> ingredients = new LinkedHashMap<>();
-        ingredients.put(this.uiSlot(ContainerSlotType.ANVIL_INPUT, ANVIL_INPUT_SLOT), input.getCount());
-        if (!ItemConverter.isEmpty(material)) {
-            ingredients.put(this.uiSlot(ContainerSlotType.ANVIL_MATERIAL, ANVIL_MATERIAL_SLOT), 1);
+        ingredients.put(input, input.get().getCount());
+        if (forged.materials() > 0) {
+            ingredients.put(material, forged.materials());
         }
-        return new Craft(anvilResult, crafts -> new CraftRecipeOptionalAction(0, 0), ingredients, 1, this.anvilName, true);
+        return new Craft(forged.result(), crafts -> new CraftRecipeOptionalAction(0, 0), ingredients, 1, this.anvilName, true);
     }
 
     private ItemData withCount(ItemData item, int count) {

@@ -25,6 +25,8 @@ public class EnchantmentConverter {
     // Indexed by the bedrock id, -1 for an enchantment java does not have
     private static final int[] JAVA_ENCHANTMENT_IDS = new int[BEDROCK_ENCHANTMENTS.length];
     private static final int[] MAX_LEVELS = new int[BEDROCK_ENCHANTMENTS.length];
+    // The levels an anvil takes for every level of the enchantment it adds
+    private static final int[] ANVIL_COSTS = new int[BEDROCK_ENCHANTMENTS.length];
 
     public static void init() {
         // The registry the java client is sent when it joins
@@ -37,6 +39,7 @@ public class EnchantmentConverter {
             NbtMap entry = javaEnchantments.get("minecraft:" + BEDROCK_ENCHANTMENTS[bedrockId]);
             JAVA_ENCHANTMENT_IDS[bedrockId] = entry == null ? -1 : entry.getInt("id");
             MAX_LEVELS[bedrockId] = entry == null ? 1 : entry.getCompound("element").getInt("max_level", 1);
+            ANVIL_COSTS[bedrockId] = entry == null ? 1 : entry.getCompound("element").getInt("anvil_cost", 1);
         }
     }
 
@@ -46,6 +49,10 @@ public class EnchantmentConverter {
 
     public static int getMaxLevel(int bedrockId) {
         return bedrockId >= 0 && bedrockId < MAX_LEVELS.length ? MAX_LEVELS[bedrockId] : 1;
+    }
+
+    public static int getAnvilCost(int bedrockId) {
+        return bedrockId >= 0 && bedrockId < ANVIL_COSTS.length ? ANVIL_COSTS[bedrockId] : 1;
     }
 
     // The enchantments of a bedrock item by their bedrock ids, in the order the item has them

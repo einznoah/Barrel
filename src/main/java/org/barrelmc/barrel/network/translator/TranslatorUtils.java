@@ -7,16 +7,21 @@ package org.barrelmc.barrel.network.translator;
 
 import net.kyori.adventure.key.Key;
 import org.barrelmc.barrel.entity.Entity;
+import org.barrelmc.barrel.network.converter.EntityDataConverter;
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
+import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataMap;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.Attribute;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeModifier;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeType;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.ModifierOperation;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRotateHeadPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEntityDataPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateAttributesPacket;
 
@@ -57,6 +62,13 @@ public class TranslatorUtils {
 
         Attribute movementSpeed = new Attribute(AttributeType.Builtin.MOVEMENT_SPEED, PLAYER_MOVEMENT_SPEED, modifiers);
         player.getJavaSession().send(new ClientboundUpdateAttributesPacket((int) player.getRuntimeEntityId(), Collections.singletonList(movementSpeed)));
+    }
+
+    public static void sendEntityData(Player player, long runtimeEntityId, EntityType entityType, EntityDataMap entityData) {
+        EntityMetadata<?, ?>[] javaEntityData = EntityDataConverter.bedrockToJavaEntityData(entityType, entityData);
+        if (javaEntityData.length > 0) {
+            player.getJavaSession().send(new ClientboundSetEntityDataPacket((int) runtimeEntityId, javaEntityData));
+        }
     }
 
     public static void sendEntityPosition(Player player, long runtimeEntityId, Entity entity, boolean onGround) {
