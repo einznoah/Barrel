@@ -159,6 +159,10 @@ public class Player extends Vector3 {
     @Setter
     private long overworldClockId = -1;
 
+    // What the java client is called. A player that is signed in to xbox is called what its account is
+    @Getter
+    private final String javaUsername;
+
     // The player itself as an entity, for what the java client is told about it like about any other
     @Getter
     private final Entity self = new Entity(EntityType.PLAYER);
@@ -186,6 +190,7 @@ public class Player extends Vector3 {
     private float experienceProgress = 0;
 
     public Player(ServerboundHelloPacket loginPacket, Session javaSession) {
+        this.javaUsername = loginPacket.getUsername();
         this.packetTranslatorManager = new PacketTranslatorManager(this);
         this.javaSession = javaSession;
 
@@ -197,7 +202,7 @@ public class Player extends Vector3 {
             this.UUID = offlineUuid.toString();
             this.xuid = Long.toString(offlineUuid.getMostSignificantBits() >>> 14);
         } else {
-            this.xboxAccount = AuthManager.getInstance().getXboxAccounts().remove(loginPacket.getUsername());
+            this.xboxAccount = AuthManager.getInstance().getXboxAccount(loginPacket.getUsername());
         }
 
         ProxyServer.getInstance().getOnlinePlayers().put(loginPacket.getUsername(), this);

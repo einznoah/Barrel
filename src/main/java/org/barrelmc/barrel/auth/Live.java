@@ -1,5 +1,6 @@
 package org.barrelmc.barrel.auth;
 
+import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -18,6 +19,7 @@ import java.util.function.Consumer;
 
 public class Live {
 
+    @Getter
     private final HttpClient httpClient = MinecraftAuth.createHttpClient();
 
     public Thread requestLiveToken(Session session, String username) {
@@ -27,13 +29,16 @@ public class Live {
                 BedrockAuthManager xboxAccount = BedrockAuthManager.create(this.httpClient, ProxyServer.getInstance().getBedrockPacketCodec().getMinecraftVersion())
                         .login(DeviceCodeMsaAuthService::new, (Consumer<MsaDeviceCode>) deviceCode -> this.sendDeviceCode(session, deviceCode));
 
-                AuthManager.getInstance().getXboxAccounts().put(username, xboxAccount);
+                AuthManager.getInstance().addXboxAccount(username, xboxAccount);
                 session.send(new ClientboundSystemChatPacket(Component.text("§eSuccessfully authenticated with Xbox Live. Please rejoin!"), false));
             } catch (InterruptedException ignored) {
                 // The player left before logging in
             } catch (Exception e) {
-                session.disconnect("§cAn error occurred while authenticating to Xbox Live. Please rejoin the server.");
-                e.printStackTrace();
+                // The player leaving while xbox is asked whether it signed in is not an error
+                if (!(e.getCause() instanceof InterruptedException)) {
+                    session.disconnect("§cAn error occurred while authenticating to Xbox Live. Please rejoin the server.");
+                    e.printStackTrace();
+                }
             } finally {
                 AuthManager.getInstance().getLoginThreads().remove(username, Thread.currentThread());
             }

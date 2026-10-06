@@ -150,6 +150,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(RespawnPacket.class, new org.barrelmc.barrel.network.translator.bedrock.RespawnPacket());
         bedrockTranslators.put(UpdateTradePacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateTradePacket());
         bedrockTranslators.put(UnlockedRecipesPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UnlockedRecipesPacket());
+        bedrockTranslators.put(PacketViolationWarningPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PacketViolationWarningPacket());
 
         // Java packets
         javaTranslators.put(ServerboundChatPacket.class, new ChatPacket());

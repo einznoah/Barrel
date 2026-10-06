@@ -8,3 +8,8 @@ bedrockAddress: "play.venitymc.com"
 bedrockPort: 19132
 # Use xbox login? (offline|online)
 auth: online
+
+# Keep players signed in to xbox, also after the proxy was restarted? (true|false)
+# A login is saved in the accounts folder then. The proxy does not check who a java player is: whoever joins with
+# the name of a player that is signed in plays with its xbox account. Only for a proxy nobody else can reach.
+rememberLogins: false

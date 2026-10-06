@@ -30,7 +30,7 @@ public class JavaPacketHandler extends SessionAdapter {
             if (packet instanceof ServerboundHelloPacket) {
                 ServerboundHelloPacket loginPacket = (ServerboundHelloPacket) packet;
 
-                if (ProxyServer.getInstance().getConfig().getAuth().equals("offline") || AuthManager.getInstance().getXboxAccounts().containsKey(loginPacket.getUsername())) {
+                if (ProxyServer.getInstance().getConfig().getAuth().equals("offline") || AuthManager.getInstance().hasXboxAccount(loginPacket.getUsername())) {
                     Player oldPlayer = ProxyServer.getInstance().getPlayerByName(loginPacket.getUsername());
                     if (oldPlayer != null) {
                         oldPlayer.disconnect("You logged in from another location");

@@ -33,4 +33,8 @@ public class Config {
     @Setter
     @Getter
     public String auth;
+
+    @Setter
+    @Getter
+    public boolean rememberLogins = false;
 }

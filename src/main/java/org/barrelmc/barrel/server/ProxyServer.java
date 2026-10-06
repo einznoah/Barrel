@@ -20,7 +20,10 @@ import org.barrelmc.barrel.utils.FileManager;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockPacketDefinition;
 import org.cloudburstmc.protocol.bedrock.codec.v2193.Bedrock_v2193;
+import org.cloudburstmc.protocol.bedrock.data.PacketRecipient;
+import org.cloudburstmc.protocol.bedrock.packet.PacketViolationWarningPacket;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.auth.SessionService;
 import org.geysermc.mcprotocollib.network.Server;
@@ -57,7 +60,7 @@ public class ProxyServer {
     @Getter
     private final Map<String, Player> onlinePlayers = new ConcurrentHashMap<>();
     @Getter
-    private final BedrockCodec bedrockPacketCodec = Bedrock_v2193.CODEC;
+    private final BedrockCodec bedrockPacketCodec = acceptViolationWarnings(Bedrock_v2193.CODEC);
     @Getter
     private final EventLoopGroup bedrockEventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
@@ -121,6 +124,16 @@ public class ProxyServer {
         }
 
         throw new IllegalStateException(name + " is missing from the " + registry + " registry");
+    }
+
+    // The warning about a packet that was not understood is one clients send. Some servers send it too before they
+    // close the connection, it tells which packet of the proxy they did not take
+    private static BedrockCodec acceptViolationWarnings(BedrockCodec codec) {
+        BedrockPacketDefinition<PacketViolationWarningPacket> definition = codec.getPacketDefinition(PacketViolationWarningPacket.class);
+        return codec.toBuilder()
+                .deregisterPacket(PacketViolationWarningPacket.class)
+                .registerPacket(PacketViolationWarningPacket::new, definition.getSerializer(), definition.getId(), PacketRecipient.BOTH)
+                .build();
     }
 
     private boolean initConfig() {

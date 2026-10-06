@@ -35,3 +35,6 @@ bin/
 build/
 /bin1/
 java/build/**
+
+# Saved xbox logins of the proxy
+accounts/
