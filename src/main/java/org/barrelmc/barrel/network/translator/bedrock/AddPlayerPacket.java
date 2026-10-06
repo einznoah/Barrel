@@ -44,6 +44,6 @@ public class AddPlayerPacket implements BedrockPacketTranslator {
         if (!ItemConverter.isEmpty(packet.getHand())) {
             player.getJavaSession().send(new ClientboundSetEquipmentPacket((int) packet.getRuntimeEntityId(), new Equipment[]{new Equipment(EquipmentSlot.MAIN_HAND, ItemConverter.bedrockToJavaItem(packet.getHand()))}));
         }
-        TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), EntityType.PLAYER, packet.getMetadata());
+        TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), entity, packet.getMetadata());
     }
 }

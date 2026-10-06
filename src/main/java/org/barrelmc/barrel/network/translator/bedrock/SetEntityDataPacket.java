@@ -6,7 +6,6 @@ import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 
 public class SetEntityDataPacket implements BedrockPacketTranslator {
 
@@ -18,11 +17,11 @@ public class SetEntityDataPacket implements BedrockPacketTranslator {
             if (packet.getMetadata().getFlags() != null) {
                 player.setImmobile(packet.getMetadata().getFlag(EntityFlag.NO_AI));
             }
-            TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), EntityType.PLAYER, packet.getMetadata());
+            TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), player.getSelf(), packet.getMetadata());
         } else {
             Entity entity = player.getEntities().get(packet.getRuntimeEntityId());
             if (entity != null) {
-                TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), entity.getType(), packet.getMetadata());
+                TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), entity, packet.getMetadata());
             }
         }
     }

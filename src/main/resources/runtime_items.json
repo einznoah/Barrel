@@ -3944,7 +3944,10 @@
     "java_name": "minecraft:elytra",
     "bedrock_name": "minecraft:elytra",
     "max_stack_size": 1,
-    "max_damage": 432
+    "max_damage": 432,
+    "repair_items": [
+      973
+    ]
   },
   "975": {
     "java_name": "minecraft:oak_boat",
@@ -4078,7 +4081,8 @@
     "java_name": "minecraft:turtle_helmet",
     "bedrock_name": "minecraft:turtle_helmet",
     "max_stack_size": 1,
-    "max_damage": 275
+    "max_damage": 275,
+    "repair_tag": "minecraft:repairs_turtle_helmet"
   },
   "1002": {
     "java_name": "minecraft:turtle_scute",
@@ -4092,7 +4096,8 @@
     "java_name": "minecraft:wolf_armor",
     "bedrock_name": "minecraft:wolf_armor",
     "max_stack_size": 1,
-    "max_damage": 64
+    "max_damage": 64,
+    "repair_tag": "minecraft:repairs_wolf_armor"
   },
   "1005": {
     "java_name": "minecraft:flint_and_steel",
@@ -4184,211 +4189,246 @@
     "java_name": "minecraft:wooden_sword",
     "bedrock_name": "minecraft:wooden_sword",
     "max_stack_size": 1,
-    "max_damage": 59
+    "max_damage": 59,
+    "repair_tag": "minecraft:wooden_tool_materials"
   },
   "1026": {
     "java_name": "minecraft:wooden_shovel",
     "bedrock_name": "minecraft:wooden_shovel",
     "max_stack_size": 1,
-    "max_damage": 59
+    "max_damage": 59,
+    "repair_tag": "minecraft:wooden_tool_materials"
   },
   "1027": {
     "java_name": "minecraft:wooden_pickaxe",
     "bedrock_name": "minecraft:wooden_pickaxe",
     "max_stack_size": 1,
-    "max_damage": 59
+    "max_damage": 59,
+    "repair_tag": "minecraft:wooden_tool_materials"
   },
   "1028": {
     "java_name": "minecraft:wooden_axe",
     "bedrock_name": "minecraft:wooden_axe",
     "max_stack_size": 1,
-    "max_damage": 59
+    "max_damage": 59,
+    "repair_tag": "minecraft:wooden_tool_materials"
   },
   "1029": {
     "java_name": "minecraft:wooden_hoe",
     "bedrock_name": "minecraft:wooden_hoe",
     "max_stack_size": 1,
-    "max_damage": 59
+    "max_damage": 59,
+    "repair_tag": "minecraft:wooden_tool_materials"
   },
   "1030": {
     "java_name": "minecraft:copper_sword",
     "bedrock_name": "minecraft:copper_sword",
     "max_stack_size": 1,
-    "max_damage": 190
+    "max_damage": 190,
+    "repair_tag": "minecraft:copper_tool_materials"
   },
   "1031": {
     "java_name": "minecraft:copper_shovel",
     "bedrock_name": "minecraft:copper_shovel",
     "max_stack_size": 1,
-    "max_damage": 190
+    "max_damage": 190,
+    "repair_tag": "minecraft:copper_tool_materials"
   },
   "1032": {
     "java_name": "minecraft:copper_pickaxe",
     "bedrock_name": "minecraft:copper_pickaxe",
     "max_stack_size": 1,
-    "max_damage": 190
+    "max_damage": 190,
+    "repair_tag": "minecraft:copper_tool_materials"
   },
   "1033": {
     "java_name": "minecraft:copper_axe",
     "bedrock_name": "minecraft:copper_axe",
     "max_stack_size": 1,
-    "max_damage": 190
+    "max_damage": 190,
+    "repair_tag": "minecraft:copper_tool_materials"
   },
   "1034": {
     "java_name": "minecraft:copper_hoe",
     "bedrock_name": "minecraft:copper_hoe",
     "max_stack_size": 1,
-    "max_damage": 190
+    "max_damage": 190,
+    "repair_tag": "minecraft:copper_tool_materials"
   },
   "1035": {
     "java_name": "minecraft:stone_sword",
     "bedrock_name": "minecraft:stone_sword",
     "max_stack_size": 1,
-    "max_damage": 131
+    "max_damage": 131,
+    "repair_tag": "minecraft:stone_tool_materials"
   },
   "1036": {
     "java_name": "minecraft:stone_shovel",
     "bedrock_name": "minecraft:stone_shovel",
     "max_stack_size": 1,
-    "max_damage": 131
+    "max_damage": 131,
+    "repair_tag": "minecraft:stone_tool_materials"
   },
   "1037": {
     "java_name": "minecraft:stone_pickaxe",
     "bedrock_name": "minecraft:stone_pickaxe",
     "max_stack_size": 1,
-    "max_damage": 131
+    "max_damage": 131,
+    "repair_tag": "minecraft:stone_tool_materials"
   },
   "1038": {
     "java_name": "minecraft:stone_axe",
     "bedrock_name": "minecraft:stone_axe",
     "max_stack_size": 1,
-    "max_damage": 131
+    "max_damage": 131,
+    "repair_tag": "minecraft:stone_tool_materials"
   },
   "1039": {
     "java_name": "minecraft:stone_hoe",
     "bedrock_name": "minecraft:stone_hoe",
     "max_stack_size": 1,
-    "max_damage": 131
+    "max_damage": 131,
+    "repair_tag": "minecraft:stone_tool_materials"
   },
   "1040": {
     "java_name": "minecraft:golden_sword",
     "bedrock_name": "minecraft:golden_sword",
     "max_stack_size": 1,
-    "max_damage": 32
+    "max_damage": 32,
+    "repair_tag": "minecraft:gold_tool_materials"
   },
   "1041": {
     "java_name": "minecraft:golden_shovel",
     "bedrock_name": "minecraft:golden_shovel",
     "max_stack_size": 1,
-    "max_damage": 32
+    "max_damage": 32,
+    "repair_tag": "minecraft:gold_tool_materials"
   },
   "1042": {
     "java_name": "minecraft:golden_pickaxe",
     "bedrock_name": "minecraft:golden_pickaxe",
     "max_stack_size": 1,
-    "max_damage": 32
+    "max_damage": 32,
+    "repair_tag": "minecraft:gold_tool_materials"
   },
   "1043": {
     "java_name": "minecraft:golden_axe",
     "bedrock_name": "minecraft:golden_axe",
     "max_stack_size": 1,
-    "max_damage": 32
+    "max_damage": 32,
+    "repair_tag": "minecraft:gold_tool_materials"
   },
   "1044": {
     "java_name": "minecraft:golden_hoe",
     "bedrock_name": "minecraft:golden_hoe",
     "max_stack_size": 1,
-    "max_damage": 32
+    "max_damage": 32,
+    "repair_tag": "minecraft:gold_tool_materials"
   },
   "1045": {
     "java_name": "minecraft:iron_sword",
     "bedrock_name": "minecraft:iron_sword",
     "max_stack_size": 1,
-    "max_damage": 250
+    "max_damage": 250,
+    "repair_tag": "minecraft:iron_tool_materials"
   },
   "1046": {
     "java_name": "minecraft:iron_shovel",
     "bedrock_name": "minecraft:iron_shovel",
     "max_stack_size": 1,
-    "max_damage": 250
+    "max_damage": 250,
+    "repair_tag": "minecraft:iron_tool_materials"
   },
   "1047": {
     "java_name": "minecraft:iron_pickaxe",
     "bedrock_name": "minecraft:iron_pickaxe",
     "max_stack_size": 1,
-    "max_damage": 250
+    "max_damage": 250,
+    "repair_tag": "minecraft:iron_tool_materials"
   },
   "1048": {
     "java_name": "minecraft:iron_axe",
     "bedrock_name": "minecraft:iron_axe",
     "max_stack_size": 1,
-    "max_damage": 250
+    "max_damage": 250,
+    "repair_tag": "minecraft:iron_tool_materials"
   },
   "1049": {
     "java_name": "minecraft:iron_hoe",
     "bedrock_name": "minecraft:iron_hoe",
     "max_stack_size": 1,
-    "max_damage": 250
+    "max_damage": 250,
+    "repair_tag": "minecraft:iron_tool_materials"
   },
   "1050": {
     "java_name": "minecraft:diamond_sword",
     "bedrock_name": "minecraft:diamond_sword",
     "max_stack_size": 1,
-    "max_damage": 1561
+    "max_damage": 1561,
+    "repair_tag": "minecraft:diamond_tool_materials"
   },
   "1051": {
     "java_name": "minecraft:diamond_shovel",
     "bedrock_name": "minecraft:diamond_shovel",
     "max_stack_size": 1,
-    "max_damage": 1561
+    "max_damage": 1561,
+    "repair_tag": "minecraft:diamond_tool_materials"
   },
   "1052": {
     "java_name": "minecraft:diamond_pickaxe",
     "bedrock_name": "minecraft:diamond_pickaxe",
     "max_stack_size": 1,
-    "max_damage": 1561
+    "max_damage": 1561,
+    "repair_tag": "minecraft:diamond_tool_materials"
   },
   "1053": {
     "java_name": "minecraft:diamond_axe",
     "bedrock_name": "minecraft:diamond_axe",
     "max_stack_size": 1,
-    "max_damage": 1561
+    "max_damage": 1561,
+    "repair_tag": "minecraft:diamond_tool_materials"
   },
   "1054": {
     "java_name": "minecraft:diamond_hoe",
     "bedrock_name": "minecraft:diamond_hoe",
     "max_stack_size": 1,
-    "max_damage": 1561
+    "max_damage": 1561,
+    "repair_tag": "minecraft:diamond_tool_materials"
   },
   "1055": {
     "java_name": "minecraft:netherite_sword",
     "bedrock_name": "minecraft:netherite_sword",
     "max_stack_size": 1,
-    "max_damage": 2031
+    "max_damage": 2031,
+    "repair_tag": "minecraft:netherite_tool_materials"
   },
   "1056": {
     "java_name": "minecraft:netherite_shovel",
     "bedrock_name": "minecraft:netherite_shovel",
     "max_stack_size": 1,
-    "max_damage": 2031
+    "max_damage": 2031,
+    "repair_tag": "minecraft:netherite_tool_materials"
   },
   "1057": {
     "java_name": "minecraft:netherite_pickaxe",
     "bedrock_name": "minecraft:netherite_pickaxe",
     "max_stack_size": 1,
-    "max_damage": 2031
+    "max_damage": 2031,
+    "repair_tag": "minecraft:netherite_tool_materials"
   },
   "1058": {
     "java_name": "minecraft:netherite_axe",
     "bedrock_name": "minecraft:netherite_axe",
     "max_stack_size": 1,
-    "max_damage": 2031
+    "max_damage": 2031,
+    "repair_tag": "minecraft:netherite_tool_materials"
   },
   "1059": {
     "java_name": "minecraft:netherite_hoe",
     "bedrock_name": "minecraft:netherite_hoe",
     "max_stack_size": 1,
-    "max_damage": 2031
+    "max_damage": 2031,
+    "repair_tag": "minecraft:netherite_tool_materials"
   },
   "1060": {
     "java_name": "minecraft:stick",
@@ -4430,169 +4470,197 @@
     "java_name": "minecraft:leather_helmet",
     "bedrock_name": "minecraft:leather_helmet",
     "max_stack_size": 1,
-    "max_damage": 55
+    "max_damage": 55,
+    "repair_tag": "minecraft:repairs_leather_armor"
   },
   "1069": {
     "java_name": "minecraft:leather_chestplate",
     "bedrock_name": "minecraft:leather_chestplate",
     "max_stack_size": 1,
-    "max_damage": 80
+    "max_damage": 80,
+    "repair_tag": "minecraft:repairs_leather_armor"
   },
   "1070": {
     "java_name": "minecraft:leather_leggings",
     "bedrock_name": "minecraft:leather_leggings",
     "max_stack_size": 1,
-    "max_damage": 75
+    "max_damage": 75,
+    "repair_tag": "minecraft:repairs_leather_armor"
   },
   "1071": {
     "java_name": "minecraft:leather_boots",
     "bedrock_name": "minecraft:leather_boots",
     "max_stack_size": 1,
-    "max_damage": 65
+    "max_damage": 65,
+    "repair_tag": "minecraft:repairs_leather_armor"
   },
   "1072": {
     "java_name": "minecraft:copper_helmet",
     "bedrock_name": "minecraft:copper_helmet",
     "max_stack_size": 1,
-    "max_damage": 121
+    "max_damage": 121,
+    "repair_tag": "minecraft:repairs_copper_armor"
   },
   "1073": {
     "java_name": "minecraft:copper_chestplate",
     "bedrock_name": "minecraft:copper_chestplate",
     "max_stack_size": 1,
-    "max_damage": 176
+    "max_damage": 176,
+    "repair_tag": "minecraft:repairs_copper_armor"
   },
   "1074": {
     "java_name": "minecraft:copper_leggings",
     "bedrock_name": "minecraft:copper_leggings",
     "max_stack_size": 1,
-    "max_damage": 165
+    "max_damage": 165,
+    "repair_tag": "minecraft:repairs_copper_armor"
   },
   "1075": {
     "java_name": "minecraft:copper_boots",
     "bedrock_name": "minecraft:copper_boots",
     "max_stack_size": 1,
-    "max_damage": 143
+    "max_damage": 143,
+    "repair_tag": "minecraft:repairs_copper_armor"
   },
   "1076": {
     "java_name": "minecraft:chainmail_helmet",
     "bedrock_name": "minecraft:chainmail_helmet",
     "max_stack_size": 1,
-    "max_damage": 165
+    "max_damage": 165,
+    "repair_tag": "minecraft:repairs_chain_armor"
   },
   "1077": {
     "java_name": "minecraft:chainmail_chestplate",
     "bedrock_name": "minecraft:chainmail_chestplate",
     "max_stack_size": 1,
-    "max_damage": 240
+    "max_damage": 240,
+    "repair_tag": "minecraft:repairs_chain_armor"
   },
   "1078": {
     "java_name": "minecraft:chainmail_leggings",
     "bedrock_name": "minecraft:chainmail_leggings",
     "max_stack_size": 1,
-    "max_damage": 225
+    "max_damage": 225,
+    "repair_tag": "minecraft:repairs_chain_armor"
   },
   "1079": {
     "java_name": "minecraft:chainmail_boots",
     "bedrock_name": "minecraft:chainmail_boots",
     "max_stack_size": 1,
-    "max_damage": 195
+    "max_damage": 195,
+    "repair_tag": "minecraft:repairs_chain_armor"
   },
   "1080": {
     "java_name": "minecraft:iron_helmet",
     "bedrock_name": "minecraft:iron_helmet",
     "max_stack_size": 1,
-    "max_damage": 165
+    "max_damage": 165,
+    "repair_tag": "minecraft:repairs_iron_armor"
   },
   "1081": {
     "java_name": "minecraft:iron_chestplate",
     "bedrock_name": "minecraft:iron_chestplate",
     "max_stack_size": 1,
-    "max_damage": 240
+    "max_damage": 240,
+    "repair_tag": "minecraft:repairs_iron_armor"
   },
   "1082": {
     "java_name": "minecraft:iron_leggings",
     "bedrock_name": "minecraft:iron_leggings",
     "max_stack_size": 1,
-    "max_damage": 225
+    "max_damage": 225,
+    "repair_tag": "minecraft:repairs_iron_armor"
   },
   "1083": {
     "java_name": "minecraft:iron_boots",
     "bedrock_name": "minecraft:iron_boots",
     "max_stack_size": 1,
-    "max_damage": 195
+    "max_damage": 195,
+    "repair_tag": "minecraft:repairs_iron_armor"
   },
   "1084": {
     "java_name": "minecraft:diamond_helmet",
     "bedrock_name": "minecraft:diamond_helmet",
     "max_stack_size": 1,
-    "max_damage": 363
+    "max_damage": 363,
+    "repair_tag": "minecraft:repairs_diamond_armor"
   },
   "1085": {
     "java_name": "minecraft:diamond_chestplate",
     "bedrock_name": "minecraft:diamond_chestplate",
     "max_stack_size": 1,
-    "max_damage": 528
+    "max_damage": 528,
+    "repair_tag": "minecraft:repairs_diamond_armor"
   },
   "1086": {
     "java_name": "minecraft:diamond_leggings",
     "bedrock_name": "minecraft:diamond_leggings",
     "max_stack_size": 1,
-    "max_damage": 495
+    "max_damage": 495,
+    "repair_tag": "minecraft:repairs_diamond_armor"
   },
   "1087": {
     "java_name": "minecraft:diamond_boots",
     "bedrock_name": "minecraft:diamond_boots",
     "max_stack_size": 1,
-    "max_damage": 429
+    "max_damage": 429,
+    "repair_tag": "minecraft:repairs_diamond_armor"
   },
   "1088": {
     "java_name": "minecraft:golden_helmet",
     "bedrock_name": "minecraft:golden_helmet",
     "max_stack_size": 1,
-    "max_damage": 77
+    "max_damage": 77,
+    "repair_tag": "minecraft:repairs_gold_armor"
   },
   "1089": {
     "java_name": "minecraft:golden_chestplate",
     "bedrock_name": "minecraft:golden_chestplate",
     "max_stack_size": 1,
-    "max_damage": 112
+    "max_damage": 112,
+    "repair_tag": "minecraft:repairs_gold_armor"
   },
   "1090": {
     "java_name": "minecraft:golden_leggings",
     "bedrock_name": "minecraft:golden_leggings",
     "max_stack_size": 1,
-    "max_damage": 105
+    "max_damage": 105,
+    "repair_tag": "minecraft:repairs_gold_armor"
   },
   "1091": {
     "java_name": "minecraft:golden_boots",
     "bedrock_name": "minecraft:golden_boots",
     "max_stack_size": 1,
-    "max_damage": 91
+    "max_damage": 91,
+    "repair_tag": "minecraft:repairs_gold_armor"
   },
   "1092": {
     "java_name": "minecraft:netherite_helmet",
     "bedrock_name": "minecraft:netherite_helmet",
     "max_stack_size": 1,
-    "max_damage": 407
+    "max_damage": 407,
+    "repair_tag": "minecraft:repairs_netherite_armor"
   },
   "1093": {
     "java_name": "minecraft:netherite_chestplate",
     "bedrock_name": "minecraft:netherite_chestplate",
     "max_stack_size": 1,
-    "max_damage": 592
+    "max_damage": 592,
+    "repair_tag": "minecraft:repairs_netherite_armor"
   },
   "1094": {
     "java_name": "minecraft:netherite_leggings",
     "bedrock_name": "minecraft:netherite_leggings",
     "max_stack_size": 1,
-    "max_damage": 555
+    "max_damage": 555,
+    "repair_tag": "minecraft:repairs_netherite_armor"
   },
   "1095": {
     "java_name": "minecraft:netherite_boots",
     "bedrock_name": "minecraft:netherite_boots",
     "max_stack_size": 1,
-    "max_damage": 481
+    "max_damage": 481,
+    "repair_tag": "minecraft:repairs_netherite_armor"
   },
   "1096": {
     "java_name": "minecraft:flint",
@@ -5867,7 +5935,10 @@
     "java_name": "minecraft:mace",
     "bedrock_name": "minecraft:mace",
     "max_stack_size": 1,
-    "max_damage": 500
+    "max_damage": 500,
+    "repair_items": [
+      1373
+    ]
   },
   "1375": {
     "java_name": "minecraft:item_frame",
@@ -6218,49 +6289,57 @@
     "java_name": "minecraft:shield",
     "bedrock_name": "minecraft:shield",
     "max_stack_size": 1,
-    "max_damage": 336
+    "max_damage": 336,
+    "repair_tag": "minecraft:wooden_tool_materials"
   },
   "1447": {
     "java_name": "minecraft:wooden_spear",
     "bedrock_name": "minecraft:wooden_spear",
     "max_stack_size": 1,
-    "max_damage": 59
+    "max_damage": 59,
+    "repair_tag": "minecraft:wooden_tool_materials"
   },
   "1448": {
     "java_name": "minecraft:stone_spear",
     "bedrock_name": "minecraft:stone_spear",
     "max_stack_size": 1,
-    "max_damage": 131
+    "max_damage": 131,
+    "repair_tag": "minecraft:stone_tool_materials"
   },
   "1449": {
     "java_name": "minecraft:copper_spear",
     "bedrock_name": "minecraft:copper_spear",
     "max_stack_size": 1,
-    "max_damage": 190
+    "max_damage": 190,
+    "repair_tag": "minecraft:copper_tool_materials"
   },
   "1450": {
     "java_name": "minecraft:iron_spear",
     "bedrock_name": "minecraft:iron_spear",
     "max_stack_size": 1,
-    "max_damage": 250
+    "max_damage": 250,
+    "repair_tag": "minecraft:iron_tool_materials"
   },
   "1451": {
     "java_name": "minecraft:golden_spear",
     "bedrock_name": "minecraft:golden_spear",
     "max_stack_size": 1,
-    "max_damage": 32
+    "max_damage": 32,
+    "repair_tag": "minecraft:gold_tool_materials"
   },
   "1452": {
     "java_name": "minecraft:diamond_spear",
     "bedrock_name": "minecraft:diamond_spear",
     "max_stack_size": 1,
-    "max_damage": 1561
+    "max_damage": 1561,
+    "repair_tag": "minecraft:diamond_tool_materials"
   },
   "1453": {
     "java_name": "minecraft:netherite_spear",
     "bedrock_name": "minecraft:netherite_spear",
     "max_stack_size": 1,
-    "max_damage": 2031
+    "max_damage": 2031,
+    "repair_tag": "minecraft:netherite_tool_materials"
   },
   "1454": {
     "java_name": "minecraft:totem_of_undying",

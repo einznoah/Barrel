@@ -2,6 +2,7 @@ package org.barrelmc.barrel.network.converter;
 
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.geysermc.mcprotocollib.protocol.MinecraftProtocol;
 
 import java.util.ArrayList;
@@ -27,6 +28,9 @@ public class EnchantmentConverter {
     private static final int[] MAX_LEVELS = new int[BEDROCK_ENCHANTMENTS.length];
     // The levels an anvil takes for every level of the enchantment it adds
     private static final int[] ANVIL_COSTS = new int[BEDROCK_ENCHANTMENTS.length];
+    // The tags of the items an enchantment can be on, and of the enchantments it can not be together with
+    private static final String[] SUPPORTED_ITEMS = new String[BEDROCK_ENCHANTMENTS.length];
+    private static final String[] EXCLUSIVE_SETS = new String[BEDROCK_ENCHANTMENTS.length];
 
     public static void init() {
         // The registry the java client is sent when it joins
@@ -40,6 +44,8 @@ public class EnchantmentConverter {
             JAVA_ENCHANTMENT_IDS[bedrockId] = entry == null ? -1 : entry.getInt("id");
             MAX_LEVELS[bedrockId] = entry == null ? 1 : entry.getCompound("element").getInt("max_level", 1);
             ANVIL_COSTS[bedrockId] = entry == null ? 1 : entry.getCompound("element").getInt("anvil_cost", 1);
+            SUPPORTED_ITEMS[bedrockId] = entry == null ? null : entry.getCompound("element").getString("supported_items", null);
+            EXCLUSIVE_SETS[bedrockId] = entry == null ? null : entry.getCompound("element").getString("exclusive_set", null);
         }
     }
 
@@ -53,6 +59,23 @@ public class EnchantmentConverter {
 
     public static int getAnvilCost(int bedrockId) {
         return bedrockId >= 0 && bedrockId < ANVIL_COSTS.length ? ANVIL_COSTS[bedrockId] : 1;
+    }
+
+    private static boolean isKnown(int bedrockId) {
+        return bedrockId >= 0 && bedrockId < BEDROCK_ENCHANTMENTS.length;
+    }
+
+    // Whether the enchantment is one for this item. An enchantment java does not know is left to the server
+    public static boolean canEnchant(int bedrockId, ItemData item) {
+        return !isKnown(bedrockId) || SUPPORTED_ITEMS[bedrockId] == null || JavaRegistries.isInTag(JavaRegistries.ITEM, SUPPORTED_ITEMS[bedrockId], ItemConverter.bedrockToJavaItemId(item));
+    }
+
+    // Whether an item can have both enchantments, sharpness and smite are not for example
+    public static boolean isCompatible(int bedrockId, int otherBedrockId) {
+        if (!isKnown(bedrockId) || !isKnown(otherBedrockId)) {
+            return true;
+        }
+        return !JavaRegistries.isInTag(JavaRegistries.ENCHANTMENT, EXCLUSIVE_SETS[bedrockId], JAVA_ENCHANTMENT_IDS[otherBedrockId]) && !JavaRegistries.isInTag(JavaRegistries.ENCHANTMENT, EXCLUSIVE_SETS[otherBedrockId], JAVA_ENCHANTMENT_IDS[bedrockId]);
     }
 
     // The enchantments of a bedrock item by their bedrock ids, in the order the item has them

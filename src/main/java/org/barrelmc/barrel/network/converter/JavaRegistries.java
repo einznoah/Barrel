@@ -11,6 +11,8 @@ import java.util.Map;
 public class JavaRegistries {
 
     public static final String BANNER_PATTERN = "minecraft:banner_pattern";
+    public static final String ENCHANTMENT = "minecraft:enchantment";
+    public static final String ITEM = "minecraft:item";
     public static final String TRIM_MATERIAL = "minecraft:trim_material";
     public static final String TRIM_PATTERN = "minecraft:trim_pattern";
 
@@ -40,6 +42,18 @@ public class JavaRegistries {
 
     public static String getName(String registry, int id) {
         return NAMES.getOrDefault(registry, Map.of()).get(id);
+    }
+
+    // A tag is given the way the registries name one, with a # in front. Anything else is not in a tag
+    public static boolean isInTag(String registry, String tag, int id) {
+        if (tag != null && tag.startsWith("#")) {
+            for (int tagId : getTag(registry, tag.substring(1))) {
+                if (tagId == id) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // The ids of a tag, in the order the client has them

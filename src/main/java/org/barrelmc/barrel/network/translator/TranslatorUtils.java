@@ -19,7 +19,6 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeT
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.ModifierOperation;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
-import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRotateHeadPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEntityDataPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
@@ -64,8 +63,8 @@ public class TranslatorUtils {
         player.getJavaSession().send(new ClientboundUpdateAttributesPacket((int) player.getRuntimeEntityId(), Collections.singletonList(movementSpeed)));
     }
 
-    public static void sendEntityData(Player player, long runtimeEntityId, EntityType entityType, EntityDataMap entityData) {
-        EntityMetadata<?, ?>[] javaEntityData = EntityDataConverter.bedrockToJavaEntityData(entityType, entityData);
+    public static void sendEntityData(Player player, long runtimeEntityId, Entity entity, EntityDataMap entityData) {
+        EntityMetadata<?, ?>[] javaEntityData = EntityDataConverter.bedrockToJavaEntityData(entity, entityData, entity == player.getSelf() ? player : null);
         if (javaEntityData.length > 0) {
             player.getJavaSession().send(new ClientboundSetEntityDataPacket((int) runtimeEntityId, javaEntityData));
         }

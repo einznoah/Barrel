@@ -22,6 +22,20 @@ public class Entity extends Vector3 {
     @Getter
     private float headYaw;
 
+    // What the java client was told about the entity, of what is sent together with something else or only once
+    @Setter
+    @Getter
+    private boolean effectParticles;
+    @Setter
+    @Getter
+    private byte color;
+    @Setter
+    @Getter
+    private boolean sheared;
+    @Setter
+    @Getter
+    private int ownFlags;
+
     public Entity(EntityType type) {
         this.type = type;
     }

@@ -44,7 +44,7 @@ public class AddEntityPacket implements BedrockPacketTranslator {
 
         player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), UUID.randomUUID(), entityType, position.getX(), position.getY(), position.getZ(), Vector3d.from(motion.getX(), motion.getY(), motion.getZ()), entity.yaw, entity.pitch, entity.getHeadYaw()));
 
-        TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), entityType, packet.getMetadata());
+        TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), entity, packet.getMetadata());
         if (entityType == EntityType.SPLASH_POTION || entityType == EntityType.LINGERING_POTION) {
             // A thrown potion is shown as the item it was, the bedrock server only tells which potion it holds
             Short bedrockPotionId = packet.getMetadata().get(EntityDataTypes.AUX_VALUE_DATA);

@@ -48,11 +48,13 @@ import org.cloudburstmc.protocol.common.DefinitionRegistry;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetChunkCacheCenterPacket;
 import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundHelloPacket;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
@@ -157,6 +159,10 @@ public class Player extends Vector3 {
     @Setter
     private long overworldClockId = -1;
 
+    // The player itself as an entity, for what the java client is told about it like about any other
+    @Getter
+    private final Entity self = new Entity(EntityType.PLAYER);
+
     // What the hearts and the hunger bar of the java client show
     @Getter
     @Setter
@@ -184,9 +190,12 @@ public class Player extends Vector3 {
         this.javaSession = javaSession;
 
         if (ProxyServer.getInstance().getConfig().getAuth().equals("offline")) {
-            this.xuid = "";
+            // A server that does not check the accounts tells the players apart by these, PowerNukkitX by the xuid
+            // alone. They are made of the name, so that a player is the same one every time and nobody else
             this.username = loginPacket.getUsername();
-            this.UUID = java.util.UUID.randomUUID().toString();
+            java.util.UUID offlineUuid = java.util.UUID.nameUUIDFromBytes(("OfflinePlayer:" + this.username).getBytes(StandardCharsets.UTF_8));
+            this.UUID = offlineUuid.toString();
+            this.xuid = Long.toString(offlineUuid.getMostSignificantBits() >>> 14);
         } else {
             this.xboxAccount = AuthManager.getInstance().getXboxAccounts().remove(loginPacket.getUsername());
         }

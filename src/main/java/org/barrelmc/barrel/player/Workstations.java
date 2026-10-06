@@ -8,6 +8,7 @@ import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,8 +51,7 @@ public class Workstations {
     }
 
     // An anvil mends an item with what it is made of, makes one of two of a kind, puts the enchantments of a book
-    // on it and names it. Returns null if it has nothing to do. What an item is made of is not known here, the
-    // server refuses the wrong material
+    // on it and names it. Returns null if it has nothing to do
     public static Forged forge(ItemData input, ItemData material, String name) {
         if (ItemConverter.isEmpty(input)) {
             return null;
@@ -65,6 +65,9 @@ public class Workstations {
             int maxDamage = ItemConverter.getMaxDamage(input);
             int damage = getDamage(input);
             if (!enchantedBook && material.getDefinition().getRuntimeId() != input.getDefinition().getRuntimeId()) {
+                if (!ItemConverter.isRepairMaterial(input, material)) {
+                    return null;
+                }
                 // Every piece of the material mends a quarter of what the item can take
                 while (maxDamage > 0 && damage > 0 && materials < material.getCount()) {
                     damage -= Math.min(damage, maxDamage / 4);
@@ -86,12 +89,33 @@ public class Workstations {
                 }
 
                 Map<Integer, Integer> enchantments = EnchantmentConverter.getEnchantments(input.getTag());
+                Set<Integer> inputEnchantments = new HashSet<>(enchantments.keySet());
+                boolean added = false;
+                boolean refused = false;
                 for (Map.Entry<Integer, Integer> enchantment : EnchantmentConverter.getEnchantments(material.getTag()).entrySet()) {
+                    // An enchantment that is not for the item, or that does not go with one it has, is left out.
+                    // The ones it does not go with cost a level each anyway
+                    boolean fits = isItem(input, "minecraft:enchanted_book") || EnchantmentConverter.canEnchant(enchantment.getKey(), input);
+                    for (int inputEnchantment : inputEnchantments) {
+                        if (inputEnchantment != enchantment.getKey() && !EnchantmentConverter.isCompatible(enchantment.getKey(), inputEnchantment)) {
+                            fits = false;
+                            work++;
+                        }
+                    }
+                    if (!fits) {
+                        refused = true;
+                        continue;
+                    }
+
+                    added = true;
                     int level = enchantments.getOrDefault(enchantment.getKey(), 0);
                     int addedLevel = Math.min(level == enchantment.getValue() ? level + 1 : Math.max(level, enchantment.getValue()), EnchantmentConverter.getMaxLevel(enchantment.getKey()));
                     int levelCost = EnchantmentConverter.getAnvilCost(enchantment.getKey());
                     work += (enchantedBook ? Math.max(1, levelCost / 2) : levelCost) * Math.max(0, addedLevel - level);
                     enchantments.put(enchantment.getKey(), addedLevel);
+                }
+                if (refused && !added) {
+                    return null;
                 }
                 if (!enchantments.isEmpty()) {
                     tag = EnchantmentConverter.setEnchantments(tag.build(), enchantments).toBuilder();

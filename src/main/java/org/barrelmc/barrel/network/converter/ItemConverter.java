@@ -39,6 +39,9 @@ public class ItemConverter {
     public static final HashMap<Integer, Integer> JAVA_ITEM_MAX_STACK_SIZE = new HashMap<>();
     // How much damage the java items that wear out can take
     public static final HashMap<Integer, Integer> JAVA_ITEM_MAX_DAMAGE = new HashMap<>();
+    // What an anvil mends the java items with, a tag of items or the items themselves
+    private static final HashMap<Integer, String> JAVA_ITEM_REPAIR_TAGS = new HashMap<>();
+    private static final HashMap<Integer, Set<Integer>> JAVA_ITEM_REPAIR_ITEMS = new HashMap<>();
     // How long the java items that are eaten or drunk take to be
     public static final HashMap<Integer, Integer> JAVA_ITEM_CONSUME_TICKS = new HashMap<>();
     private static final HashMap<String, Integer> JAVA_ITEM_IDS = new HashMap<>();
@@ -88,6 +91,16 @@ public class ItemConverter {
             }
             if (itemEntry.has("max_damage")) {
                 JAVA_ITEM_MAX_DAMAGE.put(javaItemId, itemEntry.get("max_damage").getAsInt());
+            }
+            if (itemEntry.has("repair_tag")) {
+                JAVA_ITEM_REPAIR_TAGS.put(javaItemId, "#" + itemEntry.get("repair_tag").getAsString());
+            }
+            if (itemEntry.has("repair_items")) {
+                Set<Integer> repairItems = new HashSet<>();
+                for (JsonElement repairItem : itemEntry.get("repair_items").getAsJsonArray()) {
+                    repairItems.add(repairItem.getAsInt());
+                }
+                JAVA_ITEM_REPAIR_ITEMS.put(javaItemId, repairItems);
             }
             if (itemEntry.has("consume_ticks")) {
                 JAVA_ITEM_CONSUME_TICKS.put(javaItemId, itemEntry.get("consume_ticks").getAsInt());
@@ -181,6 +194,13 @@ public class ItemConverter {
     // How much damage the item can take, 0 for the items that do not wear out
     public static int getMaxDamage(ItemData item) {
         return JAVA_ITEM_MAX_DAMAGE.getOrDefault(bedrockToJavaItemId(item), 0);
+    }
+
+    // Whether an anvil mends the item with the material
+    public static boolean isRepairMaterial(ItemData item, ItemData material) {
+        int javaItemId = bedrockToJavaItemId(item);
+        int javaMaterialId = bedrockToJavaItemId(material);
+        return JavaRegistries.isInTag(JavaRegistries.ITEM, JAVA_ITEM_REPAIR_TAGS.get(javaItemId), javaMaterialId) || JAVA_ITEM_REPAIR_ITEMS.getOrDefault(javaItemId, Set.of()).contains(javaMaterialId);
     }
 
     // The ticks it takes to eat or drink the item, 0 for the items that are used in another way

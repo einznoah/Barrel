@@ -21,6 +21,7 @@ import struct
 # Ids of the max_stack_size, max_damage and consumable data components, the first byte of their encoded form
 MAX_STACK_SIZE_COMPONENT = 1
 MAX_DAMAGE_COMPONENT = 2
+REPAIRABLE_COMPONENT = 33
 CONSUMABLE_COMPONENT = 24
 
 
@@ -74,6 +75,24 @@ def main():
             if max_damage[0] != MAX_DAMAGE_COMPONENT:
                 raise SystemExit('The data component ids changed, max_damage is no longer %d' % MAX_DAMAGE_COMPONENT)
             entry['max_damage'] = read_var_int(max_damage, 1)
+
+        # What an anvil mends the item with, a tag of items or the ids of the items themselves
+        if 'minecraft:repairable' in java_item['components']:
+            repairable = base64.b64decode(java_item['components']['minecraft:repairable'])
+            if repairable[0] != REPAIRABLE_COMPONENT:
+                raise SystemExit('The data component ids changed, repairable is no longer %d' % REPAIRABLE_COMPONENT)
+            count = read_var_int(repairable, 1)
+            if count == 0:
+                entry['repair_tag'] = repairable[3:3 + repairable[2]].decode()
+            else:
+                repair_items = []
+                offset = 2
+                for _ in range(count - 1):
+                    repair_items.append(read_var_int(repairable, offset))
+                    while repairable[offset] & 0x80:
+                        offset += 1
+                    offset += 1
+                entry['repair_items'] = repair_items
 
         # What is eaten or drunk, and how long that takes. A Bedrock server is told when the player is done
         if 'minecraft:consumable' in java_item['components']:
