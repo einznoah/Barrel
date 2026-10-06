@@ -12,6 +12,8 @@ import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.nbt.NbtMap;
+import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerId;
@@ -50,12 +52,14 @@ import org.cloudburstmc.protocol.bedrock.packet.ContainerSetDataPacket;
 import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ItemStackRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MobEquipmentPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.inventory.VillagerTrade;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundSetHeldSlotPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerClosePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetContentPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetDataPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundContainerSetSlotPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundMerchantOffersPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundOpenScreenPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetCursorItemPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetPlayerInventoryPacket;
@@ -82,6 +86,7 @@ public class Inventory {
     private static final int ANVIL_INPUT_SLOT = 1;
     private static final int ANVIL_MATERIAL_SLOT = 2;
     private static final int STONECUTTER_INPUT_SLOT = 3;
+    private static final int TRADE_INGREDIENT_SLOT = 4;
     private static final int LOOM_INPUT_SLOT = 9;
     private static final int LOOM_DYE_SLOT = 10;
     private static final int LOOM_MATERIAL_SLOT = 11;
@@ -131,7 +136,10 @@ public class Inventory {
     private final ItemData[] result = new ItemData[1];
     private final CraftingRecipes craftingRecipes = new CraftingRecipes();
     private Craft craft = null;
-    // Which of the things a stonecutter or a loom offers was picked, and what the stonecutter offered them for
+    // What the villager the player trades with offers
+    private List<Trade> trades = Collections.emptyList();
+    private String traderName = "";
+    // Which of the things a stonecutter, a loom or a villager offers was picked, and what the stonecutter offered them for
     private int selectedButton = -1;
     private ItemData stonecutterInput = ItemData.AIR;
     private List<EnchantOptionData> enchantOptions = Collections.emptyList();
@@ -165,6 +173,10 @@ public class Inventory {
     // What the crafting grid or the open crafting station makes, and what the server is asked to make it with: the
     // action of the station, and how many items of which slots one of them takes
     private record Craft(ItemData result, IntFunction<ItemStackRequestAction> action, Map<Slot, Integer> ingredients, int maxCrafts, String text, boolean repaired) {
+    }
+
+    // An offer of a villager: what it wants, what it gives for it, and how often it did and does
+    private record Trade(ItemData firstCost, ItemData secondCost, ItemData result, int networkId, int uses, int maxUses) {
     }
 
     public record Slot(ContainerSlotType type, int networkSlot, ItemData[] contents, int index) {
@@ -278,6 +290,8 @@ public class Inventory {
             case ENCHANTING_INPUT:
             case ENCHANTING_MATERIAL:
             case STONECUTTER_INPUT:
+            case TRADE2_INGREDIENT_1:
+            case TRADE2_INGREDIENT_2:
             case SMITHING_TABLE_INPUT:
             case SMITHING_TABLE_MATERIAL:
             case SMITHING_TABLE_TEMPLATE:
@@ -425,7 +439,7 @@ public class Inventory {
                 this.openJavaContainer(0);
                 break;
             default:
-                // TODO: looms, grindstones, smithing tables, stonecutters, beacons, villagers, ...
+                // TODO: beacons, ...
                 this.closeContainer();
                 break;
         }
@@ -525,6 +539,13 @@ public class Inventory {
                 slots.add(this.uiSlot(ContainerSlotType.LOOM_INPUT, LOOM_INPUT_SLOT));
                 slots.add(this.uiSlot(ContainerSlotType.LOOM_DYE, LOOM_DYE_SLOT));
                 slots.add(this.uiSlot(ContainerSlotType.LOOM_MATERIAL, LOOM_MATERIAL_SLOT));
+                slots.add(this.getResultSlot());
+                break;
+            case TRADE:
+                javaContainerType = org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.MERCHANT;
+                title = this.traderName.startsWith("entity.") ? "entity.minecraft." + this.traderName.substring("entity.".length()) : this.traderName;
+                slots.add(this.uiSlot(ContainerSlotType.TRADE2_INGREDIENT_1, TRADE_INGREDIENT_SLOT));
+                slots.add(this.uiSlot(ContainerSlotType.TRADE2_INGREDIENT_2, TRADE_INGREDIENT_SLOT + 1));
                 slots.add(this.getResultSlot());
                 break;
             case CARTOGRAPHY:
@@ -805,6 +826,10 @@ public class Inventory {
                 return !isIn(item, "minecraft:lapis_lazuli") && slot.isEmpty();
             case STONECUTTER_INPUT:
                 return !this.craftingRecipes.getCuts(item).isEmpty();
+            case TRADE2_INGREDIENT_1:
+            case TRADE2_INGREDIENT_2:
+                // A java client picks an offer to have what it costs put there
+                return false;
             case SMITHING_TABLE_TEMPLATE:
                 return this.craftingRecipes.isSmithingItem(CraftingRecipes.JAVA_SMITHING_TEMPLATES, item);
             case SMITHING_TABLE_INPUT:
@@ -1100,6 +1125,9 @@ public class Inventory {
             case CARTOGRAPHY:
                 this.craft = this.getCartographyCraft();
                 break;
+            case TRADE:
+                this.craft = this.getTradeCraft();
+                break;
             default:
                 // The grid of the inventory can hold something while a container that has none is open
                 this.craft = this.getGridCraft();
@@ -1231,6 +1259,107 @@ public class Inventory {
         ingredients.put(map, 1);
         ingredients.put(additional, 1);
         return new Craft(drawnMap, crafts -> new CraftRecipeOptionalAction(0, 0), ingredients, 1, Workstations.getCustomName(map.get()), false);
+    }
+
+    private ItemData readItem(NbtMap item) {
+        ItemDefinition itemDefinition = item == null ? null : this.getItemDefinition(item.getString("Name"));
+        if (itemDefinition == null) {
+            return ItemData.AIR;
+        }
+        return ItemData.builder().definition(itemDefinition).damage(item.getShort("Damage")).count(item.getByte("Count")).tag(item.getCompound("tag", null)).build();
+    }
+
+    // A villager is traded with in a container the server opens by telling what the villager offers. It tells again
+    // when that changed
+    public void setTrades(int containerId, String traderName, int tier, NbtMap offers) {
+        List<Trade> trades = new ArrayList<>();
+        List<VillagerTrade> javaTrades = new ArrayList<>();
+        for (NbtMap offer : offers.getList("Recipes", NbtType.COMPOUND, new ArrayList<>())) {
+            Trade trade = new Trade(this.readItem(offer.getCompound("buyA", null)), this.readItem(offer.getCompound("buyB", null)), this.readItem(offer.getCompound("sell", null)), offer.getInt("netId"), offer.getInt("uses"), offer.getInt("maxUses"));
+            // A villager only offers what is of its level, and the items of the server are all known
+            if (offer.getInt("tier") > tier || ItemConverter.isEmpty(trade.firstCost()) || ItemConverter.isEmpty(trade.result())) {
+                continue;
+            }
+
+            trades.add(trade);
+            VillagerTrade.ItemCost secondCost = ItemConverter.isEmpty(trade.secondCost()) ? null : new VillagerTrade.ItemCost(ItemConverter.bedrockToJavaItemId(trade.secondCost()), trade.secondCost().getCount(), new HashMap<>());
+            javaTrades.add(new VillagerTrade(new VillagerTrade.ItemCost(ItemConverter.bedrockToJavaItemId(trade.firstCost()), trade.firstCost().getCount(), new HashMap<>()), ItemConverter.bedrockToJavaItem(trade.result()), secondCost, trade.uses() >= trade.maxUses(), trade.uses(), trade.maxUses(), offer.getInt("traderExp"), 0, offer.getFloat("priceMultiplierA"), offer.getInt("demand")));
+        }
+
+        this.trades = trades;
+        if (containerId != this.containerId || this.containerSlots == null) {
+            this.containerId = containerId;
+            this.containerType = ContainerType.TRADE;
+            this.traderName = traderName;
+            this.openJavaContainer(0);
+        }
+        this.player.getJavaSession().send(new ClientboundMerchantOffersPacket(JAVA_CONTAINER_WINDOW, javaTrades, tier + 1, 0, true, false));
+    }
+
+    private static boolean isKind(ItemData item, ItemData other) {
+        return item.getDefinition().getRuntimeId() == other.getDefinition().getRuntimeId() && item.getDamage() == other.getDamage();
+    }
+
+    // Whether the item is what an offer costs and enough of it, nothing has to be there for a cost there is not
+    private static boolean isCost(ItemData cost, ItemData item) {
+        if (ItemConverter.isEmpty(cost)) {
+            return ItemConverter.isEmpty(item);
+        }
+        return !ItemConverter.isEmpty(item) && isKind(cost, item) && item.getCount() >= cost.getCount();
+    }
+
+    private Craft getTradeCraft() {
+        Slot first = this.uiSlot(ContainerSlotType.TRADE2_INGREDIENT_1, TRADE_INGREDIENT_SLOT);
+        Slot second = this.uiSlot(ContainerSlotType.TRADE2_INGREDIENT_2, TRADE_INGREDIENT_SLOT + 1);
+        // The offer that was picked if what is there pays for it, and the first one that it pays for otherwise
+        Trade trade = null;
+        for (int index = -1; index < this.trades.size() && trade == null; index++) {
+            Trade offered = index == -1 ? (this.selectedButton >= 0 && this.selectedButton < this.trades.size() ? this.trades.get(this.selectedButton) : null) : this.trades.get(index);
+            if (offered != null && offered.uses() < offered.maxUses() && isCost(offered.firstCost(), first.get()) && isCost(offered.secondCost(), second.get())) {
+                trade = offered;
+            }
+        }
+        if (trade == null) {
+            return null;
+        }
+
+        Map<Slot, Integer> ingredients = new LinkedHashMap<>();
+        ingredients.put(first, trade.firstCost().getCount());
+        int maxCrafts = Math.min(trade.maxUses() - trade.uses(), first.get().getCount() / trade.firstCost().getCount());
+        if (!ItemConverter.isEmpty(trade.secondCost())) {
+            ingredients.put(second, trade.secondCost().getCount());
+            maxCrafts = Math.min(maxCrafts, second.get().getCount() / trade.secondCost().getCount());
+        }
+        int networkId = trade.networkId();
+        return new Craft(trade.result(), crafts -> new CraftRecipeAction(networkId, crafts), ingredients, maxCrafts, null, false);
+    }
+
+    // The java client picked an offer, a java server puts what it costs where the villager takes it from
+    public void selectTrade(int index) {
+        if (this.containerType != ContainerType.TRADE || this.containerSlots == null || index < 0 || index >= this.trades.size()) {
+            return;
+        }
+
+        this.selectedButton = index;
+        Trade trade = this.trades.get(index);
+        List<ItemData> costs = List.of(trade.firstCost(), trade.secondCost());
+        for (int cost = 0; cost < costs.size(); cost++) {
+            Slot slot = this.containerSlots.get(cost);
+            if (!slot.isEmpty()) {
+                this.quickMove(slot, this.getPlayerSlots(false));
+            }
+            for (Slot playerSlot : this.getPlayerSlots(false)) {
+                if (ItemConverter.isEmpty(costs.get(cost)) || playerSlot.isEmpty() || !isKind(costs.get(cost), playerSlot.get()) || (!slot.isEmpty() && !canStack(slot.get(), playerSlot.get()))) {
+                    continue;
+                }
+                int count = Math.min(playerSlot.get().getCount(), ItemConverter.getMaxStackSize(playerSlot.get()) - slot.get().getCount());
+                if (count > 0) {
+                    this.move(playerSlot, slot, count);
+                }
+            }
+        }
+        this.sendRequest();
+        this.sendContents();
     }
 
     // A click on what the crafting grid or the open crafting station makes

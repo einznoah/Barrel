@@ -10,7 +10,7 @@
 
 ## Need implemented
 
-- Beacons and villager trading
+- Beacons, signs and what else a block holds
 - The recipe book
 - And More...
 
