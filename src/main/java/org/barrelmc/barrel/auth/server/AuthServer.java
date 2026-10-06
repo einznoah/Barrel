@@ -33,9 +33,12 @@ import java.util.Collections;
 
 public class AuthServer extends SessionAdapter {
 
+    // The client takes 0 for an entity that was not given an id yet, and does not join with it
+    private static final int ENTITY_ID = 1;
+
     public AuthServer(Session session, String username) {
         session.send(new ClientboundLoginPacket(
-                0, false, new Key[]{Key.key("minecraft:overworld")},
+                ENTITY_ID, false, new Key[]{Key.key("minecraft:overworld")},
                 10, 6, 6, false, true, false,
                 new PlayerSpawnInfo(
                         ProxyServer.getInstance().getOverworldId(), Key.key("minecraft:overworld"), 100,
