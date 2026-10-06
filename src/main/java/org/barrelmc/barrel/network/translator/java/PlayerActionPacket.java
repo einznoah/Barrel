@@ -85,6 +85,9 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                 player.getInventory().dropItem(player.getInventory().getHeldItemSlot(), action == PlayerAction.DROP_ITEM_STACK);
                 player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());
                 break;
+            case RELEASE_USE_ITEM:
+                player.getInventory().releaseItem();
+                break;
             case SWAP_HANDS:
                 player.getInventory().swapSlots(player.getInventory().getHeldItemSlot(), player.getInventory().getOffhandSlot());
                 player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());

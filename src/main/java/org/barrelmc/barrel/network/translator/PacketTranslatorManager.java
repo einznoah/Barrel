@@ -79,7 +79,8 @@ public class PacketTranslatorManager {
         }
     }
 
-    private boolean execute(Runnable translation) {
+    // Runs after the packets that are being translated, and returns whether it will
+    public boolean execute(Runnable translation) {
         try {
             threadPoolExecutor.execute(translation);
             return true;
@@ -143,6 +144,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(ContainerSetDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerSetDataPacket());
         bedrockTranslators.put(CraftingDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CraftingDataPacket());
         bedrockTranslators.put(PlayerEnchantOptionsPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerEnchantOptionsPacket());
+        bedrockTranslators.put(MobEffectPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MobEffectPacket());
 
         // Java packets
         javaTranslators.put(ServerboundChatPacket.class, new ChatPacket());

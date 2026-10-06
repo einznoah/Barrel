@@ -16,9 +16,11 @@ import base64
 import collections
 import json
 import os
+import struct
 
-# Id of the max_stack_size data component, the first byte of its encoded form
+# Ids of the max_stack_size and consumable data components, the first byte of their encoded form
 MAX_STACK_SIZE_COMPONENT = 1
+CONSUMABLE_COMPONENT = 24
 
 
 def read_var_int(data, offset):
@@ -64,6 +66,13 @@ def main():
             raise SystemExit('The data component ids changed, max_stack_size is no longer %d' % MAX_STACK_SIZE_COMPONENT)
         if read_var_int(max_stack_size, 1) != 64:
             entry['max_stack_size'] = read_var_int(max_stack_size, 1)
+
+        # What is eaten or drunk, and how long that takes. A Bedrock server is told when the player is done
+        if 'minecraft:consumable' in java_item['components']:
+            consumable = base64.b64decode(java_item['components']['minecraft:consumable'])
+            if consumable[0] != CONSUMABLE_COMPONENT:
+                raise SystemExit('The data component ids changed, consumable is no longer %d' % CONSUMABLE_COMPONENT)
+            entry['consume_ticks'] = round(struct.unpack('>f', consumable[1:5])[0] * 20)
 
         runtime_items[str(java_item['id'])] = entry
 

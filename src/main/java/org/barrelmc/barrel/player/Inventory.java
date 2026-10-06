@@ -9,6 +9,8 @@ import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.nbt.NbtType;
@@ -21,6 +23,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.CreativeItemData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.EnchantData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.EnchantOptionData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.FullContainerName;
+import org.cloudburstmc.protocol.bedrock.data.inventory.HandSlot;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.ItemStackRequest;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.ItemStackRequestSlotData;
@@ -40,8 +43,11 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.response.ItemS
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.response.ItemStackResponseContainer;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.response.ItemStackResponseSlot;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.response.ItemStackResponseStatus;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.ItemUseTransaction;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerClosePacket;
 import org.cloudburstmc.protocol.bedrock.packet.ContainerSetDataPacket;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 import org.cloudburstmc.protocol.bedrock.packet.ItemStackRequestPacket;
 import org.cloudburstmc.protocol.bedrock.packet.MobEquipmentPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
@@ -62,6 +68,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Inventory {
 
@@ -78,6 +86,13 @@ public class Inventory {
     private static final int CRAFTING_TABLE_GRID_SLOT = 32;
     // Where the bedrock server puts what was crafted, enchanted or taken from the creative inventory
     private static final int CREATED_OUTPUT_SLOT = 50;
+
+    private static final int ITEM_USE_CLICK_AIR = 1;
+    private static final int ITEM_RELEASE_RELEASE = 0;
+    // The server only lets an item be eaten or drunk once enough of its own ticks went by
+    private static final int CONSUME_DELAY_TICKS = 2;
+    // The bedrock items the server is told about when the player lets go of them
+    private static final Set<String> BEDROCK_RELEASED_ITEMS = Set.of("minecraft:bow", "minecraft:crossbow", "minecraft:trident");
 
     // Data of the java furnace and enchanting table windows
     private static final int JAVA_FURNACE_LIT_TIME = 0;
@@ -123,6 +138,10 @@ public class Inventory {
     private final Map<Integer, Map<Slot, ItemData>> pendingRequests = new HashMap<>();
     // The slots an anvil was asked to put what it made in, the server answers with how damaged that is
     private final Map<Integer, Slot> pendingRepairs = new HashMap<>();
+
+    // The item that is being used, and the ticks until it is eaten or drunk
+    private ItemData usedItem = null;
+    private final AtomicInteger consumeTicks = new AtomicInteger();
 
     public Inventory(Player player) {
         this.player = player;
@@ -571,6 +590,10 @@ public class Inventory {
     }
 
     public void setHeldSlot(int slot) {
+        if (slot != this.heldSlot) {
+            // A java client stops using an item when it holds another one, without telling
+            this.releaseItem();
+        }
         this.heldSlot = slot;
 
         MobEquipmentPacket mobEquipmentPacket = new MobEquipmentPacket();
@@ -580,6 +603,66 @@ public class Inventory {
         mobEquipmentPacket.setHotbarSlot(slot);
         mobEquipmentPacket.setContainerId(ContainerId.INVENTORY);
         this.player.getBedrockSession().sendPacket(mobEquipmentPacket);
+    }
+
+    // The player used the item it holds without aiming at a block
+    public void useItem() {
+        Slot slot = this.getHeldItemSlot();
+        this.sendItemUse(slot.get());
+
+        int consumeTicks = slot.isEmpty() ? 0 : ItemConverter.getConsumeTicks(slot.get());
+        boolean released = consumeTicks > 0 || (!slot.isEmpty() && BEDROCK_RELEASED_ITEMS.contains(slot.get().getDefinition().getIdentifier()));
+        this.usedItem = released ? slot.get() : null;
+        this.consumeTicks.set(consumeTicks > 0 ? consumeTicks + CONSUME_DELAY_TICKS : 0);
+    }
+
+    private void sendItemUse(ItemData item) {
+        InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
+        inventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
+        inventoryTransactionPacket.setActionType(ITEM_USE_CLICK_AIR);
+        inventoryTransactionPacket.setTriggerType(ItemUseTransaction.TriggerType.PLAYER_INPUT);
+        inventoryTransactionPacket.setBlockPosition(Vector3i.ZERO);
+        inventoryTransactionPacket.setBlockFace(255);
+        inventoryTransactionPacket.setHotbarSlot(this.heldSlot);
+        inventoryTransactionPacket.setHand(HandSlot.MAINHAND);
+        inventoryTransactionPacket.setItemInHand(item);
+        inventoryTransactionPacket.setPlayerPosition(this.player.getVector3f());
+        inventoryTransactionPacket.setClickPosition(Vector3f.ZERO);
+        inventoryTransactionPacket.setBlockDefinition(() -> 0);
+        inventoryTransactionPacket.setClientInteractPrediction(ItemUseTransaction.PredictedResult.SUCCESS);
+        this.player.getBedrockSession().sendPacket(inventoryTransactionPacket);
+    }
+
+    // Called every tick by the thread that sends what the player does. Returns whether the item is eaten or drunk now
+    public boolean tickItemUse() {
+        return this.consumeTicks.get() > 0 && this.consumeTicks.decrementAndGet() == 0;
+    }
+
+    // A java server knows by itself when the player is done eating or drinking. A bedrock server is told, by the
+    // item being used a second time
+    public void finishUsingItem() {
+        Slot slot = this.getHeldItemSlot();
+        if (this.usedItem != null && !slot.isEmpty() && canStack(this.usedItem, slot.get())) {
+            this.sendItemUse(slot.get());
+        }
+        this.usedItem = null;
+    }
+
+    // The player stopped using the item before it was used up, which is also what shoots a bow
+    public void releaseItem() {
+        this.consumeTicks.set(0);
+        if (this.usedItem == null) {
+            return;
+        }
+        this.usedItem = null;
+
+        InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
+        inventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_RELEASE);
+        inventoryTransactionPacket.setActionType(ITEM_RELEASE_RELEASE);
+        inventoryTransactionPacket.setHotbarSlot(this.heldSlot);
+        inventoryTransactionPacket.setItemInHand(this.getHeldItemSlot().get());
+        inventoryTransactionPacket.setHeadPosition(this.player.getVector3f());
+        this.player.getBedrockSession().sendPacket(inventoryTransactionPacket);
     }
 
     public void setCreativeItems(List<CreativeItemData> creativeItems) {
@@ -835,9 +918,15 @@ public class Inventory {
         }
     }
 
+    // Whether a java client holds the two for the same item, the potion in it counts
+    private static boolean isItem(ItemData item, ItemStack javaItem) {
+        ItemStack translatedItem = ItemConverter.bedrockToJavaItem(item);
+        return translatedItem.getId() == javaItem.getId() && Objects.equals(ItemConverter.javaToBedrockItem(translatedItem), ItemConverter.javaToBedrockItem(javaItem));
+    }
+
     // The creative inventory of java tells the server what a slot holds instead of what was clicked
     public void setCreativeItem(Slot slot, ItemStack javaItem) {
-        if (this.isResultSlot(slot) || (javaItem != null && !slot.isEmpty() && javaItem.getId() == ItemConverter.bedrockToJavaItemId(slot.get()) && javaItem.getAmount() == slot.get().getCount())) {
+        if (this.isResultSlot(slot) || (javaItem != null && !slot.isEmpty() && isItem(slot.get(), javaItem) && javaItem.getAmount() == slot.get().getCount())) {
             return;
         }
 
@@ -850,7 +939,7 @@ public class Inventory {
         if (javaItem == null || javaItem.getAmount() <= 0) {
             return;
         }
-        CreativeItemData creativeItem = this.creativeItems.get(ItemConverter.javaToBedrockItem(javaItem.getId()));
+        CreativeItemData creativeItem = this.creativeItems.get(ItemConverter.javaToBedrockItem(javaItem));
         if (creativeItem == null) {
             // The server does not offer this item, the client is shown that the slot stayed empty
             this.sendSlot(slot);

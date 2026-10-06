@@ -46,6 +46,7 @@ import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
 import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
 import org.cloudburstmc.protocol.common.DefinitionRegistry;
 import org.geysermc.mcprotocollib.network.Session;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetChunkCacheCenterPacket;
@@ -155,6 +156,10 @@ public class Player extends Vector3 {
     @Getter
     @Setter
     private long overworldClockId = -1;
+
+    // The effects the player has, with their strength
+    @Getter
+    private final Map<Effect, Integer> effects = new HashMap<>();
 
     @Getter
     @Setter
@@ -468,6 +473,11 @@ class PlayerAuthInputThread implements Runnable {
 
                 player.getPlayerAuthInputData().removeAll(player.getPlayerAuthInputData());
                 player.getPlayerAuthInputActions().removeAll(player.getPlayerAuthInputActions());
+
+                if (player.getInventory().tickItemUse()) {
+                    // The inventory belongs to the thread that translates the packets
+                    player.getPacketTranslatorManager().execute(() -> player.getInventory().finishUsingItem());
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

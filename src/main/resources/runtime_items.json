@@ -4100,7 +4100,8 @@
   },
   "1007": {
     "java_name": "minecraft:apple",
-    "bedrock_name": "minecraft:apple"
+    "bedrock_name": "minecraft:apple",
+    "consume_ticks": 32
   },
   "1008": {
     "java_name": "minecraft:bow",
@@ -4355,7 +4356,8 @@
   "1061": {
     "java_name": "minecraft:mushroom_stew",
     "bedrock_name": "minecraft:mushroom_stew",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "consume_ticks": 32
   },
   "1062": {
     "java_name": "minecraft:string",
@@ -4379,7 +4381,8 @@
   },
   "1067": {
     "java_name": "minecraft:bread",
-    "bedrock_name": "minecraft:bread"
+    "bedrock_name": "minecraft:bread",
+    "consume_ticks": 32
   },
   "1068": {
     "java_name": "minecraft:leather_helmet",
@@ -4527,11 +4530,13 @@
   },
   "1097": {
     "java_name": "minecraft:porkchop",
-    "bedrock_name": "minecraft:porkchop"
+    "bedrock_name": "minecraft:porkchop",
+    "consume_ticks": 32
   },
   "1098": {
     "java_name": "minecraft:cooked_porkchop",
-    "bedrock_name": "minecraft:cooked_porkchop"
+    "bedrock_name": "minecraft:cooked_porkchop",
+    "consume_ticks": 32
   },
   "1099": {
     "java_name": "minecraft:painting",
@@ -4539,11 +4544,13 @@
   },
   "1100": {
     "java_name": "minecraft:golden_apple",
-    "bedrock_name": "minecraft:golden_apple"
+    "bedrock_name": "minecraft:golden_apple",
+    "consume_ticks": 32
   },
   "1101": {
     "java_name": "minecraft:enchanted_golden_apple",
-    "bedrock_name": "minecraft:enchanted_golden_apple"
+    "bedrock_name": "minecraft:enchanted_golden_apple",
+    "consume_ticks": 32
   },
   "1102": {
     "java_name": "minecraft:oak_sign",
@@ -4707,7 +4714,8 @@
   "1134": {
     "java_name": "minecraft:milk_bucket",
     "bedrock_name": "minecraft:milk_bucket",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "consume_ticks": 32
   },
   "1135": {
     "java_name": "minecraft:pufferfish_bucket",
@@ -4977,27 +4985,33 @@
   },
   "1190": {
     "java_name": "minecraft:cod",
-    "bedrock_name": "minecraft:cod"
+    "bedrock_name": "minecraft:cod",
+    "consume_ticks": 32
   },
   "1191": {
     "java_name": "minecraft:salmon",
-    "bedrock_name": "minecraft:salmon"
+    "bedrock_name": "minecraft:salmon",
+    "consume_ticks": 32
   },
   "1192": {
     "java_name": "minecraft:tropical_fish",
-    "bedrock_name": "minecraft:tropical_fish"
+    "bedrock_name": "minecraft:tropical_fish",
+    "consume_ticks": 32
   },
   "1193": {
     "java_name": "minecraft:pufferfish",
-    "bedrock_name": "minecraft:pufferfish"
+    "bedrock_name": "minecraft:pufferfish",
+    "consume_ticks": 32
   },
   "1194": {
     "java_name": "minecraft:cooked_cod",
-    "bedrock_name": "minecraft:cooked_cod"
+    "bedrock_name": "minecraft:cooked_cod",
+    "consume_ticks": 32
   },
   "1195": {
     "java_name": "minecraft:cooked_salmon",
-    "bedrock_name": "minecraft:cooked_salmon"
+    "bedrock_name": "minecraft:cooked_salmon",
+    "consume_ticks": 32
   },
   "1196": {
     "java_name": "minecraft:ink_sac",
@@ -5195,7 +5209,8 @@
   },
   "1236": {
     "java_name": "minecraft:cookie",
-    "bedrock_name": "minecraft:cookie"
+    "bedrock_name": "minecraft:cookie",
+    "consume_ticks": 32
   },
   "1237": {
     "java_name": "minecraft:crafter",
@@ -5293,11 +5308,13 @@
   },
   "1256": {
     "java_name": "minecraft:melon_slice",
-    "bedrock_name": "minecraft:melon_slice"
+    "bedrock_name": "minecraft:melon_slice",
+    "consume_ticks": 32
   },
   "1257": {
     "java_name": "minecraft:dried_kelp",
-    "bedrock_name": "minecraft:dried_kelp"
+    "bedrock_name": "minecraft:dried_kelp",
+    "consume_ticks": 16
   },
   "1258": {
     "java_name": "minecraft:pumpkin_seeds",
@@ -5309,23 +5326,28 @@
   },
   "1260": {
     "java_name": "minecraft:beef",
-    "bedrock_name": "minecraft:beef"
+    "bedrock_name": "minecraft:beef",
+    "consume_ticks": 32
   },
   "1261": {
     "java_name": "minecraft:cooked_beef",
-    "bedrock_name": "minecraft:cooked_beef"
+    "bedrock_name": "minecraft:cooked_beef",
+    "consume_ticks": 32
   },
   "1262": {
     "java_name": "minecraft:chicken",
-    "bedrock_name": "minecraft:chicken"
+    "bedrock_name": "minecraft:chicken",
+    "consume_ticks": 32
   },
   "1263": {
     "java_name": "minecraft:cooked_chicken",
-    "bedrock_name": "minecraft:cooked_chicken"
+    "bedrock_name": "minecraft:cooked_chicken",
+    "consume_ticks": 32
   },
   "1264": {
     "java_name": "minecraft:rotten_flesh",
-    "bedrock_name": "minecraft:rotten_flesh"
+    "bedrock_name": "minecraft:rotten_flesh",
+    "consume_ticks": 32
   },
   "1265": {
     "java_name": "minecraft:ender_pearl",
@@ -5355,11 +5377,13 @@
   "1271": {
     "java_name": "minecraft:potion",
     "bedrock_name": "minecraft:potion",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "consume_ticks": 32
   },
   "1272": {
     "java_name": "minecraft:spider_eye",
-    "bedrock_name": "minecraft:spider_eye"
+    "bedrock_name": "minecraft:spider_eye",
+    "consume_ticks": 32
   },
   "1273": {
     "java_name": "minecraft:fermented_spider_eye",
@@ -5786,19 +5810,23 @@
   },
   "1378": {
     "java_name": "minecraft:carrot",
-    "bedrock_name": "minecraft:carrot"
+    "bedrock_name": "minecraft:carrot",
+    "consume_ticks": 32
   },
   "1379": {
     "java_name": "minecraft:potato",
-    "bedrock_name": "minecraft:potato"
+    "bedrock_name": "minecraft:potato",
+    "consume_ticks": 32
   },
   "1380": {
     "java_name": "minecraft:baked_potato",
-    "bedrock_name": "minecraft:baked_potato"
+    "bedrock_name": "minecraft:baked_potato",
+    "consume_ticks": 32
   },
   "1381": {
     "java_name": "minecraft:poisonous_potato",
-    "bedrock_name": "minecraft:poisonous_potato"
+    "bedrock_name": "minecraft:poisonous_potato",
+    "consume_ticks": 32
   },
   "1382": {
     "java_name": "minecraft:map",
@@ -5806,7 +5834,8 @@
   },
   "1383": {
     "java_name": "minecraft:golden_carrot",
-    "bedrock_name": "minecraft:golden_carrot"
+    "bedrock_name": "minecraft:golden_carrot",
+    "consume_ticks": 32
   },
   "1384": {
     "java_name": "minecraft:skeleton_skull",
@@ -5842,7 +5871,8 @@
   },
   "1392": {
     "java_name": "minecraft:pumpkin_pie",
-    "bedrock_name": "minecraft:pumpkin_pie"
+    "bedrock_name": "minecraft:pumpkin_pie",
+    "consume_ticks": 32
   },
   "1393": {
     "java_name": "minecraft:firework_rocket",
@@ -5875,16 +5905,19 @@
   },
   "1400": {
     "java_name": "minecraft:rabbit",
-    "bedrock_name": "minecraft:rabbit"
+    "bedrock_name": "minecraft:rabbit",
+    "consume_ticks": 32
   },
   "1401": {
     "java_name": "minecraft:cooked_rabbit",
-    "bedrock_name": "minecraft:cooked_rabbit"
+    "bedrock_name": "minecraft:cooked_rabbit",
+    "consume_ticks": 32
   },
   "1402": {
     "java_name": "minecraft:rabbit_stew",
     "bedrock_name": "minecraft:rabbit_stew",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "consume_ticks": 32
   },
   "1403": {
     "java_name": "minecraft:rabbit_foot",
@@ -5944,11 +5977,13 @@
   },
   "1415": {
     "java_name": "minecraft:mutton",
-    "bedrock_name": "minecraft:mutton"
+    "bedrock_name": "minecraft:mutton",
+    "consume_ticks": 32
   },
   "1416": {
     "java_name": "minecraft:cooked_mutton",
-    "bedrock_name": "minecraft:cooked_mutton"
+    "bedrock_name": "minecraft:cooked_mutton",
+    "consume_ticks": 32
   },
   "1417": {
     "java_name": "minecraft:white_banner",
@@ -6052,7 +6087,8 @@
   },
   "1434": {
     "java_name": "minecraft:chorus_fruit",
-    "bedrock_name": "minecraft:chorus_fruit"
+    "bedrock_name": "minecraft:chorus_fruit",
+    "consume_ticks": 32
   },
   "1435": {
     "java_name": "minecraft:popped_chorus_fruit",
@@ -6068,7 +6104,8 @@
   },
   "1438": {
     "java_name": "minecraft:beetroot",
-    "bedrock_name": "minecraft:beetroot"
+    "bedrock_name": "minecraft:beetroot",
+    "consume_ticks": 32
   },
   "1439": {
     "java_name": "minecraft:beetroot_seeds",
@@ -6077,7 +6114,8 @@
   "1440": {
     "java_name": "minecraft:beetroot_soup",
     "bedrock_name": "minecraft:beetroot_soup",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "consume_ticks": 32
   },
   "1441": {
     "java_name": "minecraft:dragon_breath",
@@ -6332,7 +6370,8 @@
   "1492": {
     "java_name": "minecraft:suspicious_stew",
     "bedrock_name": "minecraft:suspicious_stew",
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "consume_ticks": 32
   },
   "1493": {
     "java_name": "minecraft:loom",
@@ -6475,11 +6514,13 @@
   },
   "1525": {
     "java_name": "minecraft:sweet_berries",
-    "bedrock_name": "minecraft:sweet_berries"
+    "bedrock_name": "minecraft:sweet_berries",
+    "consume_ticks": 32
   },
   "1526": {
     "java_name": "minecraft:glow_berries",
-    "bedrock_name": "minecraft:glow_berries"
+    "bedrock_name": "minecraft:glow_berries",
+    "consume_ticks": 32
   },
   "1527": {
     "java_name": "minecraft:campfire",
@@ -6508,7 +6549,8 @@
   "1533": {
     "java_name": "minecraft:honey_bottle",
     "bedrock_name": "minecraft:honey_bottle",
-    "max_stack_size": 16
+    "max_stack_size": 16,
+    "consume_ticks": 40
   },
   "1534": {
     "java_name": "minecraft:honeycomb_block",
@@ -7005,6 +7047,7 @@
   },
   "1657": {
     "java_name": "minecraft:ominous_bottle",
-    "bedrock_name": "minecraft:ominous_bottle"
+    "bedrock_name": "minecraft:ominous_bottle",
+    "consume_ticks": 32
   }
 }
