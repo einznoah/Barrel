@@ -101,8 +101,8 @@ saved under the name of a player by an older version is taken over the first tim
 - **Entities:** mobs, other players with what they hold and wear, dropped items and picking them up, name tags,
   baby animals, the wool of sheep, creepers about to blow up, the swirls of effects; hitting and using entities
 - **The inventory:** the inventory of the player with armor and offhand, the creative inventory, chests,
-  furnaces, blast furnaces and smokers, brewing stands, dispensers, droppers and hoppers, and what is in the
-  bundles of the player
+  furnaces, blast furnaces and smokers, brewing stands, dispensers, droppers and hoppers, and bundles: what is in
+  them, putting items in and taking them out
 - **Crafting:** the grid of the inventory and the crafting table with the recipe book, anvils, enchanting tables,
   stonecutters, smithing tables, grindstones, looms and cartography tables, trading with villagers
 - **The player:** health and hunger, eating, bows, potions that are drunk, thrown or linger, effects, dying and
@@ -115,8 +115,7 @@ saved under the name of a player by an older version is taken over the first tim
 ## Need implemented
 
 - Beacons, signs and what else a block holds
-- Putting items into a bundle and taking them out: a bundle shows what is in it, a click that would change it
-  does nothing
+- Bundles in the creative inventory, and putting a bundle into a bundle
 - What a command takes: the Java client is told the names of the commands, not what follows them
 - Riding: boats, minecarts and animals
 - Sounds and most particles

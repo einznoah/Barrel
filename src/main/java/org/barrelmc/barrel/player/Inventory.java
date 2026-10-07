@@ -95,6 +95,8 @@ public class Inventory {
     // Slots of the bedrock container the cursor and everything that is being worked on are in
     private static final int CURSOR_SLOT = 0;
     private static final int MAX_BUNDLE_SLOTS = 64;
+    private static final int BUNDLE_CAPACITY = 64;
+    private static final int BUNDLE_IN_BUNDLE_WEIGHT = 4;
     private static final int ANVIL_INPUT_SLOT = 1;
     private static final int ANVIL_MATERIAL_SLOT = 2;
     private static final int STONECUTTER_INPUT_SLOT = 3;
@@ -160,6 +162,9 @@ public class Inventory {
     private final ItemData[] result = new ItemData[1];
     // What is in the bundles, by the numbers the server has for them. The server sends it apart from the bundles
     private final Map<Integer, ItemData[]> bundles = new HashMap<>();
+    // The slot of the bundle the player of the java client points into, and at which of its items
+    private Slot selectedBundleSlot = null;
+    private int selectedBundleItem = 0;
     private final CraftingRecipes craftingRecipes = new CraftingRecipes();
     private Craft craft = null;
     // What the villager the player trades with offers
@@ -208,7 +213,12 @@ public class Inventory {
     private record Trade(ItemData firstCost, ItemData secondCost, ItemData result, int networkId, int uses, int maxUses) {
     }
 
-    public record Slot(ContainerSlotType type, int networkSlot, ItemData[] contents, int index) {
+    // The bundle is the number the server has for what is in a bundle, for a slot that is one of a bundle
+    public record Slot(ContainerSlotType type, int networkSlot, ItemData[] contents, int index, Integer bundle) {
+
+        public Slot(ContainerSlotType type, int networkSlot, ItemData[] contents, int index) {
+            this(type, networkSlot, contents, index, null);
+        }
 
         public ItemData get() {
             return ItemConverter.isEmpty(this.contents[this.index]) ? ItemData.AIR : this.contents[this.index];
@@ -219,7 +229,7 @@ public class Inventory {
         }
 
         private ItemStackRequestSlotData toNetwork() {
-            return new ItemStackRequestSlotData(this.type, this.networkSlot, this.isEmpty() ? 0 : this.get().getNetId(), new FullContainerName(this.type, null));
+            return new ItemStackRequestSlotData(this.type, this.networkSlot, this.isEmpty() ? 0 : this.get().getNetId(), new FullContainerName(this.type, this.bundle));
         }
     }
 
@@ -233,6 +243,23 @@ public class Inventory {
 
     private Slot containerSlot(ContainerSlotType type, int slot) {
         return new Slot(type, slot, this.container, slot);
+    }
+
+    private ItemData[] getBundle(int bundleId) {
+        return this.bundles.computeIfAbsent(bundleId, id -> createBundle(Collections.emptyList()));
+    }
+
+    private Slot bundleSlot(int bundleId, int slot) {
+        return new Slot(ContainerSlotType.DYNAMIC_CONTAINER, slot, this.getBundle(bundleId), slot, bundleId);
+    }
+
+    // A bundle has room for 64 kinds of items, whatever the server sent of it
+    private static ItemData[] createBundle(List<ItemData> contents) {
+        ItemData[] bundle = new ItemData[MAX_BUNDLE_SLOTS];
+        for (int slot = 0; slot < bundle.length; slot++) {
+            bundle[slot] = slot < contents.size() && !ItemConverter.isEmpty(contents.get(slot)) ? contents.get(slot) : ItemData.AIR;
+        }
+        return bundle;
     }
 
     public Slot getHotbarSlot(int slot) {
@@ -381,6 +408,11 @@ public class Inventory {
     }
 
     public void sendSlot(Slot slot) {
+        if (slot.bundle() != null) {
+            // What is in a bundle is told with the bundle
+            this.sendBundle(slot.bundle());
+            return;
+        }
         this.sendSlot(slot.contents(), slot.index());
     }
 
@@ -389,20 +421,15 @@ public class Inventory {
     }
 
     public void setBundleContents(int bundleId, List<ItemData> contents) {
-        this.bundles.put(bundleId, contents.toArray(new ItemData[0]));
+        this.bundles.put(bundleId, createBundle(contents));
         this.sendBundle(bundleId);
     }
 
     public void setBundleSlot(int bundleId, int slot, ItemData item) {
-        ItemData[] bundle = this.bundles.getOrDefault(bundleId, new ItemData[0]);
         if (slot < 0 || slot >= MAX_BUNDLE_SLOTS) {
             return;
         }
-        if (slot >= bundle.length) {
-            bundle = Arrays.copyOf(bundle, slot + 1);
-        }
-        bundle[slot] = item;
-        this.bundles.put(bundleId, bundle);
+        this.getBundle(bundleId)[slot] = ItemConverter.isEmpty(item) ? ItemData.AIR : item;
         this.sendBundle(bundleId);
     }
 
@@ -422,16 +449,128 @@ public class Inventory {
         }
     }
 
-    // A java client puts an item into a bundle or takes one out of it with a click that moves items otherwise. The
-    // bundles of a bedrock server are filled another way, which is not translated
-    // TODO: Put items into bundles and take them out
+    // A java client puts an item into a bundle or takes one out of it with a click that moves items otherwise:
+    // with the bundle on the cursor, a left click on an item takes it in and a right click on an empty slot puts
+    // one out, and with the bundle in a slot, a left click with an item puts it in and a right click with nothing
+    // takes one out. The first of the two that fits counts
     public boolean isBundleClick(Slot slot, boolean leftClick) {
+        if (this.isResultSlot(slot)) {
+            return false;
+        }
         ItemData cursor = this.ui[CURSOR_SLOT];
         ItemData clicked = slot.get();
         if (ItemConverter.isBundle(cursor) && leftClick != ItemConverter.isEmpty(clicked)) {
             return true;
         }
         return ItemConverter.isBundle(clicked) && leftClick != ItemConverter.isEmpty(cursor);
+    }
+
+    // The java client tells which of the items in a bundle the player points at, that one is taken out next
+    public void selectBundleItem(int javaSlot, int index) {
+        this.selectedBundleSlot = this.getJavaSlot(this.containerSlots == null ? 0 : JAVA_CONTAINER_WINDOW, javaSlot);
+        this.selectedBundleItem = index;
+    }
+
+    // A bedrock client asks to move items between a slot and the items of the bundle, which the server keeps as a
+    // container of its own that is named by a number the bundle carries
+    public void clickBundle(Slot slot, boolean leftClick) {
+        Slot cursorSlot = this.getCursorSlot();
+        boolean onCursor = ItemConverter.isBundle(cursorSlot.get()) && leftClick != slot.isEmpty();
+        Slot bundleSlot = onCursor ? cursorSlot : slot;
+        Slot otherSlot = onCursor ? slot : cursorSlot;
+        Integer bundleId = ItemConverter.getBundleId(bundleSlot.get());
+
+        if (bundleId != null) {
+            if (leftClick) {
+                this.putIntoBundle(bundleId, otherSlot);
+            } else {
+                // A bundle on the cursor has no item that is pointed at
+                boolean selected = !onCursor && slot.equals(this.selectedBundleSlot);
+                this.takeOutOfBundle(bundleId, selected ? this.selectedBundleItem : 0, otherSlot);
+            }
+            this.sendRequest();
+        }
+        this.selectedBundleSlot = null;
+        // The client has put the items in its own order, and is told what is true if nothing came of the click
+        this.sendContents();
+    }
+
+    // How much of a bundle an item takes up, of the 64 a bundle holds: an item that stacks to 64 takes up 1
+    private int getBundleWeight(ItemData item) {
+        if (ItemConverter.isEmpty(item)) {
+            return 0;
+        }
+        if (ItemConverter.isBundle(item)) {
+            int weight = BUNDLE_IN_BUNDLE_WEIGHT;
+            Integer bundleId = ItemConverter.getBundleId(item);
+            ItemData[] bundle = bundleId == null ? null : this.bundles.get(bundleId);
+            for (int slot = 0; bundle != null && slot < bundle.length; slot++) {
+                weight += ItemConverter.isBundle(bundle[slot]) ? BUNDLE_IN_BUNDLE_WEIGHT : this.getBundleWeight(bundle[slot]);
+            }
+            return weight;
+        }
+        return BUNDLE_CAPACITY / Math.max(1, ItemConverter.getMaxStackSize(item)) * item.getCount();
+    }
+
+    private void putIntoBundle(int bundleId, Slot source) {
+        ItemData item = source.get();
+        // A bundle does not take what holds items itself
+        if (ItemConverter.isBundle(item) || item.getDefinition().getIdentifier().endsWith("shulker_box")) {
+            return;
+        }
+
+        ItemData[] bundle = this.getBundle(bundleId);
+        int weight = 0;
+        for (ItemData content : bundle) {
+            weight += this.getBundleWeight(content);
+        }
+        int maxStackSize = Math.max(1, ItemConverter.getMaxStackSize(item));
+        int count = Math.min(item.getCount(), (BUNDLE_CAPACITY - weight) / Math.max(1, BUNDLE_CAPACITY / maxStackSize));
+        if (count <= 0) {
+            return;
+        }
+
+        // It goes to the items of its kind that are in the bundle, or behind the last item
+        int target = -1;
+        for (int slot = 0; slot < bundle.length; slot++) {
+            if (ItemConverter.isEmpty(bundle[slot])) {
+                target = target < 0 ? slot : target;
+                break;
+            } else if (canStack(item, bundle[slot]) && bundle[slot].getCount() + count <= maxStackSize) {
+                target = slot;
+                break;
+            }
+        }
+        if (target >= 0) {
+            this.move(source, this.bundleSlot(bundleId, target), count);
+        }
+    }
+
+    // A java client has the item that was put in last in front, the server has it behind the others
+    private void takeOutOfBundle(int bundleId, int javaIndex, Slot destination) {
+        if (!destination.isEmpty()) {
+            return;
+        }
+
+        ItemData[] bundle = this.getBundle(bundleId);
+        List<Integer> filled = new ArrayList<>();
+        for (int slot = 0; slot < bundle.length; slot++) {
+            if (!ItemConverter.isEmpty(bundle[slot])) {
+                filled.add(slot);
+            }
+        }
+        if (filled.isEmpty()) {
+            return;
+        }
+
+        int slot = filled.get(filled.size() - 1 - (javaIndex >= 0 && javaIndex < filled.size() ? javaIndex : 0));
+        Slot source = this.bundleSlot(bundleId, slot);
+        this.move(source, destination, source.get().getCount());
+        // The server moves the items behind it up, a bundle has no gaps
+        for (int next = slot + 1; next < bundle.length && !ItemConverter.isEmpty(bundle[next]); next++) {
+            this.change(this.bundleSlot(bundleId, next - 1), bundle[next]);
+            this.change(this.bundleSlot(bundleId, next), ItemData.AIR);
+        }
     }
 
     // Unlike sending everything, this leaves the item the client has on its cursor alone
@@ -1879,7 +2018,12 @@ public class Inventory {
         // The server tells how many items the slots hold now and which ids it gave the stacks
         for (ItemStackResponseContainer responseContainer : response.getContainers()) {
             for (ItemStackResponseSlot responseSlot : responseContainer.getItems()) {
-                Slot slot = this.getBedrockSlot(responseContainer.getContainer(), responseSlot.getSlot());
+                FullContainerName containerName = responseContainer.getContainerName();
+                boolean inBundle = responseContainer.getContainer() == ContainerSlotType.DYNAMIC_CONTAINER && containerName != null && containerName.getDynamicId() != null;
+                if (inBundle && (responseSlot.getSlot() < 0 || responseSlot.getSlot() >= MAX_BUNDLE_SLOTS)) {
+                    continue;
+                }
+                Slot slot = inBundle ? this.bundleSlot(containerName.getDynamicId(), responseSlot.getSlot()) : this.getBedrockSlot(responseContainer.getContainer(), responseSlot.getSlot());
                 if (slot == null) {
                     continue;
                 }

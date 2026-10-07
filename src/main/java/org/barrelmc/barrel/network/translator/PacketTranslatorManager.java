@@ -191,6 +191,7 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundSeenAdvancementsPacket.class, new SeenAdvancementsPacket());
         javaTranslators.put(ServerboundPlayerAbilitiesPacket.class, new PlayerAbilitiesPacket());
         javaTranslators.put(ServerboundContainerClickPacket.class, new ContainerClickPacket());
+        javaTranslators.put(org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.inventory.ServerboundSelectBundleItemPacket.class, new SelectBundleItemPacket());
         javaTranslators.put(ServerboundContainerClosePacket.class, new ContainerClosePacket());
         javaTranslators.put(ServerboundContainerButtonClickPacket.class, new ContainerButtonClickPacket());
         javaTranslators.put(ServerboundRenameItemPacket.class, new RenameItemPacket());
