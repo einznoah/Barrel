@@ -228,6 +228,12 @@ public class ProxyServer {
         server.setGlobalFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY, (ServerInfoBuilder) session -> new ServerStatusInfo(Component.text(this.config.getMotd()), new PlayerInfo(10, 0, new ArrayList<>()), new VersionInfo(MinecraftCodec.CODEC.getMinecraftVersion(), MinecraftCodec.CODEC.getProtocolVersion()), null, false));
         server.setGlobalFlag(MinecraftConstants.SERVER_LOGIN_HANDLER_KEY, (ServerLoginHandler) session -> {
             GameProfile profile = session.getFlag(MinecraftConstants.PROFILE_KEY);
+            if (profile == null) {
+                // The library lets a client come this far that went on without proving its account when it was
+                // asked to. Nobody has joined then
+                session.disconnect(Component.translatable("multiplayer.disconnect.unverified_username"));
+                return;
+            }
             System.out.println(profile.getName() + " logged in");
 
             // The client can only be sent game packets from here on, so this is when the bedrock server is joined
