@@ -74,6 +74,7 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.C
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.inventory.ClientboundSetPlayerInventoryPacket;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -93,6 +94,7 @@ public class Inventory {
 
     // Slots of the bedrock container the cursor and everything that is being worked on are in
     private static final int CURSOR_SLOT = 0;
+    private static final int MAX_BUNDLE_SLOTS = 64;
     private static final int ANVIL_INPUT_SLOT = 1;
     private static final int ANVIL_MATERIAL_SLOT = 2;
     private static final int STONECUTTER_INPUT_SLOT = 3;
@@ -156,6 +158,8 @@ public class Inventory {
 
     // What the crafting grid or the anvil makes. Bedrock clients work that out themselves, java clients are told
     private final ItemData[] result = new ItemData[1];
+    // What is in the bundles, by the numbers the server has for them. The server sends it apart from the bundles
+    private final Map<Integer, ItemData[]> bundles = new HashMap<>();
     private final CraftingRecipes craftingRecipes = new CraftingRecipes();
     private Craft craft = null;
     // What the villager the player trades with offers
@@ -380,9 +384,59 @@ public class Inventory {
         this.sendSlot(slot.contents(), slot.index());
     }
 
+    private ItemStack toJavaItem(ItemData item) {
+        return ItemConverter.bedrockToJavaItem(item, this.bundles::get);
+    }
+
+    public void setBundleContents(int bundleId, List<ItemData> contents) {
+        this.bundles.put(bundleId, contents.toArray(new ItemData[0]));
+        this.sendBundle(bundleId);
+    }
+
+    public void setBundleSlot(int bundleId, int slot, ItemData item) {
+        ItemData[] bundle = this.bundles.getOrDefault(bundleId, new ItemData[0]);
+        if (slot < 0 || slot >= MAX_BUNDLE_SLOTS) {
+            return;
+        }
+        if (slot >= bundle.length) {
+            bundle = Arrays.copyOf(bundle, slot + 1);
+        }
+        bundle[slot] = item;
+        this.bundles.put(bundleId, bundle);
+        this.sendBundle(bundleId);
+    }
+
+    // The server tells when it no longer keeps what was in a bundle
+    public void removeBundle(int bundleId) {
+        this.bundles.remove(bundleId);
+    }
+
+    // The java client is told the bundle anew wherever the player has it, what is in it belongs to the item there
+    private void sendBundle(int bundleId) {
+        for (ItemData[] contents : new ItemData[][]{this.items, this.armor, this.offhand, this.ui, this.container}) {
+            for (int slot = 0; contents != null && slot < contents.length; slot++) {
+                if (Objects.equals(ItemConverter.getBundleId(contents[slot]), bundleId)) {
+                    this.sendSlot(contents, slot);
+                }
+            }
+        }
+    }
+
+    // A java client puts an item into a bundle or takes one out of it with a click that moves items otherwise. The
+    // bundles of a bedrock server are filled another way, which is not translated
+    // TODO: Put items into bundles and take them out
+    public boolean isBundleClick(Slot slot, boolean leftClick) {
+        ItemData cursor = this.ui[CURSOR_SLOT];
+        ItemData clicked = slot.get();
+        if (ItemConverter.isBundle(cursor) && leftClick != ItemConverter.isEmpty(clicked)) {
+            return true;
+        }
+        return ItemConverter.isBundle(clicked) && leftClick != ItemConverter.isEmpty(cursor);
+    }
+
     // Unlike sending everything, this leaves the item the client has on its cursor alone
     private void sendSlot(ItemData[] contents, int slot) {
-        ItemStack javaItem = ItemConverter.bedrockToJavaItem(contents[slot]);
+        ItemStack javaItem = this.toJavaItem(contents[slot]);
         if (contents == this.items) {
             this.player.getJavaSession().send(new ClientboundSetPlayerInventoryPacket(slot, javaItem));
         } else if (contents == this.armor) {
@@ -402,7 +456,7 @@ public class Inventory {
                 for (int javaSlot = 0; slots != null && javaSlot < slots.size(); javaSlot++) {
                     Slot javaContainerSlot = slots.get(javaSlot);
                     if ((resultChanged && this.isResultSlot(javaContainerSlot)) || (javaContainerSlot.contents() == contents && javaContainerSlot.index() == slot)) {
-                        this.player.getJavaSession().send(new ClientboundContainerSetSlotPacket(windowId, 0, javaSlot, ItemConverter.bedrockToJavaItem(javaContainerSlot.get())));
+                        this.player.getJavaSession().send(new ClientboundContainerSetSlotPacket(windowId, 0, javaSlot, this.toJavaItem(javaContainerSlot.get())));
                     }
                 }
             }
@@ -411,7 +465,7 @@ public class Inventory {
 
     public void sendContents() {
         this.updateResult();
-        ItemStack carriedItem = ItemConverter.bedrockToJavaItem(this.ui[CURSOR_SLOT]);
+        ItemStack carriedItem = this.toJavaItem(this.ui[CURSOR_SLOT]);
 
         for (int windowId = 0; windowId <= JAVA_CONTAINER_WINDOW; windowId++) {
             if (windowId == JAVA_CONTAINER_WINDOW && this.containerSlots == null) {
@@ -420,7 +474,7 @@ public class Inventory {
 
             ItemStack[] javaItems = new ItemStack[windowId == 0 ? 46 : this.containerSlots.size() + 36];
             for (int slot = 0; slot < javaItems.length; slot++) {
-                javaItems[slot] = ItemConverter.bedrockToJavaItem(this.getJavaSlot(windowId, slot).get());
+                javaItems[slot] = this.toJavaItem(this.getJavaSlot(windowId, slot).get());
             }
             this.player.getJavaSession().send(new ClientboundContainerSetContentPacket(windowId, 0, javaItems, carriedItem));
         }

@@ -27,7 +27,10 @@ public class ContainerClickPacket implements JavaPacketTranslator {
                     // A click next to the window drops what is on the cursor
                     inventory.dropItem(inventory.getCursorSlot(), packet.getParam() == ClickItemAction.LEFT_CLICK);
                 } else if (slot != null) {
-                    if (packet.getParam() == ClickItemAction.LEFT_CLICK) {
+                    if (inventory.isBundleClick(slot, packet.getParam() == ClickItemAction.LEFT_CLICK)) {
+                        // The client believes to have changed what is in a bundle, it is told what is true
+                        inventory.sendContents();
+                    } else if (packet.getParam() == ClickItemAction.LEFT_CLICK) {
                         inventory.leftClick(slot);
                     } else {
                         inventory.rightClick(slot);

@@ -157,6 +157,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(CreativeContentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CreativeContentPacket());
         bedrockTranslators.put(InventoryContentPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventoryContentPacket());
         bedrockTranslators.put(InventorySlotPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventorySlotPacket());
+        bedrockTranslators.put(ContainerRegistryCleanupPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerRegistryCleanupPacket());
         bedrockTranslators.put(ItemStackResponsePacket.class, new org.barrelmc.barrel.network.translator.bedrock.ItemStackResponsePacket());
         bedrockTranslators.put(PlayerHotbarPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerHotbarPacket());
         bedrockTranslators.put(ContainerOpenPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ContainerOpenPacket());

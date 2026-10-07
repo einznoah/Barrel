@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.IntFunction;
 
 public class ItemConverter {
 
@@ -56,6 +57,9 @@ public class ItemConverter {
     private static final Set<String> BEDROCK_FUELS = Set.of("minecraft:coal_block", "minecraft:lava_bucket", "minecraft:blaze_rod", "minecraft:dried_kelp_block", "minecraft:stick", "minecraft:bamboo");
     // The bedrock items of the item tags, a recipe can ask for any item of a tag
     public static final HashMap<String, Set<String>> BEDROCK_ITEM_TAGS = new HashMap<>();
+    private static final String BUNDLE_ID = "bundle_id";
+    // A bundle can hold bundles. Should the numbers of bundles ever name each other, this is where it ends
+    private static final int MAX_BUNDLES_IN_BUNDLES = 8;
 
     // Shown for the bedrock items java does not have
     private static int unknownJavaItem = 0;
@@ -234,7 +238,26 @@ public class ItemConverter {
         return new ItemStack(JAVA_ITEM_IDS.get(javaName), 1, components);
     }
 
+    public static boolean isBundle(ItemData item) {
+        return !isEmpty(item) && item.getDefinition().getIdentifier().endsWith("bundle");
+    }
+
+    // The number a bedrock server has for what is in a bundle, or null for an item that has none
+    public static Integer getBundleId(ItemData item) {
+        return isBundle(item) && item.getTag() != null && item.getTag().containsKey(BUNDLE_ID, NbtType.INT) ? (Integer) item.getTag().getInt(BUNDLE_ID) : null;
+    }
+
     public static ItemStack bedrockToJavaItem(ItemData item) {
+        return bedrockToJavaItem(item, null);
+    }
+
+    // A bedrock server sends what is in a bundle apart from the bundle, a java client has it with the item. With
+    // what the bundles hold by their numbers, a bundle is told with what is in it
+    public static ItemStack bedrockToJavaItem(ItemData item, IntFunction<ItemData[]> bundles) {
+        return bedrockToJavaItem(item, bundles, 0);
+    }
+
+    private static ItemStack bedrockToJavaItem(ItemData item, IntFunction<ItemData[]> bundles, int bundlesAround) {
         if (isEmpty(item)) {
             return null;
         }
@@ -299,6 +322,20 @@ public class ItemConverter {
                     components.put(DataComponentTypes.LORE, lore);
                 }
             }
+        }
+
+        Integer bundleId = bundles == null || bundlesAround > MAX_BUNDLES_IN_BUNDLES ? null : getBundleId(item);
+        ItemData[] bundle = bundleId == null ? null : bundles.apply(bundleId);
+        if (bundle != null) {
+            // A java client has what was put in last in front, a bedrock server has it at the end
+            List<ItemStack> contents = new ArrayList<>();
+            for (int slot = bundle.length - 1; slot >= 0; slot--) {
+                ItemStack content = bedrockToJavaItem(bundle[slot], bundles, bundlesAround + 1);
+                if (content != null) {
+                    contents.add(content);
+                }
+            }
+            components.put(DataComponentTypes.BUNDLE_CONTENTS, contents);
         }
 
         return new ItemStack(javaItemId, item.getCount(), components);
