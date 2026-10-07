@@ -169,6 +169,11 @@ public class ProxyServer {
         }
     }
 
+    // Whether a java player has to be signed in to the account it joins with. Anything but offline asks for it
+    public boolean verifiesJavaAccounts() {
+        return !"offline".equalsIgnoreCase(this.config.getJavaAuth());
+    }
+
     private void startServer() {
         Runtime.getRuntime().addShutdownHook(new Thread(this::closeBedrockConnections, "Barrel shutdown"));
 
@@ -176,8 +181,15 @@ public class ProxyServer {
 
         Server server = new NetworkServer(new InetSocketAddress(this.config.getBindAddress(), this.config.getPort()), MinecraftProtocol::new);
         server.setGlobalFlag(MinecraftConstants.SESSION_SERVICE_KEY, sessionService);
-        server.setGlobalFlag(MinecraftConstants.ENCRYPT_CONNECTION, false);
-        server.setGlobalFlag(MinecraftConstants.SHOULD_AUTHENTICATE, false);
+        // With these the library asks mojang whether the client is signed in to the java account it names, and only
+        // then tells who has joined. A client is only asked once the connection is encrypted
+        boolean verifyJavaAccounts = this.verifiesJavaAccounts();
+        server.setGlobalFlag(MinecraftConstants.ENCRYPT_CONNECTION, verifyJavaAccounts);
+        server.setGlobalFlag(MinecraftConstants.SHOULD_AUTHENTICATE, verifyJavaAccounts);
+        if (!verifyJavaAccounts) {
+            System.out.println("Java accounts are not checked (javaAuth: offline): anybody can join under any name"
+                    + (this.config.isRememberLogins() ? ", and plays with the xbox account that was remembered for it" : ""));
+        }
         server.setGlobalFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY, (ServerInfoBuilder) session -> new ServerStatusInfo(Component.text(this.config.getMotd()), new PlayerInfo(10, 0, new ArrayList<>()), new VersionInfo(MinecraftCodec.CODEC.getMinecraftVersion(), MinecraftCodec.CODEC.getProtocolVersion()), null, false));
         server.setGlobalFlag(MinecraftConstants.SERVER_LOGIN_HANDLER_KEY, (ServerLoginHandler) session -> {
             GameProfile profile = session.getFlag(MinecraftConstants.PROFILE_KEY);
@@ -188,7 +200,7 @@ public class ProxyServer {
             if (player != null && player.getJavaSession() == session) {
                 player.connect();
             } else {
-                session.addListener(new AuthServer(session, profile.getName()));
+                session.addListener(new AuthServer(session, profile.getId()));
             }
         });
         server.setGlobalFlag(MinecraftConstants.SERVER_COMPRESSION_THRESHOLD, 100);
@@ -216,7 +228,7 @@ public class ProxyServer {
                     return;
                 }
 
-                Thread loginThread = AuthManager.getInstance().getLoginThreads().remove(profile.getName());
+                Thread loginThread = AuthManager.getInstance().getLoginThreads().remove(profile.getId());
                 if (loginThread != null) {
                     loginThread.interrupt();
                 }

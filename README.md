@@ -41,7 +41,9 @@ Starting Barrel Proxy software, built 2026-10-06 14:14 UTC
 ```
 
 Add the proxy to the server list of the Java client with the address and port of the config, `localhost:25565`
-with the default config on the same machine, and join.
+with the default config on the same machine, and join. The Java client has to be signed in to its account, a
+client that is not is sent away with `Failed to verify username!` or `Invalid session` unless the config says
+`javaAuth: offline`.
 
 ## Configuration
 
@@ -50,6 +52,7 @@ with the default config on the same machine, and join.
 | `bindAddress` | `0.0.0.0` | The address the proxy listens on for Java clients. `127.0.0.1` only lets clients of the same machine in. |
 | `port` | `25565` | The port the proxy listens on for Java clients. |
 | `motd` | `Barrel Proxy\nConnect to Bedrock Server` | What the server list of the Java client shows. |
+| `javaAuth` | `online` | `online` checks with Mojang that a Java player is signed in to the account it joins with, as a Java server with `online-mode` on does. With `offline` anybody can join under any name. |
 | `bedrockAddress` | `play.venitymc.com` | The address of the Bedrock server. |
 | `bedrockPort` | `19132` | The port of the Bedrock server. |
 | `transport` | `raknet` | How the Bedrock server is reached: `raknet`, as most servers are, or `nethernet`. See [NetherNet](#nethernet). |
@@ -78,10 +81,14 @@ the chat. After opening the link, entering the code and signing in with the Micr
 Without `rememberLogins` a login is used once, every join asks for a new one. With `rememberLogins: true` a login
 is kept, and saved as a file in the `accounts` folder next to the jar.
 
+A login belongs to the Java account that signed in, not to its name: with `javaAuth: online` only a player that is
+signed in to that Java account plays with it, also after the account was given another name. A login that was
+saved under the name of a player by an older version is taken over the first time that player joins.
+
 > [!WARNING]
-> The proxy does not check who a Java player is. Whoever joins with the name of a player that is signed in plays
-> with the Xbox account of that player, and the files in `accounts` are the login to that account. Only turn
-> `rememberLogins` on for a proxy nobody else can reach, and do not share the `accounts` folder.
+> The files in `accounts` are the login to the Xbox accounts, do not share that folder. With `javaAuth: offline`
+> the proxy does not check who a Java player is: whoever joins with the name of a player that is signed in plays
+> with the Xbox account of that player. Then only turn `rememberLogins` on for a proxy nobody else can reach.
 
 ## What works
 

@@ -2,6 +2,9 @@
 bindAddress: "0.0.0.0"
 port: 25565
 motd: "Barrel Proxy\nConnect to Bedrock Server"
+# Check with mojang that a java player is who it says it is? (online|offline)
+# With offline anybody can join under any name, as on a java server that has online-mode off.
+javaAuth: online
 
 # Downstream server (bedrock)
 bedrockAddress: "play.venitymc.com"
@@ -15,6 +18,7 @@ transport: raknet
 auth: online
 
 # Keep players signed in to xbox, also after the proxy was restarted? (true|false)
-# A login is saved in the accounts folder then. The proxy does not check who a java player is: whoever joins with
-# the name of a player that is signed in plays with its xbox account. Only for a proxy nobody else can reach.
+# A login is saved in the accounts folder then, for the java account that signed in. With javaAuth offline the
+# proxy does not check who a java player is: whoever joins with the name of a player that is signed in plays with
+# its xbox account. Then only for a proxy nobody else can reach.
 rememberLogins: false

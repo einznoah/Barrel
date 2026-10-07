@@ -30,13 +30,14 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 
 import java.util.BitSet;
 import java.util.Collections;
+import java.util.UUID;
 
 public class AuthServer extends SessionAdapter {
 
     // The client takes 0 for an entity that was not given an id yet, and does not join with it
     private static final int ENTITY_ID = 1;
 
-    public AuthServer(Session session, String username) {
+    public AuthServer(Session session, UUID javaAccount) {
         session.send(new ClientboundLoginPacket(
                 ENTITY_ID, false, new Key[]{Key.key("minecraft:overworld")},
                 10, 6, 6, false, true, false,
@@ -54,8 +55,8 @@ public class AuthServer extends SessionAdapter {
         session.send(new ClientboundGameEventPacket(GameEvent.LEVEL_CHUNKS_LOAD_START, null));
 
         session.send(new ClientboundSystemChatPacket(Component.text("§cPlease login with your Xbox account"), false));
-        Thread loginThread = AuthManager.getInstance().getXboxLive().requestLiveToken(session, username);
-        AuthManager.getInstance().getLoginThreads().put(username, loginThread);
+        Thread loginThread = AuthManager.getInstance().getXboxLive().requestLiveToken(session, javaAccount);
+        AuthManager.getInstance().getLoginThreads().put(javaAccount, loginThread);
     }
 
     private void generateWorld(Session session) {

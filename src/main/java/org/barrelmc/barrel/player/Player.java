@@ -53,13 +53,13 @@ import org.cloudburstmc.protocol.bedrock.packet.RequestNetworkSettingsPacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
 import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
 import org.cloudburstmc.protocol.common.DefinitionRegistry;
+import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetChunkCacheCenterPacket;
-import org.geysermc.mcprotocollib.protocol.packet.login.serverbound.ServerboundHelloPacket;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -215,6 +215,9 @@ public class Player extends Vector3 {
     // What the java client is called. A player that is signed in to xbox is called what its account is
     @Getter
     private final String javaUsername;
+    // The java account of the player. Without javaAuth it is made of the name
+    @Getter
+    private final java.util.UUID javaUuid;
 
     // The player itself as an entity, for what the java client is told about it like about any other
     @Getter
@@ -242,24 +245,25 @@ public class Player extends Vector3 {
     @Setter
     private float experienceProgress = 0;
 
-    public Player(ServerboundHelloPacket loginPacket, Session javaSession) {
-        this.javaUsername = loginPacket.getUsername();
+    public Player(GameProfile profile, Session javaSession) {
+        this.javaUsername = profile.getName();
+        this.javaUuid = profile.getId();
         this.packetTranslatorManager = new PacketTranslatorManager(this);
         this.javaSession = javaSession;
 
         if (ProxyServer.getInstance().getConfig().getAuth().equals("offline")) {
             // A server that does not check the accounts tells the players apart by these, PowerNukkitX by the xuid
             // alone. They are made of the name, so that a player is the same one every time and nobody else
-            this.username = loginPacket.getUsername();
+            this.username = profile.getName();
             java.util.UUID offlineUuid = java.util.UUID.nameUUIDFromBytes(("OfflinePlayer:" + this.username).getBytes(StandardCharsets.UTF_8));
             this.UUID = offlineUuid.toString();
             this.xuid = Long.toString(offlineUuid.getMostSignificantBits() >>> 14);
             this.playFabId = Long.toHexString(offlineUuid.getLeastSignificantBits());
         } else {
-            this.xboxAccount = AuthManager.getInstance().getXboxAccount(loginPacket.getUsername());
+            this.xboxAccount = AuthManager.getInstance().getXboxAccount(profile.getId());
         }
 
-        ProxyServer.getInstance().getOnlinePlayers().put(loginPacket.getUsername(), this);
+        ProxyServer.getInstance().getOnlinePlayers().put(profile.getName(), this);
     }
 
     // For what does not wait for a packet. It runs on the thread that translates the packets

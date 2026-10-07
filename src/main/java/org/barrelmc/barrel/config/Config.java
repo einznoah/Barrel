@@ -40,5 +40,9 @@ public class Config {
 
     @Setter
     @Getter
+    public String javaAuth = "online";
+
+    @Setter
+    @Getter
     public boolean rememberLogins = false;
 }

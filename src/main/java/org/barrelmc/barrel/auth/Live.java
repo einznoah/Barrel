@@ -15,6 +15,7 @@ import org.barrelmc.barrel.server.ProxyServer;
 import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
 
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class Live {
@@ -22,14 +23,14 @@ public class Live {
     @Getter
     private final HttpClient httpClient = MinecraftAuth.createHttpClient();
 
-    public Thread requestLiveToken(Session session, String username) {
+    public Thread requestLiveToken(Session session, UUID javaAccount) {
         Thread thread = new Thread(() -> {
             try {
                 // Returns once the player has entered the code on the microsoft website
                 BedrockAuthManager xboxAccount = BedrockAuthManager.create(this.httpClient, ProxyServer.getInstance().getBedrockPacketCodec().getMinecraftVersion())
                         .login(DeviceCodeMsaAuthService::new, (Consumer<MsaDeviceCode>) deviceCode -> this.sendDeviceCode(session, deviceCode));
 
-                AuthManager.getInstance().addXboxAccount(username, xboxAccount);
+                AuthManager.getInstance().addXboxAccount(javaAccount, xboxAccount);
                 session.send(new ClientboundSystemChatPacket(Component.text("§eSuccessfully authenticated with Xbox Live. Please rejoin!"), false));
             } catch (InterruptedException ignored) {
                 // The player left before logging in
@@ -40,7 +41,7 @@ public class Live {
                     e.printStackTrace();
                 }
             } finally {
-                AuthManager.getInstance().getLoginThreads().remove(username, Thread.currentThread());
+                AuthManager.getInstance().getLoginThreads().remove(javaAccount, Thread.currentThread());
             }
         });
         thread.start();
