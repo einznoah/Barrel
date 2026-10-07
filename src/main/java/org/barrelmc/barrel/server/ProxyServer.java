@@ -54,6 +54,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,6 +92,8 @@ public class ProxyServer {
     private final int overworldClockId;
     // The dimensions by the numbers a bedrock server has for them: the overworld, the nether and the end
     private final Dimension[] dimensions;
+    // The paintings the java client was told of, by their names
+    private final Map<String, Painting> paintings = new HashMap<>();
     @Getter
     private final int defaultBiomeId;
     @Getter
@@ -111,6 +114,10 @@ public class ProxyServer {
         this.overworldSectionCount = overworld.getCompound("element").getInt("height") >> 4;
         this.overworldClockId = getRegistryEntry(registries, "minecraft:world_clock", "minecraft:overworld").getInt("id");
         this.dimensions = new Dimension[]{readDimension(registries, "minecraft:overworld"), readDimension(registries, "minecraft:the_nether"), readDimension(registries, "minecraft:the_end")};
+        for (NbtMap painting : registries.getCompound("minecraft:painting_variant").getList("value", NbtType.COMPOUND)) {
+            NbtMap element = painting.getCompound("element");
+            this.paintings.put(painting.getString("name"), new Painting(painting.getInt("id"), element.getInt("width"), element.getInt("height")));
+        }
         this.defaultBiomeId = getRegistryEntry(registries, "minecraft:worldgen/biome", "minecraft:plains").getInt("id");
         this.biomeCount = registries.getCompound("minecraft:worldgen/biome").getList("value", NbtType.COMPOUND).size();
 
@@ -133,6 +140,14 @@ public class ProxyServer {
         NbtMap entry = getRegistryEntry(registries, "minecraft:dimension_type", name);
         NbtMap element = entry.getCompound("element");
         return new Dimension(entry.getInt("id"), Key.key(name), element.getInt("min_y") >> 4, element.getInt("height") >> 4, element.getBoolean("has_skylight"));
+    }
+
+    // What the java client was told of a painting: its number, and how many blocks wide and high it is
+    public record Painting(int id, int width, int height) {
+    }
+
+    public Painting getPainting(String name) {
+        return this.paintings.get(name);
     }
 
     // A dimension that is not known is taken for the overworld

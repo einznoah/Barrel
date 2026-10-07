@@ -140,7 +140,7 @@ public class SubChunkRequests {
             if (this.tick - chunk.since > GIVE_UP_TICKS) {
                 iterator.remove();
                 chunk.bedrockBlocks.joinDoors(chunk.sections);
-                LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections);
+                LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections, chunk.bedrockBlocks.getJavaBlockEntities(chunk.sections.length));
                 continue;
             }
             // The sub chunks no answer came for are asked for again, before those further away
@@ -214,7 +214,9 @@ public class SubChunkRequests {
                     if (data != null && data.isReadable()) {
                         try {
                             LevelChunkPacket.readSubChunk(data, chunk.sections, position.getY() - minSection, hashedBlockIds, chunk.bedrockBlocks);
-                        } catch (RuntimeException e) {
+                            // Behind the blocks of a sub chunk is what they hold
+                            LevelChunkPacket.readBlockEntityData(data, chunk.bedrockBlocks);
+                        } catch (RuntimeException | java.io.IOException e) {
                             // What was read of it stays, as a bedrock client does it
                         }
                     }
@@ -234,7 +236,7 @@ public class SubChunkRequests {
             if (chunk.missing.isEmpty()) {
                 this.chunks.remove(key);
                 chunk.bedrockBlocks.joinDoors(chunk.sections);
-                LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections);
+                LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections, chunk.bedrockBlocks.getJavaBlockEntities(chunk.sections.length));
             }
         }
     }

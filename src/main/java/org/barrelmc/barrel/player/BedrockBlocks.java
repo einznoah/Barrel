@@ -1,11 +1,16 @@
 package org.barrelmc.barrel.player;
 
 import org.barrelmc.barrel.network.converter.BlockConverter;
+import org.barrelmc.barrel.network.converter.BlockEntityConverter;
 import org.barrelmc.barrel.server.ProxyServer;
 import org.barrelmc.barrel.utils.nukkit.BitArray;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
+import org.cloudburstmc.nbt.NbtMap;
+import org.cloudburstmc.nbt.NbtType;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockChangeEntry;
+import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityInfo;
+import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockUpdatePacket;
 
 import java.util.ArrayList;
@@ -30,6 +35,10 @@ public class BedrockBlocks {
         private final Map<Integer, Integer> changed = new HashMap<>();
         // Where the lower halves of the doors are that came with the sub chunks: the section, then x, z and y in it
         private final List<Integer> doors = new ArrayList<>();
+        // The blocks of the chunk a java client draws through what they hold, by where they are in the same way
+        private final Map<Integer, BlockEntityType> blockEntities = new HashMap<>();
+        // What the server sent that its blocks hold, by their place in the chunk
+        private final Map<Integer, NbtMap> blockEntityData = new HashMap<>();
 
         private Column(int x, int z, int minSection) {
             this.x = x;
@@ -52,6 +61,34 @@ public class BedrockBlocks {
             this.palettes.put(section, palette);
             this.changed.keySet().removeIf(place -> place >> 12 == section);
             this.doors.removeIf(door -> door >> 12 == section);
+            this.blockEntities.keySet().removeIf(blockEntity -> blockEntity >> 12 == section);
+        }
+
+        public void addBlockEntity(int section, int x, int y, int z, BlockEntityType type) {
+            this.blockEntities.put(section << 12 | x << 8 | z << 4 | y, type);
+        }
+
+        // What a block holds as the server sent it, which tells itself where the block is
+        public void setBlockEntityData(NbtMap data) {
+            if (data.containsKey("x", NbtType.INT) && data.containsKey("y", NbtType.INT) && data.containsKey("z", NbtType.INT)
+                    && data.getInt("x") >> 4 == this.x && data.getInt("z") >> 4 == this.z) {
+                this.blockEntityData.put(this.getPlace(data.getInt("x"), data.getInt("y"), data.getInt("z")), data);
+            }
+        }
+
+        // The java client is told with the chunk which of its blocks hold something, and what
+        public BlockEntityInfo[] getJavaBlockEntities(int sectionCount) {
+            List<BlockEntityInfo> javaBlockEntities = new ArrayList<>();
+            for (Map.Entry<Integer, BlockEntityType> blockEntity : this.blockEntities.entrySet()) {
+                int section = blockEntity.getKey() >> 12, x = blockEntity.getKey() >> 8 & 15, z = blockEntity.getKey() >> 4 & 15;
+                if (section < 0 || section >= sectionCount) {
+                    continue;
+                }
+                int y = (section + this.minSection << 4) + (blockEntity.getKey() & 15);
+                NbtMap data = this.blockEntityData.get(this.getPlace(x, y, z));
+                javaBlockEntities.add(new BlockEntityInfo(x, y, z, blockEntity.getValue(), BlockEntityConverter.bedrockToJava(blockEntity.getValue(), data)));
+            }
+            return javaBlockEntities.toArray(new BlockEntityInfo[0]);
         }
 
         public void addDoor(int section, int x, int y, int z) {
@@ -133,6 +170,19 @@ public class BedrockBlocks {
             }
         }
         this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(position, javaBlock)));
+    }
+
+    // What the server sent that the block at a place holds, null when it sent nothing
+    public NbtMap getBlockEntityData(Vector3i position) {
+        Column column = this.columns.get(getKey(position.getX() >> 4, position.getZ() >> 4));
+        return column == null ? null : column.blockEntityData.get(column.getPlace(position.getX(), position.getY(), position.getZ()));
+    }
+
+    public void setBlockEntityData(Vector3i position, NbtMap data) {
+        Column column = this.columns.get(getKey(position.getX() >> 4, position.getZ() >> 4));
+        if (column != null) {
+            column.blockEntityData.put(column.getPlace(position.getX(), position.getY(), position.getZ()), data);
+        }
     }
 
     // What is not known is air: a sub chunk of nothing but air is not sent

@@ -10,6 +10,8 @@ import com.google.gson.JsonObject;
 import lombok.Getter;
 import org.barrelmc.barrel.utils.FileManager;
 
+import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
+
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,6 +25,9 @@ public class BlockConverter {
     public static final HashMap<Integer, Integer> WATERLOGGED_JAVA_BLOCK = new HashMap<>();
     public static final BitSet JAVA_WATER_BLOCK = new BitSet();
     public static final BitSet JAVA_FLUID_BLOCK = new BitSet();
+    // The java blocks a client draws through what they hold, a chest or a sign for example, with the kind of that.
+    // A java client that is not told of it for a block that comes with a chunk does not draw the block at all
+    private static final HashMap<Integer, BlockEntityType> JAVA_BLOCK_ENTITY = new HashMap<>();
     // The first java block state of a door, for every one of its states. A door has 64 of them, counted through
     // by which way it faces, which half it is, on which side the hinge is, whether it is open and whether it is
     // powered. The bits of a state, from the first state of its door on:
@@ -61,6 +66,13 @@ public class BlockConverter {
             if (bedrockName.equals("minecraft:water") || bedrockName.equals("minecraft:flowing_water")) {
                 JAVA_WATER_BLOCK.set(javaStateId);
             }
+            BlockEntityType blockEntity = getJavaBlockEntity(bedrockName);
+            if (blockEntity != null) {
+                JAVA_BLOCK_ENTITY.put(javaStateId, blockEntity);
+                if (blockEntry.has("java_waterlogged_state")) {
+                    JAVA_BLOCK_ENTITY.put(blockEntry.get("java_waterlogged_state").getAsInt(), blockEntity);
+                }
+            }
             if (bedrockName.endsWith("_door")) {
                 doors.computeIfAbsent(bedrockName, name -> new TreeSet<>()).add(javaStateId);
             }
@@ -75,6 +87,49 @@ public class BlockConverter {
             }
         }
         doors.values().forEach(BlockConverter::addJavaDoor);
+    }
+
+    // The kinds are told by the names of the bedrock blocks, which only differ from the java ones in the wood
+    private static BlockEntityType getJavaBlockEntity(String bedrockName) {
+        String name = bedrockName.substring(bedrockName.indexOf(':') + 1);
+        if (name.endsWith("_hanging_sign")) {
+            return BlockEntityType.HANGING_SIGN;
+        } else if (name.endsWith("standing_sign") || name.endsWith("wall_sign")) {
+            return BlockEntityType.SIGN;
+        } else if (name.equals("chest") || name.endsWith("copper_chest")) {
+            return BlockEntityType.CHEST;
+        } else if (name.endsWith("shulker_box")) {
+            return BlockEntityType.SHULKER_BOX;
+        } else if (name.endsWith("_head") || name.endsWith("_skull")) {
+            return BlockEntityType.SKULL;
+        } else if (name.endsWith("_shelf")) {
+            return BlockEntityType.SHELF;
+        } else if (name.endsWith("copper_golem_statue")) {
+            return BlockEntityType.COPPER_GOLEM_STATUE;
+        }
+        return switch (name) {
+            case "trapped_chest" -> BlockEntityType.TRAPPED_CHEST;
+            case "ender_chest" -> BlockEntityType.ENDER_CHEST;
+            case "standing_banner", "wall_banner" -> BlockEntityType.BANNER;
+            case "bell" -> BlockEntityType.BELL;
+            case "enchanting_table" -> BlockEntityType.ENCHANTING_TABLE;
+            case "end_portal" -> BlockEntityType.END_PORTAL;
+            case "end_gateway" -> BlockEntityType.END_GATEWAY;
+            case "conduit" -> BlockEntityType.CONDUIT;
+            case "decorated_pot" -> BlockEntityType.DECORATED_POT;
+            case "mob_spawner" -> BlockEntityType.MOB_SPAWNER;
+            case "trial_spawner" -> BlockEntityType.TRIAL_SPAWNER;
+            case "vault" -> BlockEntityType.VAULT;
+            case "lectern" -> BlockEntityType.LECTERN;
+            case "beacon" -> BlockEntityType.BEACON;
+            case "campfire", "soul_campfire" -> BlockEntityType.CAMPFIRE;
+            default -> null;
+        };
+    }
+
+    // What kind of thing a java block holds that it is drawn through, null for a block that is drawn as it is
+    public static BlockEntityType getJavaBlockEntity(int javaBlockId) {
+        return JAVA_BLOCK_ENTITY.get(javaBlockId);
     }
 
     // A bedrock door has every state of a java door that is not powered, which is every second one from the second

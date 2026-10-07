@@ -137,6 +137,9 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(UpdateBlockSyncedPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateBlockPacket());
         bedrockTranslators.put(UpdateSubChunkBlocksPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateSubChunkBlocksPacket());
         bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.PlayerActionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerActionPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.BlockEntityDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.BlockEntityDataPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.AddPaintingPacket.class, new org.barrelmc.barrel.network.translator.bedrock.AddPaintingPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.OpenSignPacket.class, new org.barrelmc.barrel.network.translator.bedrock.OpenSignPacket());
         bedrockTranslators.put(InventoryTransactionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventoryTransactionPacket());
         bedrockTranslators.put(DisconnectPacket.class, new org.barrelmc.barrel.network.translator.bedrock.DisconnectPacket());
         bedrockTranslators.put(SetPlayerGameTypePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetPlayerGameTypePacket());
@@ -199,6 +202,7 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundPlaceRecipePacket.class, new PlaceRecipePacket());
         javaTranslators.put(ServerboundSetCreativeModeSlotPacket.class, new SetCreativeModeSlotPacket());
         javaTranslators.put(ServerboundUseItemOnPacket.class, new UseItemOnPacket());
+        javaTranslators.put(org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundSignUpdatePacket.class, new SignUpdatePacket());
         javaTranslators.put(ServerboundUseItemPacket.class, new UseItemPacket());
         javaTranslators.put(ServerboundAttackPacket.class, new AttackPacket());
         javaTranslators.put(ServerboundInteractPacket.class, new InteractPacket());

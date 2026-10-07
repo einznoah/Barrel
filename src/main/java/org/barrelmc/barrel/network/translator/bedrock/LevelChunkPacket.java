@@ -20,6 +20,7 @@ import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.geysermc.mcprotocollib.protocol.data.game.level.HeightmapTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.level.LightUpdateData;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityInfo;
+import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
 import java.io.IOException;
@@ -31,6 +32,12 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
 
     // The light of a section, half a byte for each place, all of them the brightest
     private static final byte[] FULL_LIGHT = new byte[2048];
+    // No dimension has more sub chunks than this
+    private static final int MAX_SUB_CHUNKS = 32;
+    // What biomes are told as when they are those of the sub chunk below
+    private static final int SAME_AS_BELOW = 127;
+    // The first byte of what a block holds, as of everything that is made of named parts
+    private static final int COMPOUND_TAG = 10;
 
     static {
         Arrays.fill(FULL_LIGHT, (byte) 0xFF);
@@ -60,9 +67,46 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
             readSubChunk(byteBuf, chunkSections, subChunkIndex, hashedBlockIds, bedrockBlocks);
             //TODO: Read biome
         }
+        try {
+            readBlockEntities(byteBuf, bedrockBlocks);
+        } catch (RuntimeException | IOException e) {
+            // The chunk is shown without what its blocks hold, a sign without its text for one
+        }
 
         bedrockBlocks.joinDoors(chunkSections);
-        sendChunk(player, packet.getChunkX(), packet.getChunkZ(), chunkSections);
+        sendChunk(player, packet.getChunkX(), packet.getChunkZ(), chunkSections, bedrockBlocks.getJavaBlockEntities(chunkSections.length));
+    }
+
+    // Behind the sub chunks of a chunk are its biomes, the blocks at the border of an education world, and then
+    // what the blocks of the chunk hold
+    private static void readBlockEntities(ByteBuf byteBuf, BedrockBlocks.Column bedrockBlocks) throws IOException {
+        // The biomes of a sub chunk are told as its blocks are, by a first byte that is odd
+        for (int biomes = 0; biomes < MAX_SUB_CHUNKS && byteBuf.isReadable() && (byteBuf.getByte(byteBuf.readerIndex()) & 1) != 0; biomes++) {
+            int version = byteBuf.readUnsignedByte() >> 1;
+            if (version == SAME_AS_BELOW) {
+                continue;
+            }
+            BitArrayVersion bitArrayVersion = BitArrayVersion.get(version, true);
+            byteBuf.skipBytes(bitArrayVersion.createPalette(4096).getWords().length * 4);
+            for (int entries = bitArrayVersion == BitArrayVersion.V0 ? 1 : VarInts.readInt(byteBuf); entries > 0; entries--) {
+                VarInts.readInt(byteBuf);
+            }
+        }
+        if (byteBuf.isReadable()) {
+            byteBuf.skipBytes(byteBuf.readUnsignedByte());
+        }
+        readBlockEntityData(byteBuf, bedrockBlocks);
+    }
+
+    // What blocks hold, one after the other to the end
+    public static void readBlockEntityData(ByteBuf byteBuf, BedrockBlocks.Column bedrockBlocks) throws IOException {
+        NBTInputStream nbtStream = new NBTInputStream(new NetworkDataInputStream(new ByteBufInputStream(byteBuf)));
+        // A chunk that has none ends with a single byte that is not the start of one
+        while (byteBuf.isReadable() && byteBuf.getByte(byteBuf.readerIndex()) == COMPOUND_TAG) {
+            if (nbtStream.readTag() instanceof NbtMap blockEntity) {
+                bedrockBlocks.setBlockEntityData(blockEntity);
+            }
+        }
     }
 
     // Reads a sub chunk into the section it is for. A sub chunk that tells its height itself goes to that one
@@ -86,7 +130,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         networkDecodeVersionEight(byteBuf, chunkSection, storageSize, hashedBlockIds, bedrockBlocks, sectionIndex);
     }
 
-    public static void sendChunk(Player player, int chunkX, int chunkZ, ChunkSection[] chunkSections) {
+    public static void sendChunk(Player player, int chunkX, int chunkZ, ChunkSection[] chunkSections, BlockEntityInfo[] blockEntities) {
         // A bedrock server does not send light, its clients work it out themselves. A java client shows a chunk it
         // was sent no light for as dark, so every place is told to be in the light of the sky, also below the ground
         // TODO: Work out the light as a client does, with shadows and with what gives light
@@ -99,7 +143,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
                 : new LightUpdateData(new BitSet(), everywhere, new BitSet(), new BitSet(), Collections.emptyList(), Collections.nCopies(lightSections, FULL_LIGHT));
         ClientboundLevelChunkWithLightPacket chunkPacket = new ClientboundLevelChunkWithLightPacket(
                 chunkX, chunkZ,
-                Utils.writeChunkSections(chunkSections), Collections.singletonMap(HeightmapTypes.MOTION_BLOCKING, new long[37]), new BlockEntityInfo[0],
+                Utils.writeChunkSections(chunkSections), Collections.singletonMap(HeightmapTypes.MOTION_BLOCKING, new long[37]), blockEntities,
                 light
         );
 
@@ -151,18 +195,30 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
                 bedrockBlocks.setSection(sectionIndex, bitArray, sectionPalette);
             }
 
+            // What the blocks of the sub chunk are for a java client is looked up once for each kind of them
+            int[] javaPalette = new int[paletteSize];
+            boolean[] doors = new boolean[paletteSize];
+            BlockEntityType[] blockEntities = new BlockEntityType[paletteSize];
+            for (int i = 0; i < paletteSize; i++) {
+                javaPalette[i] = BlockConverter.bedrockRuntimeToJavaStateId(sectionPalette[i], hashedBlockIds);
+                doors[i] = BlockConverter.isJavaDoorLower(javaPalette[i]);
+                blockEntities[i] = BlockConverter.getJavaBlockEntity(javaPalette[i]);
+            }
+
             int index = 0;
             for (int x = 0; x < 16; x++) {
                 for (int z = 0; z < 16; z++) {
                     for (int y = 0; y < 16; y++) {
                         int paletteIndex = bitArray.get(index);
-                        int mcbeBlockId = sectionPalette[paletteIndex];
-                        int javaStateId = BlockConverter.bedrockRuntimeToJavaStateId(mcbeBlockId, hashedBlockIds);
+                        int javaStateId = javaPalette[paletteIndex];
 
                         if (storageReadIndex == 0) {
                             chunkSection.setBlock(x, y, z, javaStateId);
-                            if (BlockConverter.isJavaDoorLower(javaStateId)) {
+                            if (doors[paletteIndex]) {
                                 bedrockBlocks.addDoor(sectionIndex, x, y, z);
+                            }
+                            if (blockEntities[paletteIndex] != null) {
+                                bedrockBlocks.addBlockEntity(sectionIndex, x, y, z, blockEntities[paletteIndex]);
                             }
                         } else {
                             if (BlockConverter.isJavaWater(javaStateId)) {
