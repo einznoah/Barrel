@@ -59,6 +59,8 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundSystemChatPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateMobEffectPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerAbilitiesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSetChunkCacheCenterPacket;
 
 import java.net.ConnectException;
@@ -165,6 +167,25 @@ public class Player extends Vector3 {
     @Setter
     @Getter
     private boolean spawned = false;
+    // The dimension the player is in, by the number the bedrock server has for it
+    @Setter
+    @Getter
+    private int dimension = 0;
+    // The server is taking the player to another dimension and has not told yet that it is done
+    @Setter
+    @Getter
+    private boolean changingDimension = false;
+    // The loading screen the server named for that, a server names none for some changes
+    @Setter
+    @Getter
+    private Integer dimensionLoadingScreen = null;
+    // What the java client was last told the player may do, and the effects on the player as it was told them with
+    // the time. A java client forgets both when the player comes into another dimension
+    @Setter
+    @Getter
+    private ClientboundPlayerAbilitiesPacket abilities = null;
+    @Getter
+    private final Map<Effect, SentEffect> sentEffects = new HashMap<>();
     @Getter
     private final PlayerInput input = new PlayerInput(this);
     @Setter
@@ -626,6 +647,13 @@ public class Player extends Vector3 {
         }
         this.javaSession.disconnect(reason);
         ProxyServer.getInstance().getOnlinePlayers().values().remove(this);
+    }
+
+    public record SentEffect(ClientboundUpdateMobEffectPacket packet, long time) {
+    }
+
+    public ProxyServer.Dimension getJavaDimension() {
+        return ProxyServer.getInstance().getDimension(this.dimension);
     }
 
     @Override

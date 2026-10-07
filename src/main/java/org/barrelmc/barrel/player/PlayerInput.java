@@ -121,7 +121,8 @@ public class PlayerInput {
     }
 
     private void send() {
-        if (!this.player.getBedrockSession().isConnected()) {
+        // While the server takes the player to another dimension, a bedrock client shows a loading screen
+        if (!this.player.getBedrockSession().isConnected() || this.player.isChangingDimension()) {
             return;
         }
         this.tick++;

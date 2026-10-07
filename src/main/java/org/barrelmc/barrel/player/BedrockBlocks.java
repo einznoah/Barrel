@@ -22,6 +22,8 @@ public class BedrockBlocks {
     public static class Column {
         private final int x;
         private final int z;
+        // The lowest section of the dimension the chunk is in
+        private final int minSection;
         private final Map<Integer, BitArray> blocks = new HashMap<>();
         private final Map<Integer, int[]> palettes = new HashMap<>();
         // The blocks that changed since the sub chunk they are in came
@@ -29,16 +31,26 @@ public class BedrockBlocks {
         // Where the lower halves of the doors are that came with the sub chunks: the section, then x, z and y in it
         private final List<Integer> doors = new ArrayList<>();
 
-        private Column(int x, int z) {
+        private Column(int x, int z, int minSection) {
             this.x = x;
             this.z = z;
+            this.minSection = minSection;
+        }
+
+        public int getMinSection() {
+            return this.minSection;
+        }
+
+        // The number of a place in the chunk: how high it is above the lowest block, then x and z
+        private int getPlace(int x, int y, int z) {
+            return y - (this.minSection << 4) << 8 | (x & 15) << 4 | z & 15;
         }
 
         // The sections are counted as those of the java world, from its lowest one
         public void setSection(int section, BitArray blocks, int[] palette) {
             this.blocks.put(section, blocks);
             this.palettes.put(section, palette);
-            this.changed.keySet().removeIf(place -> getSection((place >> 8) + getMinY()) == section);
+            this.changed.keySet().removeIf(place -> place >> 12 == section);
             this.doors.removeIf(door -> door >> 12 == section);
         }
 
@@ -77,18 +89,6 @@ public class BedrockBlocks {
         return (long) chunkX << 32 | chunkZ & 0xFFFFFFFFL;
     }
 
-    private static int getMinY() {
-        return ProxyServer.getInstance().getOverworldMinSection() << 4;
-    }
-
-    private static int getSection(int y) {
-        return (y >> 4) - ProxyServer.getInstance().getOverworldMinSection();
-    }
-
-    private static int getPlace(int x, int y, int z) {
-        return y - getMinY() << 8 | (x & 15) << 4 | z & 15;
-    }
-
     // A chunk comes, what was known of it is not true anymore
     public Column startChunk(int chunkX, int chunkZ) {
         // The chunks the player has left behind are not kept
@@ -97,7 +97,7 @@ public class BedrockBlocks {
             this.columns.values().removeIf(column -> Math.abs(column.x - chunkX) > reach || Math.abs(column.z - chunkZ) > reach);
         }
 
-        Column column = new Column(chunkX, chunkZ);
+        Column column = new Column(chunkX, chunkZ, this.player.getJavaDimension().minSection());
         this.columns.put(getKey(chunkX, chunkZ), column);
         return column;
     }
@@ -109,7 +109,7 @@ public class BedrockBlocks {
     public void setBlock(Vector3i position, int bedrockBlockId) {
         Column column = this.columns.get(getKey(position.getX() >> 4, position.getZ() >> 4));
         if (column != null) {
-            column.changed.put(getPlace(position.getX(), position.getY(), position.getZ()), bedrockBlockId);
+            column.changed.put(column.getPlace(position.getX(), position.getY(), position.getZ()), bedrockBlockId);
         }
     }
 
@@ -143,11 +143,11 @@ public class BedrockBlocks {
             return air;
         }
 
-        Integer changed = column.changed.get(getPlace(position.getX(), position.getY(), position.getZ()));
+        Integer changed = column.changed.get(column.getPlace(position.getX(), position.getY(), position.getZ()));
         if (changed != null) {
             return changed;
         }
-        int section = getSection(position.getY());
+        int section = (position.getY() >> 4) - column.minSection;
         BitArray blocks = column.blocks.get(section);
         if (blocks == null) {
             return air;

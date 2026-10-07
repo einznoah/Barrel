@@ -9,6 +9,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import lombok.Getter;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import org.barrelmc.barrel.auth.LoginSerializer;
 import org.barrelmc.barrel.network.CommandOutputSerializer;
@@ -88,6 +89,8 @@ public class ProxyServer {
     private final int overworldSectionCount;
     @Getter
     private final int overworldClockId;
+    // The dimensions by the numbers a bedrock server has for them: the overworld, the nether and the end
+    private final Dimension[] dimensions;
     @Getter
     private final int defaultBiomeId;
     @Getter
@@ -107,6 +110,7 @@ public class ProxyServer {
         this.overworldMinSection = overworld.getCompound("element").getInt("min_y") >> 4;
         this.overworldSectionCount = overworld.getCompound("element").getInt("height") >> 4;
         this.overworldClockId = getRegistryEntry(registries, "minecraft:world_clock", "minecraft:overworld").getInt("id");
+        this.dimensions = new Dimension[]{readDimension(registries, "minecraft:overworld"), readDimension(registries, "minecraft:the_nether"), readDimension(registries, "minecraft:the_end")};
         this.defaultBiomeId = getRegistryEntry(registries, "minecraft:worldgen/biome", "minecraft:plains").getInt("id");
         this.biomeCount = registries.getCompound("minecraft:worldgen/biome").getList("value", NbtType.COMPOUND).size();
 
@@ -118,6 +122,22 @@ public class ProxyServer {
         }
 
         this.startServer();
+    }
+
+    // What the java client was told of a dimension: the number of its kind, its name, its lowest section, how many
+    // sections it has and whether the sky gives light in it
+    public record Dimension(int id, Key name, int minSection, int sectionCount, boolean skyLight) {
+    }
+
+    private static Dimension readDimension(NbtMap registries, String name) {
+        NbtMap entry = getRegistryEntry(registries, "minecraft:dimension_type", name);
+        NbtMap element = entry.getCompound("element");
+        return new Dimension(entry.getInt("id"), Key.key(name), element.getInt("min_y") >> 4, element.getInt("height") >> 4, element.getBoolean("has_skylight"));
+    }
+
+    // A dimension that is not known is taken for the overworld
+    public Dimension getDimension(int bedrockDimension) {
+        return this.dimensions[bedrockDimension >= 0 && bedrockDimension < this.dimensions.length ? bedrockDimension : 0];
     }
 
     private static NbtMap getRegistryEntry(NbtMap registries, String registry, String name) {

@@ -28,7 +28,8 @@ public class UpdateAbilitiesPacket implements BedrockPacketTranslator {
                         player.setGameMode(GameType.SURVIVAL_VIEWER);
                         player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, TranslatorUtils.translateGamemodeToJE(GameType.SURVIVAL_VIEWER)));
                     }
-                    player.getJavaSession().send(new ClientboundPlayerAbilitiesPacket(abilityValues.contains(Ability.INVULNERABLE), abilityValues.contains(Ability.MAY_FLY), abilityValues.contains(Ability.FLYING), abilityValues.contains(Ability.INSTABUILD), 0.05f, 0.1f));
+                    player.setAbilities(new ClientboundPlayerAbilitiesPacket(abilityValues.contains(Ability.INVULNERABLE), abilityValues.contains(Ability.MAY_FLY), abilityValues.contains(Ability.FLYING), abilityValues.contains(Ability.INSTABUILD), 0.05f, 0.1f));
+                    player.getJavaSession().send(player.getAbilities());
                 }
             }
         }

@@ -198,7 +198,7 @@ public class SubChunkRequests {
 
         Vector3i center = packet.getCenterPosition();
         boolean hashedBlockIds = this.player.getStartGamePacketCache().isBlockNetworkIdsHashed();
-        int minSection = ProxyServer.getInstance().getOverworldMinSection();
+        int minSection = ProxyServer.getInstance().getDimension(this.dimension).minSection();
         for (SubChunkData subChunk : packet.getSubChunks()) {
             Vector3i position = center.add(subChunk.getPosition());
             long key = getKey(position.getX(), position.getZ());

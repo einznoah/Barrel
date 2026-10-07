@@ -38,9 +38,10 @@ public class RespawnPacket implements BedrockPacketTranslator {
 
         // A java client makes a new player of the one that died, which has nothing of what the server did not send again
         GameMode gameMode = TranslatorUtils.translateGamemodeToJE(player.getGameMode());
-        player.getJavaSession().send(new ClientboundRespawnPacket(new PlayerSpawnInfo(ProxyServer.getInstance().getOverworldId(), Key.key("minecraft:overworld"), 100, gameMode, gameMode, false, false, null, 0, 63), false, false));
+        player.getJavaSession().send(new ClientboundRespawnPacket(new PlayerSpawnInfo(player.getJavaDimension().id(), player.getJavaDimension().name(), 100, gameMode, gameMode, false, false, null, 0, 63), false, false));
         player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.LEVEL_CHUNKS_LOAD_START, null));
         player.getEffects().clear();
+        player.getSentEffects().clear();
         player.getInventory().sendContents();
         player.getJavaSession().send(new ClientboundSetHeldSlotPacket(player.getInventory().getHeldSlot()));
         player.getJavaSession().send(new ClientboundSetExperiencePacket(player.getExperienceProgress(), player.getExperienceLevel(), 0));

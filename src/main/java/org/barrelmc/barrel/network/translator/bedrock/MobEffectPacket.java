@@ -26,10 +26,13 @@ public class MobEffectPacket implements BedrockPacketTranslator {
             case ADD:
             case MODIFY:
                 player.getEffects().put(effect, packet.getAmplifier());
-                player.getJavaSession().send(new ClientboundUpdateMobEffectPacket(entityId, effect, packet.getAmplifier(), packet.getDuration(), packet.isAmbient(), packet.isParticles(), true, false));
+                ClientboundUpdateMobEffectPacket effectPacket = new ClientboundUpdateMobEffectPacket(entityId, effect, packet.getAmplifier(), packet.getDuration(), packet.isAmbient(), packet.isParticles(), true, false);
+                player.getSentEffects().put(effect, new Player.SentEffect(effectPacket, System.currentTimeMillis()));
+                player.getJavaSession().send(effectPacket);
                 break;
             case REMOVE:
                 player.getEffects().remove(effect);
+                player.getSentEffects().remove(effect);
                 player.getJavaSession().send(new ClientboundRemoveMobEffectPacket(entityId, effect));
                 break;
             default:

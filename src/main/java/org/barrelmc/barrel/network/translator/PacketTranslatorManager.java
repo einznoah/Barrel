@@ -136,6 +136,7 @@ public class PacketTranslatorManager {
         // A block that changes together with an entity, sand that starts to fall for one
         bedrockTranslators.put(UpdateBlockSyncedPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateBlockPacket());
         bedrockTranslators.put(UpdateSubChunkBlocksPacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdateSubChunkBlocksPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.PlayerActionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerActionPacket());
         bedrockTranslators.put(InventoryTransactionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventoryTransactionPacket());
         bedrockTranslators.put(DisconnectPacket.class, new org.barrelmc.barrel.network.translator.bedrock.DisconnectPacket());
         bedrockTranslators.put(SetPlayerGameTypePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetPlayerGameTypePacket());

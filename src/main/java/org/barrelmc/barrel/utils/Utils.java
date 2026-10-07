@@ -29,7 +29,11 @@ public class Utils {
     }
 
     public static ChunkSection[] createChunkSections() {
-        ChunkSection[] chunkSections = new ChunkSection[ProxyServer.getInstance().getOverworldSectionCount()];
+        return createChunkSections(ProxyServer.getInstance().getOverworldSectionCount());
+    }
+
+    public static ChunkSection[] createChunkSections(int count) {
+        ChunkSection[] chunkSections = new ChunkSection[count];
         for (int i = 0; i < chunkSections.length; i++) {
             chunkSections[i] = createChunkSection();
         }

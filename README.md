@@ -93,7 +93,8 @@ saved under the name of a player by an older version is taken over the first tim
 ## What works
 
 - **The world:** chunks, also from servers that send a chunk without its blocks and wait to be asked for them,
-  blocks that change, one or many at once, and water a block is in
+  blocks that change, one or many at once, and water a block is in, the Nether
+  and the End
 - **Moving:** walking, sprinting, sneaking, jumping and flying, also on servers that move the player themselves
   from the keys that are held and put the client back where they got to
 - **Blocks:** breaking and placing, using what a block does when it is clicked on
@@ -117,11 +118,10 @@ saved under the name of a player by an older version is taken over the first tim
 - Putting items into a bundle and taking them out: a bundle shows what is in it, a click that would change it
   does nothing
 - What a command takes: the Java client is told the names of the commands, not what follows them
-- The Nether and the End, a change of dimension is not told to the Java client
 - Riding: boats, minecarts and animals
 - Sounds and most particles
-- Light: every place is as bright as under the open sky, also caves. A Bedrock server does not send light and the
-  proxy does not work it out yet
+- Light: every place is as bright as under the open sky, also caves, and the Nether is bright all over. A Bedrock
+  server does not send light and the proxy does not work it out yet
 - Biomes, every place has the same one
 - Forms, boss bars, and the resource packs of a server (the server is told the client has them)
 - And More...

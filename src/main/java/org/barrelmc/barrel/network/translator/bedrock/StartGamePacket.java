@@ -34,13 +34,15 @@ public class StartGamePacket implements BedrockPacketTranslator {
         player.setStartGamePacketCache(packet);
         player.setLevelGameMode(packet.getLevelGameType());
         player.setGameMode(packet.getPlayerGameType());
+        player.setDimension(packet.getDimensionId());
+        ProxyServer.Dimension dimension = player.getJavaDimension();
 
         ClientboundLoginPacket serverJoinGamePacket = new ClientboundLoginPacket(
                 (int) packet.getRuntimeEntityId(), false,
                 new Key[]{Key.key("minecraft:overworld"), Key.key("minecraft:the_nether"), Key.key("minecraft:the_end")},
                 10, 16, 16, false, true, false,
                 new PlayerSpawnInfo(
-                        ProxyServer.getInstance().getOverworldId(), Key.key("minecraft:overworld"), 100,
+                        dimension.id(), dimension.name(), 100,
                         TranslatorUtils.translateGamemodeToJE(player.getGameMode()),
                         TranslatorUtils.translateGamemodeToJE(player.getGameMode()),
                         false, false, null, 0, 63

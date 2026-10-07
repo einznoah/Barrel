@@ -40,7 +40,12 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket packet = (org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket) pk;
 
-        ChunkSection[] chunkSections = Utils.createChunkSections();
+        if (packet.getDimension() != player.getDimension()) {
+            // A chunk of the dimension the player has left
+            return;
+        }
+
+        ChunkSection[] chunkSections = Utils.createChunkSections(player.getJavaDimension().sectionCount());
         BedrockBlocks.Column bedrockBlocks = player.getBedrockBlocks().startChunk(packet.getChunkX(), packet.getChunkZ());
         if (packet.isRequestSubChunks()) {
             // The server waits to be asked for the sub chunks, the chunk is sent when they are there
@@ -49,13 +54,10 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         }
 
         boolean hashedBlockIds = player.getStartGamePacketCache().isBlockNetworkIdsHashed();
-        // Only the bedrock overworld goes below y 0
-        int firstSection = packet.getDimension() == 0 ? 0 : -ProxyServer.getInstance().getOverworldMinSection();
-
         ByteBuf byteBuf = packet.getData();
 
         for (int subChunkIndex = 0; subChunkIndex < packet.getSubChunksLength(); subChunkIndex++) {
-            readSubChunk(byteBuf, chunkSections, firstSection + subChunkIndex, hashedBlockIds, bedrockBlocks);
+            readSubChunk(byteBuf, chunkSections, subChunkIndex, hashedBlockIds, bedrockBlocks);
             //TODO: Read biome
         }
 
@@ -76,7 +78,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
             storageSize = byteBuf.readByte();
         }
         if (chunkVersion == 9) {
-            sectionIndex = byteBuf.readByte() - ProxyServer.getInstance().getOverworldMinSection(); // height
+            sectionIndex = byteBuf.readByte() - bedrockBlocks.getMinSection(); // height
         }
 
         // The java world is not as high as the bedrock one, read the sub chunk anyway to get to the next one
@@ -89,12 +91,16 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         // was sent no light for as dark, so every place is told to be in the light of the sky, also below the ground
         // TODO: Work out the light as a client does, with shadows and with what gives light
         int lightSections = chunkSections.length + 2;
-        BitSet skyLight = new BitSet(lightSections);
-        skyLight.set(0, lightSections);
+        BitSet everywhere = new BitSet(lightSections);
+        everywhere.set(0, lightSections);
+        // Where the sky gives no light, in the nether and the end, the same is told of the light of blocks
+        LightUpdateData light = player.getJavaDimension().skyLight()
+                ? new LightUpdateData(everywhere, new BitSet(), new BitSet(), everywhere, Collections.nCopies(lightSections, FULL_LIGHT), Collections.emptyList())
+                : new LightUpdateData(new BitSet(), everywhere, new BitSet(), new BitSet(), Collections.emptyList(), Collections.nCopies(lightSections, FULL_LIGHT));
         ClientboundLevelChunkWithLightPacket chunkPacket = new ClientboundLevelChunkWithLightPacket(
                 chunkX, chunkZ,
                 Utils.writeChunkSections(chunkSections), Collections.singletonMap(HeightmapTypes.MOTION_BLOCKING, new long[37]), new BlockEntityInfo[0],
-                new LightUpdateData(skyLight, new BitSet(), new BitSet(), skyLight, Collections.nCopies(lightSections, FULL_LIGHT), Collections.emptyList())
+                light
         );
 
         player.getJavaSession().send(chunkPacket);
