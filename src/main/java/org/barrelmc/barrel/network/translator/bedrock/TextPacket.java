@@ -15,6 +15,14 @@ public class TextPacket implements BedrockPacketTranslator {
 
         boolean overlay = packet.getType() == org.cloudburstmc.protocol.bedrock.packet.TextPacket.Type.TIP || packet.getType() == org.cloudburstmc.protocol.bedrock.packet.TextPacket.Type.POPUP
                 || packet.getType() == org.cloudburstmc.protocol.bedrock.packet.TextPacket.Type.JUKEBOX_POPUP;
+        // What a java client shows above the hotbar is shown there, also when a bedrock client has it in the chat
+        overlay = overlay || TranslatorUtils.isJavaOverlayText(packet.getMessage());
+        Component rawText = TranslatorUtils.translateRawText(packet.getMessage());
+        if (rawText != null) {
+            // A text that is made of parts
+            player.getJavaSession().send(new ClientboundSystemChatPacket(rawText, overlay));
+            return;
+        }
         if (packet.isNeedsTranslation()) {
             // The key of a text, with what goes into it
             player.getJavaSession().send(new ClientboundSystemChatPacket(TranslatorUtils.translateText(packet.getMessage(), packet.getParameters()), overlay));
