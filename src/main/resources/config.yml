@@ -5,6 +5,11 @@ motd: "Barrel Proxy\nConnect to Bedrock Server"
 # Check with mojang that a java player is who it says it is? (online|offline)
 # With offline anybody can join under any name, as on a java server that has online-mode off.
 javaAuth: online
+# Only let in the java accounts that are listed in whitelist.json? (true|false)
+# The file is next to this one and is kept like the whitelist of a java server: a list of entries with the uuid of
+# an account and its name. An account is told by its uuid, the name is only there to read. The file is read again
+# when it was changed. Who is turned away is printed with its uuid.
+javaWhitelist: false
 
 # Downstream server (bedrock)
 bedrockAddress: "play.venitymc.com"

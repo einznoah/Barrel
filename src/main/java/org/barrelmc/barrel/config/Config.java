@@ -44,5 +44,9 @@ public class Config {
 
     @Setter
     @Getter
+    public boolean javaWhitelist = false;
+
+    @Setter
+    @Getter
     public boolean rememberLogins = false;
 }

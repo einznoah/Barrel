@@ -15,6 +15,7 @@ import org.barrelmc.barrel.auth.LoginSerializer;
 import org.barrelmc.barrel.network.CommandOutputSerializer;
 import org.barrelmc.barrel.Barrel;
 import org.barrelmc.barrel.auth.AuthManager;
+import org.barrelmc.barrel.auth.Whitelist;
 import org.barrelmc.barrel.auth.server.AuthServer;
 import org.barrelmc.barrel.config.Config;
 import org.barrelmc.barrel.network.JavaPacketHandler;
@@ -31,7 +32,9 @@ import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
 import org.cloudburstmc.protocol.bedrock.packet.PacketViolationWarningPacket;
 import org.geysermc.mcprotocollib.auth.GameProfile;
 import org.geysermc.mcprotocollib.auth.SessionService;
+import org.geysermc.mcprotocollib.network.Flag;
 import org.geysermc.mcprotocollib.network.Server;
+import org.geysermc.mcprotocollib.network.Session;
 import org.geysermc.mcprotocollib.network.event.server.ServerAdapter;
 import org.geysermc.mcprotocollib.network.event.server.ServerClosedEvent;
 import org.geysermc.mcprotocollib.network.event.server.SessionAddedEvent;
@@ -75,6 +78,10 @@ public class ProxyServer {
 
     @Getter
     private Config config;
+    // The java accounts that are let in, null when every account is
+    private Whitelist whitelist;
+    // Set for a java client that was turned away for not being on the whitelist
+    private static final Flag<Boolean> TURNED_AWAY = new Flag<>("barrel-turned-away", Boolean.class);
 
     @Getter
     private String defaultSkinData;
@@ -209,6 +216,20 @@ public class ProxyServer {
         return !"offline".equalsIgnoreCase(this.config.getJavaAuth());
     }
 
+    // Whether a java account may join: every account, or with a whitelist only those on it
+    public boolean isLetIn(GameProfile profile) {
+        return this.whitelist == null || this.whitelist.contains(profile.getId());
+    }
+
+    // For a java account that is not let in. Its uuid is printed, which is what an entry of the whitelist is made of
+    public void turnAway(Session session, GameProfile profile) {
+        if (session.getFlag(TURNED_AWAY) == null) {
+            session.setFlag(TURNED_AWAY, true);
+            System.out.println(profile.getName() + " (uuid " + profile.getId() + ") is not on the whitelist and was turned away");
+        }
+        session.disconnect(Component.translatable("multiplayer.disconnect.not_whitelisted"));
+    }
+
     private void startServer() {
         Runtime.getRuntime().addShutdownHook(new Thread(this::closeBedrockConnections, "Barrel shutdown"));
 
@@ -225,6 +246,14 @@ public class ProxyServer {
             System.out.println("Java accounts are not checked (javaAuth: offline): anybody can join under any name"
                     + (this.config.isRememberLogins() ? ", and plays with the xbox account that was remembered for it" : ""));
         }
+        if (this.config.isJavaWhitelist()) {
+            this.whitelist = new Whitelist(this.dataPath.resolve(Whitelist.FILE));
+            if (!verifyJavaAccounts) {
+                // The uuid of such a player is made of the name it says it has
+                System.out.println("The whitelist keeps nobody out while java accounts are not checked (javaAuth: offline):"
+                        + " who joins under the name of a player on it is let in. The uuids on it have to be those of offline players");
+            }
+        }
         server.setGlobalFlag(MinecraftConstants.SERVER_INFO_BUILDER_KEY, (ServerInfoBuilder) session -> new ServerStatusInfo(Component.text(this.config.getMotd()), new PlayerInfo(10, 0, new ArrayList<>()), new VersionInfo(MinecraftCodec.CODEC.getMinecraftVersion(), MinecraftCodec.CODEC.getProtocolVersion()), null, false));
         server.setGlobalFlag(MinecraftConstants.SERVER_LOGIN_HANDLER_KEY, (ServerLoginHandler) session -> {
             GameProfile profile = session.getFlag(MinecraftConstants.PROFILE_KEY);
@@ -232,6 +261,10 @@ public class ProxyServer {
                 // The library lets a client come this far that went on without proving its account when it was
                 // asked to. Nobody has joined then
                 session.disconnect(Component.translatable("multiplayer.disconnect.unverified_username"));
+                return;
+            }
+            if (!this.isLetIn(profile)) {
+                this.turnAway(session, profile);
                 return;
             }
             System.out.println(profile.getName() + " logged in");
@@ -264,8 +297,8 @@ public class ProxyServer {
             @Override
             public void sessionRemoved(SessionRemovedEvent event) {
                 GameProfile profile = event.getSession().getFlag(MinecraftConstants.PROFILE_KEY);
-                if (profile == null) {
-                    // Server list ping
+                if (profile == null || event.getSession().getFlag(TURNED_AWAY) != null) {
+                    // Server list ping, or a client that was never let in
                     return;
                 }
 

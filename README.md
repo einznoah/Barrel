@@ -53,11 +53,41 @@ client that is not is sent away with `Failed to verify username!` or `Invalid se
 | `port` | `25565` | The port the proxy listens on for Java clients. |
 | `motd` | `Barrel Proxy\nConnect to Bedrock Server` | What the server list of the Java client shows. |
 | `javaAuth` | `online` | `online` checks with Mojang that a Java player is signed in to the account it joins with, as a Java server with `online-mode` on does. With `offline` anybody can join under any name. |
+| `javaWhitelist` | `false` | Whether only the Java accounts that are listed in `whitelist.json` are let in. See [Whitelist](#whitelist). |
 | `bedrockAddress` | `play.venitymc.com` | The address of the Bedrock server. |
 | `bedrockPort` | `19132` | The port of the Bedrock server. |
 | `transport` | `raknet` | How the Bedrock server is reached: `raknet`, as most servers are, or `nethernet`. See [NetherNet](#nethernet). |
 | `auth` | `online` | `online` signs players in to Xbox, `offline` joins with the name of the Java player for servers that do not ask for an Xbox account. |
 | `rememberLogins` | `false` | Whether a player stays signed in to Xbox, also after the proxy was restarted. See below before turning it on. |
+
+## Whitelist
+
+With `javaWhitelist: true` only the Java accounts that are listed in `whitelist.json`, next to `config.yml`, are
+let in. Everybody else is sent away with `You are not white-listed on this server!` before anything else is done
+for them: they are not asked to sign in to Xbox, and the Bedrock server is not told of them.
+
+The file is kept like the whitelist of a Java server, and the one of a Java server can be used as it is:
+
+```json
+[
+  {"uuid": "069a79f4-44e9-4726-a5be-fca90e38aaf5", "name": "Notch"},
+  {"uuid": "853c80ef-3c37-49fd-aa49-938b674adae6", "name": "jeb_"}
+]
+```
+
+- An account is told by its `uuid`, written with or without the dashes. The `name` is only there for reading the
+  file: it is not looked at, and an account that was given another name is still let in.
+- The file is read again when it was changed, the proxy does not have to be restarted. Who is already playing
+  stays until it leaves.
+- When there is no file the proxy makes one that lists nobody.
+- Who is turned away is printed with its uuid: `Steve (uuid ...) is not on the whitelist and was turned away`. To
+  add a player, let it try to join once and copy the uuid from that line.
+- A file that can not be read lets nobody in, and the proxy prints what is wrong with it. An entry without a uuid
+  is left out and printed.
+
+> [!WARNING]
+> With `javaAuth: offline` the whitelist keeps nobody out: the uuid of a player is made of the name it says it
+> has then, so whoever joins under a name that is on the list is let in.
 
 ## NetherNet
 
