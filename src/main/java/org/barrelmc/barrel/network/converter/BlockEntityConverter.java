@@ -15,6 +15,9 @@ import java.util.Locale;
 public class BlockEntityConverter {
 
     private static final int SIGN_LINES = 4;
+    // How wide a line of a sign can be for a java client, in the pixels of its font
+    private static final int SIGN_WIDTH = 90;
+    private static final int HANGING_SIGN_WIDTH = 60;
     private static final int CAMPFIRE_SLOTS = 4;
     // The sides of a decorated pot, in the order a bedrock server lists them
     private static final String[] POT_SIDES = {"back", "left", "right", "front"};
@@ -105,8 +108,9 @@ public class BlockEntityConverter {
 
         NbtMapBuilder sign = NbtMap.builder();
         // Before signs had a back, the text was not in a part of its own
-        sign.putCompound("front_text", getSignText(bedrock.containsKey("FrontText", NbtType.COMPOUND) ? bedrock.getCompound("FrontText") : bedrock));
-        sign.putCompound("back_text", getSignText(bedrock.getCompound("BackText")));
+        int width = type == BlockEntityType.HANGING_SIGN ? HANGING_SIGN_WIDTH : SIGN_WIDTH;
+        sign.putCompound("front_text", getSignText(bedrock.containsKey("FrontText", NbtType.COMPOUND) ? bedrock.getCompound("FrontText") : bedrock, width));
+        sign.putCompound("back_text", getSignText(bedrock.getCompound("BackText"), width));
         sign.putBoolean("is_waxed", bedrock.getBoolean("IsWaxed", false));
         return sign.build();
     }
@@ -167,19 +171,68 @@ public class BlockEntityConverter {
         return NbtMap.builder().putCompound("sherds", sherds.build()).build();
     }
 
-    private static NbtMap getSignText(NbtMap bedrockText) {
-        // A bedrock sign has its lines as one text, a java sign has four of them
-        String[] bedrockLines = bedrockText.getString("Text", "").split("\n", -1);
-        List<String> lines = new ArrayList<>();
-        for (int line = 0; line < SIGN_LINES; line++) {
-            lines.add(line < bedrockLines.length ? bedrockLines[line].replaceAll("\u00a7.", "") : "");
-        }
+    private static NbtMap getSignText(NbtMap bedrockText, int width) {
+        List<String> lines = getSignLines(bedrockText.getString("Text", "").replaceAll("\u00a7.", ""), width);
 
         NbtMapBuilder text = NbtMap.builder();
         text.putList("messages", NbtType.STRING, lines);
         text.putString("color", getDyeName(bedrockText.getInt("SignTextColor", 0xFF000000)));
         text.putBoolean("has_glowing_text", bedrockText.getBoolean("IgnoreLighting", false) && !bedrockText.getBoolean("HideGlowOutline", false));
         return text.build();
+    }
+
+    // A bedrock sign has its lines as one text, a java sign has four of them. The text is only broken where its
+    // writer broke it: a bedrock client goes on in the next line by itself when a line is full. A java client
+    // does not, it shows of each line what fits and nothing of the rest. So a line that is too wide is broken here,
+    // before the word that does not fit anymore, or within a word that is wider than a line
+    static List<String> getSignLines(String text, int width) {
+        List<String> lines = new ArrayList<>();
+        for (String written : text.split("\n", -1)) {
+            StringBuilder line = new StringBuilder();
+            for (int i = 0; i < written.length(); i++) {
+                char character = written.charAt(i);
+                if (line.length() > 0 && getTextWidth(line) + getCharacterWidth(character) > width) {
+                    String word = "";
+                    int space = line.lastIndexOf(" ");
+                    if (character != ' ' && space != -1) {
+                        word = line.substring(space + 1);
+                        line.setLength(space);
+                    }
+                    lines.add(line.toString());
+                    line = new StringBuilder(word);
+                    // The space a line is broken at is not shown
+                    if (character == ' ') {
+                        continue;
+                    }
+                }
+                line.append(character);
+            }
+            lines.add(line.toString());
+        }
+        while (lines.size() < SIGN_LINES) {
+            lines.add("");
+        }
+        return new ArrayList<>(lines.subList(0, SIGN_LINES));
+    }
+
+    private static int getTextWidth(CharSequence text) {
+        int width = 0;
+        for (int i = 0; i < text.length(); i++) {
+            width += getCharacterWidth(text.charAt(i));
+        }
+        return width;
+    }
+
+    // How wide a character is in the font of a java client, with the gap to the next one
+    private static int getCharacterWidth(char character) {
+        return switch (character) {
+            case '!', ',', '.', ':', ';', 'i', '|', '\u00a1' -> 2;
+            case '\'', '`', 'l', '\u00ec', '\u00ed' -> 3;
+            case ' ', 'I', '[', ']', 't', '\u00d7', '\u00ef' -> 4;
+            case '"', '(', ')', '*', '<', '>', 'f', 'k', '{', '}' -> 5;
+            case '@', '~', '\u00ae' -> 7;
+            default -> 6;
+        };
     }
 
     // A sign as a bedrock client sends it after the player has written one side of it. What was not written stays

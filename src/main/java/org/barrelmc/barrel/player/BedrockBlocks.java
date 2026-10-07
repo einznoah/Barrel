@@ -4,7 +4,9 @@ import org.barrelmc.barrel.network.converter.BlockConverter;
 import org.barrelmc.barrel.network.converter.BlockEntityConverter;
 import org.barrelmc.barrel.server.ProxyServer;
 import org.barrelmc.barrel.utils.nukkit.BitArray;
+import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 // The blocks the bedrock server has sent, by the ids the server has for them. A bedrock client tells the server
 // which block it believes it clicks on, and a server of mojang does not take a click on a block it has another
@@ -135,6 +138,13 @@ public class BedrockBlocks {
     }
 
     private static final int JAVA_AIR = 0;
+    // The side a look enters a block by when it goes up or down an axis: x, y, z
+    private static final Direction[][] ENTERED_BY = {{Direction.WEST, Direction.EAST}, {Direction.DOWN, Direction.UP}, {Direction.NORTH, Direction.SOUTH}};
+    private static final Set<String> BEDROCK_LIQUIDS = Set.of("minecraft:water", "minecraft:flowing_water", "minecraft:lava", "minecraft:flowing_lava");
+
+    // A liquid that is looked at: the block, the side the look enters it by and where on the block it does
+    public record LiquidHit(Vector3i position, Direction face, Vector3f cursor) {
+    }
 
     private final Player player;
     private final Map<Long, Column> columns = new HashMap<>();
@@ -223,6 +233,42 @@ public class BedrockBlocks {
         if (column != null) {
             column.blockEntityData.put(column.getPlace(position.getX(), position.getY(), position.getZ()), data);
         }
+    }
+
+    // The first liquid along a look, null when another block is in the way or there is none within reach. The
+    // look goes from block to block, each time into the one whose side it gets to first
+    public LiquidHit findLiquid(Vector3f from, Vector3f direction, float reach) {
+        boolean hashed = this.player.getStartGamePacketCache().isBlockNetworkIdsHashed();
+        int air = BlockConverter.getBedrockAirId(hashed);
+        int[] block = {(int) Math.floor(from.getX()), (int) Math.floor(from.getY()), (int) Math.floor(from.getZ())};
+        float[] start = {from.getX(), from.getY(), from.getZ()}, way = {direction.getX(), direction.getY(), direction.getZ()};
+        // How far along the look the next side of a block is on each axis, and how far it is from side to side
+        double[] next = new double[3], step = new double[3];
+        for (int axis = 0; axis < 3; axis++) {
+            step[axis] = way[axis] == 0 ? Double.MAX_VALUE : Math.abs(1 / way[axis]);
+            next[axis] = way[axis] == 0 ? Double.MAX_VALUE : (way[axis] > 0 ? block[axis] + 1 - start[axis] : start[axis] - block[axis]) * step[axis];
+        }
+
+        // Eyes that are in the liquid look at it from above for what is done with it
+        Direction face = Direction.UP;
+        for (double far = 0; far <= reach; ) {
+            Vector3i position = Vector3i.from(block[0], block[1], block[2]);
+            int bedrockBlockId = this.getBlock(position);
+            if (bedrockBlockId != air) {
+                if (!BEDROCK_LIQUIDS.contains(String.valueOf(BlockConverter.getBedrockName(bedrockBlockId, hashed)))) {
+                    return null;
+                }
+                Vector3f hit = from.add(direction.mul((float) far));
+                return new LiquidHit(position, face, Vector3f.from(hit.getX() - block[0], hit.getY() - block[1], hit.getZ() - block[2]));
+            }
+
+            int axis = next[0] <= next[1] && next[0] <= next[2] ? 0 : next[1] <= next[2] ? 1 : 2;
+            far = next[axis];
+            next[axis] += step[axis];
+            block[axis] += way[axis] > 0 ? 1 : -1;
+            face = ENTERED_BY[axis][way[axis] > 0 ? 0 : 1];
+        }
+        return null;
     }
 
     // What is not known is air: a sub chunk of nothing but air is not sent

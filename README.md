@@ -130,8 +130,11 @@ saved under the name of a player by an older version is taken over the first tim
 - **Blocks:** breaking and placing, using what a block does when it is clicked on, doors, the blocks a Java
   client only draws when it is told what they hold, as chests, ender chests, shulker boxes and heads, two chests
   next to each other as one large chest, signs with
-  what is written on them and writing on them, beds and banners in their colors, the patterns of a banner, the
+  what is written on them and writing on them, also a text that is longer than a line and that a Bedrock client
+  goes on with in the next line by itself, beds and banners in their colors, the patterns of a banner, the
   plant in a flower pot, the book on a lectern, the mob in a spawner, what lies on a campfire or a shelf
+- **Water:** putting a boat or a lily pad on the water the player looks at, and filling a bucket or a bottle from
+  it
 - **Entities:** mobs, other players with what they hold and wear, dropped items and picking them up, paintings,
   name tags,
   baby animals, the wool of sheep, creepers about to blow up, the swirls of effects; hitting and using entities

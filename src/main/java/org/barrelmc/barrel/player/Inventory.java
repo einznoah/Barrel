@@ -13,6 +13,11 @@ import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.protocol.bedrock.data.PlayerActionType;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryActionData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventorySource;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerActionPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
@@ -120,12 +125,14 @@ public class Inventory {
     // Where the bedrock server puts what was crafted, enchanted or taken from the creative inventory
     private static final int CREATED_OUTPUT_SLOT = 50;
 
+    private static final int ITEM_USE_CLICK_BLOCK = 0;
     private static final int ITEM_USE_CLICK_AIR = 1;
     private static final int ITEM_RELEASE_RELEASE = 0;
     // The server only lets an item be eaten or drunk once enough of its own ticks went by
     private static final int CONSUME_DELAY_TICKS = 2;
     // The bedrock items the server is told about when the player lets go of them
     private static final Set<String> BEDROCK_RELEASED_ITEMS = Set.of("minecraft:bow", "minecraft:crossbow", "minecraft:trident");
+    private static final Set<String> BEDROCK_LIQUID_ITEMS = Set.of("minecraft:waterlily", "minecraft:frog_spawn", "minecraft:bucket", "minecraft:glass_bottle");
 
     // The tabs of the java recipe book, by their place among the kinds of recipes java has
     private static final int JAVA_RECIPES_BUILDING_BLOCKS = 0;
@@ -998,6 +1005,73 @@ public class Inventory {
         boolean released = consumeTicks > 0 || (!slot.isEmpty() && BEDROCK_RELEASED_ITEMS.contains(slot.get().getDefinition().getIdentifier()));
         this.usedItem = released ? slot.get() : null;
         this.consumeTicks.set(consumeTicks > 0 ? consumeTicks + CONSUME_DELAY_TICKS : 0);
+    }
+
+    // What a bedrock client aims at water with, where it aims past the water with anything else: a boat, a lily
+    // pad, a bucket or a bottle to fill
+    public boolean isHeldItemUsedOnLiquid() {
+        Slot slot = this.getHeldItemSlot();
+        if (slot.isEmpty()) {
+            return false;
+        }
+        String identifier = slot.get().getDefinition().getIdentifier();
+        return identifier.endsWith("_boat") || identifier.endsWith("_raft") || BEDROCK_LIQUID_ITEMS.contains(identifier);
+    }
+
+    // The player used the item it holds on a block
+    public void useItemOn(Vector3i position, Direction face, boolean insideBlock, Vector3f cursor) {
+        // A bedrock client says that it starts to use what it holds on a block, and after it that it stopped
+        Vector3i neighbor = position;
+        if (!insideBlock) {
+            switch (face) {
+                case DOWN -> neighbor = neighbor.down();
+                case UP -> neighbor = neighbor.up();
+                case NORTH -> neighbor = neighbor.north();
+                case SOUTH -> neighbor = neighbor.south();
+                case WEST -> neighbor = neighbor.west();
+                case EAST -> neighbor = neighbor.east();
+            }
+        }
+        PlayerActionPacket startPacket = new PlayerActionPacket();
+        startPacket.setRuntimeEntityId(this.player.getRuntimeEntityId());
+        startPacket.setAction(PlayerActionType.START_ITEM_USE_ON);
+        startPacket.setBlockPosition(position);
+        startPacket.setResultPosition(neighbor);
+        startPacket.setFace(face.ordinal());
+        this.player.getBedrockSession().sendPacket(startPacket);
+
+        InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
+        inventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
+        inventoryTransactionPacket.setActionType(ITEM_USE_CLICK_BLOCK);
+        inventoryTransactionPacket.setTriggerType(ItemUseTransaction.TriggerType.PLAYER_INPUT);
+        inventoryTransactionPacket.setBlockPosition(position);
+        inventoryTransactionPacket.setBlockFace(face.ordinal());
+        inventoryTransactionPacket.setHotbarSlot(this.heldSlot);
+        inventoryTransactionPacket.setHand(HandSlot.MAINHAND);
+        ItemData heldItem = this.getHeldItemSlot().get();
+        // A block that is put down is one less in the hand, the server is told what the client expects
+        ItemData leftItem = heldItem;
+        if (heldItem.getBlockDefinition() != null && this.player.getGameMode() != GameType.CREATIVE) {
+            leftItem = heldItem.getCount() > 1 ? heldItem.toBuilder().count(heldItem.getCount() - 1).build() : ItemData.AIR;
+        }
+        inventoryTransactionPacket.getActions().add(new InventoryActionData(InventorySource.fromContainerWindowId(ContainerId.INVENTORY), this.heldSlot, heldItem, leftItem, 0));
+        inventoryTransactionPacket.setItemInHand(heldItem);
+        inventoryTransactionPacket.setPlayerPosition(this.player.getVector3f());
+        inventoryTransactionPacket.setClickPosition(cursor);
+        // A server of mojang does not take a click on a block it has another block at
+        int clickedBlock = this.player.getBedrockBlocks().getBlock(position);
+        inventoryTransactionPacket.setBlockDefinition(() -> clickedBlock);
+        inventoryTransactionPacket.setClientInteractPrediction(ItemUseTransaction.PredictedResult.SUCCESS);
+
+        this.player.getBedrockSession().sendPacket(inventoryTransactionPacket);
+
+        PlayerActionPacket stopPacket = new PlayerActionPacket();
+        stopPacket.setRuntimeEntityId(this.player.getRuntimeEntityId());
+        stopPacket.setAction(PlayerActionType.STOP_ITEM_USE_ON);
+        stopPacket.setBlockPosition(position);
+        stopPacket.setResultPosition(Vector3i.ZERO);
+        stopPacket.setFace(0);
+        this.player.getBedrockSession().sendPacket(stopPacket);
     }
 
     private void sendItemUse(ItemData item) {
