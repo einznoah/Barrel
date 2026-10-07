@@ -13,6 +13,7 @@ import org.barrelmc.barrel.utils.FileManager;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeSet;
 
 public class BlockConverter {
 
@@ -22,6 +23,15 @@ public class BlockConverter {
     public static final HashMap<Integer, Integer> WATERLOGGED_JAVA_BLOCK = new HashMap<>();
     public static final BitSet JAVA_WATER_BLOCK = new BitSet();
     public static final BitSet JAVA_FLUID_BLOCK = new BitSet();
+    // The first java block state of a door, for every one of its states. A door has 64 of them, counted through
+    // by which way it faces, which half it is, on which side the hinge is, whether it is open and whether it is
+    // powered. The bits of a state, from the first state of its door on:
+    private static final HashMap<Integer, Integer> JAVA_DOOR_FIRST_STATE = new HashMap<>();
+    private static final int DOOR_STATES = 64;
+    private static final int DOOR_FACING = 0b110000;
+    private static final int DOOR_LOWER = 0b001000;
+    private static final int DOOR_HINGE = 0b000100;
+    private static final int DOOR_OPEN = 0b000010;
 
     @Getter
     private static int javaBlockStateCount = 0;
@@ -34,6 +44,7 @@ public class BlockConverter {
 
         assert jsonObject != null;
 
+        Map<String, TreeSet<Integer>> doors = new HashMap<>();
         for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
             Integer bedrockRuntimeId = Integer.valueOf(entry.getKey());
             JsonObject blockEntry = entry.getValue().getAsJsonObject();
@@ -50,6 +61,9 @@ public class BlockConverter {
             if (bedrockName.equals("minecraft:water") || bedrockName.equals("minecraft:flowing_water")) {
                 JAVA_WATER_BLOCK.set(javaStateId);
             }
+            if (bedrockName.endsWith("_door")) {
+                doors.computeIfAbsent(bedrockName, name -> new TreeSet<>()).add(javaStateId);
+            }
             if (blockEntry.has("java_fluid")) {
                 JAVA_FLUID_BLOCK.set(javaStateId);
             }
@@ -60,6 +74,54 @@ public class BlockConverter {
                 javaBlockStateCount = Math.max(javaBlockStateCount, waterlogged.getAsInt() + 1);
             }
         }
+        doors.values().forEach(BlockConverter::addJavaDoor);
+    }
+
+    // A bedrock door has every state of a java door that is not powered, which is every second one from the second
+    // on. A door that is not known like this is left as it is
+    private static void addJavaDoor(TreeSet<Integer> javaStates) {
+        int first = javaStates.first() - 1;
+        int state = first + 1;
+        for (int javaState : javaStates) {
+            if (javaState != state) {
+                return;
+            }
+            state += 2;
+        }
+        if (state != first + 1 + DOOR_STATES) {
+            return;
+        }
+        for (int i = 0; i < DOOR_STATES; i++) {
+            JAVA_DOOR_FIRST_STATE.put(first + i, first);
+        }
+    }
+
+    public static boolean isJavaDoorHalf(int javaBlockId) {
+        return JAVA_DOOR_FIRST_STATE.containsKey(javaBlockId);
+    }
+
+    public static boolean isJavaDoorLower(int javaBlockId) {
+        Integer first = JAVA_DOOR_FIRST_STATE.get(javaBlockId);
+        return first != null && (javaBlockId - first & DOOR_LOWER) != 0;
+    }
+
+    // Whether the two are the lower and the upper half of the same kind of door
+    public static boolean isJavaDoor(int lowerHalf, int upperHalf) {
+        Integer first = JAVA_DOOR_FIRST_STATE.get(lowerHalf);
+        return first != null && first.equals(JAVA_DOOR_FIRST_STATE.get(upperHalf)) && (lowerHalf - first & DOOR_LOWER) != 0 && (upperHalf - first & DOOR_LOWER) == 0;
+    }
+
+    // A bedrock server keeps which way a door faces and whether it is open with the lower half, and on which side
+    // the hinge is with the upper half. Its clients put the two together, and what the other half says of these is
+    // not kept up. A java client shows each half as it is told, so the halves are put together for it
+    public static int getJavaDoorLower(int lowerHalf, int upperHalf) {
+        int first = JAVA_DOOR_FIRST_STATE.get(lowerHalf);
+        return first + (lowerHalf - first & ~DOOR_HINGE | upperHalf - first & DOOR_HINGE);
+    }
+
+    public static int getJavaDoorUpper(int lowerHalf, int upperHalf) {
+        int first = JAVA_DOOR_FIRST_STATE.get(lowerHalf);
+        return first + (upperHalf - first & ~(DOOR_FACING | DOOR_OPEN) | lowerHalf - first & (DOOR_FACING | DOOR_OPEN));
     }
 
     public static int getBedrockAirId(boolean hashed) {

@@ -4,8 +4,13 @@ import org.barrelmc.barrel.network.converter.BlockConverter;
 import org.barrelmc.barrel.server.ProxyServer;
 import org.barrelmc.barrel.utils.nukkit.BitArray;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.geysermc.mcprotocollib.protocol.data.game.chunk.ChunkSection;
+import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockChangeEntry;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockUpdatePacket;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 // The blocks the bedrock server has sent, by the ids the server has for them. A bedrock client tells the server
@@ -21,6 +26,8 @@ public class BedrockBlocks {
         private final Map<Integer, int[]> palettes = new HashMap<>();
         // The blocks that changed since the sub chunk they are in came
         private final Map<Integer, Integer> changed = new HashMap<>();
+        // Where the lower halves of the doors are that came with the sub chunks: the section, then x, z and y in it
+        private final List<Integer> doors = new ArrayList<>();
 
         private Column(int x, int z) {
             this.x = x;
@@ -32,6 +39,30 @@ public class BedrockBlocks {
             this.blocks.put(section, blocks);
             this.palettes.put(section, palette);
             this.changed.keySet().removeIf(place -> getSection((place >> 8) + getMinY()) == section);
+            this.doors.removeIf(door -> door >> 12 == section);
+        }
+
+        public void addDoor(int section, int x, int y, int z) {
+            this.doors.add(section << 12 | x << 8 | z << 4 | y);
+        }
+
+        // The halves of the doors are put together as a java client shows them, once all sub chunks are there: the
+        // upper half of a door can be in the next one
+        public void joinDoors(ChunkSection[] sections) {
+            for (int door : this.doors) {
+                int section = door >> 12, x = door >> 8 & 15, z = door >> 4 & 15, y = door & 15;
+                int upperSection = y == 15 ? section + 1 : section, upperY = y + 1 & 15;
+                if (section < 0 || upperSection >= sections.length) {
+                    continue;
+                }
+
+                int lowerHalf = sections[section].getBlock(x, y, z);
+                int upperHalf = sections[upperSection].getBlock(x, upperY, z);
+                if (BlockConverter.isJavaDoor(lowerHalf, upperHalf)) {
+                    sections[section].setBlock(x, y, z, BlockConverter.getJavaDoorLower(lowerHalf, upperHalf));
+                    sections[upperSection].setBlock(x, upperY, z, BlockConverter.getJavaDoorUpper(lowerHalf, upperHalf));
+                }
+            }
         }
     }
 
@@ -80,6 +111,28 @@ public class BedrockBlocks {
         if (column != null) {
             column.changed.put(getPlace(position.getX(), position.getY(), position.getZ()), bedrockBlockId);
         }
+    }
+
+    // The server has told that the block at a place is another one now, and the java client is told. The other
+    // half of a door is told as well, what it shows is partly kept with this half
+    public void changeBlock(Vector3i position, int bedrockBlockId) {
+        boolean hashed = this.player.getStartGamePacketCache().isBlockNetworkIdsHashed();
+        this.setBlock(position, bedrockBlockId);
+
+        int javaBlock = BlockConverter.bedrockRuntimeToJavaStateId(bedrockBlockId, hashed);
+        if (BlockConverter.isJavaDoorHalf(javaBlock)) {
+            boolean isLower = BlockConverter.isJavaDoorLower(javaBlock);
+            Vector3i lower = isLower ? position : position.down();
+            Vector3i upper = lower.up();
+            int lowerHalf = isLower ? javaBlock : BlockConverter.bedrockRuntimeToJavaStateId(this.getBlock(lower), hashed);
+            int upperHalf = isLower ? BlockConverter.bedrockRuntimeToJavaStateId(this.getBlock(upper), hashed) : javaBlock;
+            if (BlockConverter.isJavaDoor(lowerHalf, upperHalf)) {
+                this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(lower, BlockConverter.getJavaDoorLower(lowerHalf, upperHalf))));
+                this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(upper, BlockConverter.getJavaDoorUpper(lowerHalf, upperHalf))));
+                return;
+            }
+        }
+        this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(position, javaBlock)));
     }
 
     // What is not known is air: a sub chunk of nothing but air is not sent

@@ -139,6 +139,7 @@ public class SubChunkRequests {
             PendingChunk chunk = iterator.next();
             if (this.tick - chunk.since > GIVE_UP_TICKS) {
                 iterator.remove();
+                chunk.bedrockBlocks.joinDoors(chunk.sections);
                 LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections);
                 continue;
             }
@@ -232,6 +233,7 @@ public class SubChunkRequests {
             chunk.missing.remove(position.getY());
             if (chunk.missing.isEmpty()) {
                 this.chunks.remove(key);
+                chunk.bedrockBlocks.joinDoors(chunk.sections);
                 LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections);
             }
         }

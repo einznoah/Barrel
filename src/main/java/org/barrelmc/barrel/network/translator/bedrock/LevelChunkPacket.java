@@ -59,6 +59,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
             //TODO: Read biome
         }
 
+        bedrockBlocks.joinDoors(chunkSections);
         sendChunk(player, packet.getChunkX(), packet.getChunkZ(), chunkSections);
     }
 
@@ -154,6 +155,9 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
 
                         if (storageReadIndex == 0) {
                             chunkSection.setBlock(x, y, z, javaStateId);
+                            if (BlockConverter.isJavaDoorLower(javaStateId)) {
+                                bedrockBlocks.addDoor(sectionIndex, x, y, z);
+                            }
                         } else {
                             if (BlockConverter.isJavaWater(javaStateId)) {
                                 int layer0 = chunkSection.getBlock(x, y, z);
