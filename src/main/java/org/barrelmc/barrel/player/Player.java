@@ -194,6 +194,9 @@ public class Player extends Vector3 {
     private final Map<Effect, SentEffect> sentEffects = new HashMap<>();
     @Getter
     private final PlayerInput input = new PlayerInput(this);
+    // Who rides what, the player itself for one
+    @Getter
+    private final Riding riding = new Riding(this);
     @Setter
     @Getter
     private PlayerActionType diggingStatus;

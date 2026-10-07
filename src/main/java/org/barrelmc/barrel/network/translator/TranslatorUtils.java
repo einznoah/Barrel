@@ -18,6 +18,8 @@ import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.network.converter.EntityDataConverter;
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector3d;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataMap;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.Effect;
@@ -264,6 +266,16 @@ public class TranslatorUtils {
     }
 
     public static void sendEntityData(Player player, long runtimeEntityId, Entity entity, EntityDataMap entityData) {
+        Vector3f seatOffset = entityData.get(EntityDataTypes.SEAT_OFFSET);
+        if (seatOffset != null) {
+            entity.setSeatOffset(seatOffset);
+            player.getRiding().seatChanged(entity);
+        }
+        // What stands in for an entity a java client has no kind for has none of what that entity is told with
+        if (entity.isStandIn()) {
+            return;
+        }
+
         EntityMetadata<?, ?>[] javaEntityData = EntityDataConverter.bedrockToJavaEntityData(entity, entityData, entity == player.getSelf() ? player : null);
         if (javaEntityData.length > 0) {
             player.getJavaSession().send(new ClientboundSetEntityDataPacket((int) runtimeEntityId, javaEntityData));
@@ -271,7 +283,7 @@ public class TranslatorUtils {
     }
 
     public static void sendEntityPosition(Player player, long runtimeEntityId, Entity entity, boolean onGround) {
-        player.getJavaSession().send(new ClientboundTeleportEntityPacket((int) runtimeEntityId, Vector3d.from(entity.x, entity.y, entity.z), Vector3d.ZERO, entity.yaw, entity.pitch, Collections.emptyList(), onGround));
+        player.getJavaSession().send(new ClientboundTeleportEntityPacket((int) runtimeEntityId, Vector3d.from(entity.x, entity.y + entity.getShownOffset(), entity.z), Vector3d.ZERO, entity.yaw, entity.pitch, Collections.emptyList(), onGround));
         player.getJavaSession().send(new ClientboundRotateHeadPacket((int) runtimeEntityId, entity.getHeadYaw()));
     }
 }

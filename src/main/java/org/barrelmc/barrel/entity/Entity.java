@@ -7,6 +7,7 @@ package org.barrelmc.barrel.entity;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.cloudburstmc.math.vector.Vector3f;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.barrelmc.barrel.math.Vector3;
 
@@ -35,6 +36,19 @@ public class Entity extends Vector3 {
     @Setter
     @Getter
     private int ownFlags;
+    // Where on a vehicle the server seats the entity, as seen from the vehicle. Told with the rider, null before
+    @Setter
+    @Getter
+    private Vector3f seatOffset;
+    // Whether this stands in for an entity a java client has no kind for, and is not seen
+    @Setter
+    @Getter
+    private boolean standIn;
+    // How much higher the java client has the entity than the server: what stands in for a seat is put where a
+    // java client seats a player as high as the server does
+    @Setter
+    @Getter
+    private float shownOffset;
 
     public Entity(EntityType type) {
         this.type = type;

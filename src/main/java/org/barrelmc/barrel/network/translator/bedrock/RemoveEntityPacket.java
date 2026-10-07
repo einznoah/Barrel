@@ -17,6 +17,7 @@ public class RemoveEntityPacket implements BedrockPacketTranslator {
             runtimeEntityId = packet.getUniqueEntityId();
         }
         player.getEntities().remove(runtimeEntityId);
+        player.getRiding().remove(runtimeEntityId);
 
         int[] entityIds = new int[1];
         entityIds[0] = (int) (long) runtimeEntityId;

@@ -66,6 +66,7 @@ public class PlayerInput {
     private boolean lastOnGround;
     private boolean horizontalCollision;
     private boolean teleported;
+    private boolean wasRiding;
     private Vector3f lastPosition;
 
     // The number the java client was last told with where the player is, and for how long it has not answered. What
@@ -125,7 +126,7 @@ public class PlayerInput {
     // Whether the player is where the server put it, whatever the java client sends of where it is: the client has
     // not said yet that it is there, or the server is taking the player to another dimension
     public boolean isHeld() {
-        return this.awaitedTeleport != 0 || this.player.isChangingDimension();
+        return this.awaitedTeleport != 0 || this.player.isChangingDimension() || this.player.getRiding().isRiding();
     }
 
     public void startDimensionChange() {
@@ -169,6 +170,10 @@ public class PlayerInput {
         }
 
         int place = (int) Math.floorMod(tick, (long) TOLD_TICKS);
+        // A player that rides is where its vehicle is, which the server moves or corrects by itself
+        if (this.player.getRiding().isRiding()) {
+            return;
+        }
         Vector3f toldThen = this.toldTicks[place] == tick ? this.told[place] : null;
         Vector3f off = toldThen == null ? null : position.sub(toldThen);
         if (off != null && off.length() <= MOVED_UNALIKE) {
@@ -216,6 +221,23 @@ public class PlayerInput {
             this.teleportJava();
         }
         this.tick++;
+
+        // A player that rides is where its seat is: a java client says nothing of where it is while it rides. It
+        // gets off when the sneak key is pressed, which a java client leaves to its server
+        Vector3f seat = this.player.getRiding().getSeat();
+        if (seat != null) {
+            this.player.setPosition(seat.getX(), seat.getY() - Entity.PLAYER_EYE_HEIGHT, seat.getZ());
+            if (this.shift && !this.lastShift) {
+                this.player.getRiding().leave();
+            }
+        }
+        if ((seat != null) != this.wasRiding) {
+            // Getting on or off puts the player somewhere else: what the server corrects next is where it has the
+            // player, not how far the two were apart before
+            this.wasRiding = seat != null;
+            this.lastPosition = null;
+            java.util.Arrays.fill(this.told, null);
+        }
 
         PlayerAuthInputPacket packet = new PlayerAuthInputPacket();
         Set<PlayerAuthInputData> inputData = packet.getInputData();
@@ -301,7 +323,7 @@ public class PlayerInput {
         Vector3f moved = this.lastPosition == null ? Vector3f.ZERO : position.sub(this.lastPosition);
         // How fast the player is after this tick, which is what a bedrock client says of itself
         Vector3f delta = moved;
-        if (!this.player.isFlying() && !this.player.isChangingDimension()) {
+        if (!this.player.isFlying() && !this.player.isChangingDimension() && seat == null) {
             float friction = (this.onGround ? GROUND_FRICTION : 1) * DRAG;
             delta = Vector3f.from(moved.getX() * 0.98F * friction, (moved.getY() - GRAVITY) * 0.98F, moved.getZ() * 0.98F * friction);
         }

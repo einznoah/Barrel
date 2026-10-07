@@ -30,14 +30,15 @@ public class AddEntityPacket implements BedrockPacketTranslator {
         org.cloudburstmc.protocol.bedrock.packet.AddEntityPacket packet = (org.cloudburstmc.protocol.bedrock.packet.AddEntityPacket) pk;
 
         // TODO: Most of the entity data, a sheep keeps its wool
-        EntityType entityType = EntityConverter.bedrockToJavaEntityType(packet.getIdentifier());
-        if (entityType == null) {
-            return;
-        }
+        // An entity a java client has no kind for is still there for the server: a seat an add-on brings, for one.
+        // It is told as something that is not seen, so that what rides it has something to ride
+        EntityType knownType = EntityConverter.bedrockToJavaEntityType(packet.getIdentifier());
+        EntityType entityType = knownType == null ? EntityType.ITEM_DISPLAY : knownType;
 
         Vector3f position = packet.getPosition();
         Vector3f motion = packet.getMotion();
         Entity entity = new Entity(entityType);
+        entity.setStandIn(knownType == null);
         entity.setLocation(position.getX(), position.getY(), position.getZ(), packet.getRotation().getY(), packet.getRotation().getX());
         entity.setHeadYaw(packet.getHeadRotation());
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
@@ -52,5 +53,6 @@ public class AddEntityPacket implements BedrockPacketTranslator {
             ItemStack javaItem = ItemConverter.getJavaPotion(entityType == EntityType.SPLASH_POTION ? "minecraft:splash_potion" : "minecraft:lingering_potion", bedrockPotionId == null ? 0 : bedrockPotionId);
             player.getJavaSession().send(new ClientboundSetEntityDataPacket((int) packet.getRuntimeEntityId(), new EntityMetadata<?, ?>[]{new ObjectEntityMetadata<>(JAVA_ITEM_METADATA, MetadataTypes.ITEM_STACK, javaItem)}));
         }
+        packet.getEntityLinks().forEach(player.getRiding()::link);
     }
 }
