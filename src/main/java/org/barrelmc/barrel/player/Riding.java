@@ -65,17 +65,33 @@ public class Riding {
         if (!changed.contains(vehicle)) {
             changed.add(vehicle);
         }
-        if (rider == this.player.getRuntimeEntityId()) {
+        boolean self = rider == this.player.getRuntimeEntityId();
+        if (self) {
             this.vehicle = rides ? vehicle : 0;
         }
         changed.forEach(this::sendRiders);
+        if (self && !rides) {
+            this.getOff(this.player.getEntities().get(vehicle));
+        }
+    }
+
+    // A server of mojang leaves it to the client where a player stands once it got off, and a java client leaves it
+    // to its server: seated, a java client has the feet of a player below the seat, which can be in the ground.
+    // The player is put on top of what it rode, where a java server puts it when it finds no better place. A
+    // server that puts the player somewhere itself tells so right after
+    private void getOff(Entity vehicle) {
+        if (vehicle != null) {
+            this.player.setPosition(vehicle.x, vehicle.y + vehicle.getHeight(), vehicle.z);
+            this.player.getInput().teleportJava();
+        }
     }
 
     // An entity is gone, with it who rode it and what it rode
-    public void remove(long runtimeEntityId) {
+    public void remove(long runtimeEntityId, Entity entity) {
         this.riders.remove(runtimeEntityId);
         if (this.vehicle == runtimeEntityId) {
             this.vehicle = 0;
+            this.getOff(entity);
         }
         List<Long> changed = new ArrayList<>();
         for (Map.Entry<Long, List<Long>> entry : this.riders.entrySet()) {

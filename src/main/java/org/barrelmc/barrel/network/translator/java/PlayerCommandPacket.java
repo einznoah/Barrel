@@ -16,6 +16,16 @@ public class PlayerCommandPacket implements JavaPacketTranslator {
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundPlayerCommandPacket packet = (ServerboundPlayerCommandPacket) pk;
         switch (packet.getState()) {
+            case LEAVE_BED: {
+                PlayerActionPacket playerActionPacket = new PlayerActionPacket();
+                playerActionPacket.setAction(PlayerActionType.STOP_SLEEP);
+                playerActionPacket.setBlockPosition(Vector3i.ZERO);
+                playerActionPacket.setResultPosition(Vector3i.ZERO);
+                playerActionPacket.setFace(0);
+                playerActionPacket.setRuntimeEntityId(player.getRuntimeEntityId());
+                player.getBedrockSession().sendPacket(playerActionPacket);
+                break;
+            }
             case START_SPRINTING: {
                 if (player.getStartGamePacketCache().getAuthoritativeMovementMode() == AuthoritativeMovementMode.CLIENT) {
                     PlayerActionPacket playerActionPacket = new PlayerActionPacket();

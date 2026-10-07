@@ -266,6 +266,10 @@ public class TranslatorUtils {
     }
 
     public static void sendEntityData(Player player, long runtimeEntityId, Entity entity, EntityDataMap entityData) {
+        Float height = entityData.get(EntityDataTypes.HEIGHT);
+        if (height != null) {
+            entity.setHeight(height);
+        }
         Vector3f seatOffset = entityData.get(EntityDataTypes.SEAT_OFFSET);
         if (seatOffset != null) {
             entity.setSeatOffset(seatOffset);

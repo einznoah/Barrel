@@ -135,6 +135,10 @@ saved under the name of a player by an older version is taken over the first tim
 - **Entities:** mobs, other players with what they hold and wear, dropped items and picking them up, paintings,
   name tags,
   baby animals, the wool of sheep, creepers about to blow up, the swirls of effects; hitting and using entities
+- **What is seen for a moment:** the lid of a chest, an ender chest or a shulker box going up and down, a bell
+  swinging, players lying in their beds and getting up, with the screen to leave the bed, other players eating,
+  drinking, raising a shield or drawing a bow, and what mobs show: the swing of a golem, hearts and smoke of
+  taming and feeding, a wolf shaking itself dry, a sheep grazing, villagers angry or happy, a totem
 - **Riding:** seeing who rides what, riding along in a minecart, sitting on what a server or an add-on seats a
   player on, also an entity a Java client has no kind for (it is not seen then), and getting off with the sneak key
 - **The inventory:** the inventory of the player with armor and offhand, the creative inventory, chests,
@@ -156,6 +160,7 @@ saved under the name of a player by an older version is taken over the first tim
 - Bundles in the creative inventory, and putting a bundle into a bundle
 - What a command takes: the Java client is told the names of the commands, not what follows them
 - Steering what is ridden: boats and animals
+- Pistons moving: what they push is where it ends up at once
 - Sounds and most particles
 - Light: every place is as bright as under the open sky, also caves, and the Nether is bright all over. A Bedrock
   server does not send light and the proxy does not work it out yet

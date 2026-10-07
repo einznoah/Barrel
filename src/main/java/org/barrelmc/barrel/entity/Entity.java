@@ -8,6 +8,7 @@ package org.barrelmc.barrel.entity;
 import lombok.Getter;
 import lombok.Setter;
 import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.math.vector.Vector3i;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
 import org.barrelmc.barrel.math.Vector3;
 
@@ -36,10 +37,24 @@ public class Entity extends Vector3 {
     @Setter
     @Getter
     private int ownFlags;
+    @Setter
+    @Getter
+    private boolean sleeping;
+    @Setter
+    @Getter
+    private int handState;
+    // The bed the server last told for the entity, a player lies in it while it sleeps
+    @Setter
+    @Getter
+    private Vector3i bedPosition;
     // Where on a vehicle the server seats the entity, as seen from the vehicle. Told with the rider, null before
     @Setter
     @Getter
     private Vector3f seatOffset;
+    // How high the server says the entity is
+    @Setter
+    @Getter
+    private float height = 1;
     // Whether this stands in for an entity a java client has no kind for, and is not seen
     @Setter
     @Getter

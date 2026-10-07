@@ -3,6 +3,7 @@ package org.barrelmc.barrel.network.converter;
 import net.kyori.adventure.text.Component;
 import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.player.Player;
+import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataMap;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
@@ -42,6 +43,13 @@ public class EntityDataConverter {
     private static final int JAVA_GLIDING = 0x80;
 
     private static final int JAVA_EFFECT_PARTICLES = 10;
+    // Whether a hand is in use and which one, and the bed something sleeps in
+    private static final int JAVA_HAND_STATE = 8;
+    private static final int JAVA_HAND_IN_USE = 0x01;
+    private static final int JAVA_OFFHAND_IN_USE = 0x02;
+    private static final int JAVA_SLEEPING_POS = 14;
+    // Of what a bedrock server tells of a player by itself: that it sleeps
+    private static final int BEDROCK_PLAYER_SLEEPS = 0x02;
     private static final int JAVA_BABY = 16;
     private static final int JAVA_CLOUD_RADIUS = 8;
     private static final int JAVA_CLOUD_PARTICLE = 10;
@@ -70,6 +78,28 @@ public class EntityDataConverter {
         EntityType entityType = entity.getType();
         boolean flags = entityData.getFlags() != null;
 
+        if (entityType == EntityType.PLAYER) {
+            // A player that sleeps lies in its bed for a java client that is told which bed that is, also the
+            // player of the client itself: its client lays it down and offers to leave the bed
+            Vector3i bed = entityData.get(EntityDataTypes.BED_POSITION);
+            if (bed != null) {
+                entity.setBedPosition(bed);
+            }
+            // Whether it sleeps is one of what a server tells of a player by itself. The same is told with what it
+            // tells of any entity, but not as long as the player sleeps
+            Byte playerFlags = entityData.get(EntityDataTypes.PLAYER_FLAGS);
+            if (playerFlags != null) {
+                boolean sleeping = (playerFlags & BEDROCK_PLAYER_SLEEPS) != 0 && entity.getBedPosition() != null;
+                if (sleeping != entity.isSleeping()) {
+                    entity.setSleeping(sleeping);
+                    javaEntityData.add(new ObjectEntityMetadata<>(JAVA_SLEEPING_POS, MetadataTypes.OPTIONAL_BLOCK_POS, sleeping ? Optional.of(entity.getBedPosition()) : Optional.<Vector3i>empty()));
+                    if (self == null && !flags) {
+                        javaEntityData.add(new ObjectEntityMetadata<>(JAVA_POSE, MetadataTypes.POSE, sleeping ? Pose.SLEEPING : Pose.STANDING));
+                    }
+                }
+            }
+        }
+
         if (flags) {
             int javaFlags = (entityData.getFlag(EntityFlag.ON_FIRE) ? JAVA_ON_FIRE : 0) | (entityData.getFlag(EntityFlag.INVISIBLE) ? JAVA_INVISIBLE : 0)
                     | (entityData.getFlag(EntityFlag.SWIMMING) ? JAVA_SWIMMING : 0) | (entityData.getFlag(EntityFlag.GLIDING) ? JAVA_GLIDING : 0);
@@ -78,8 +108,17 @@ public class EntityDataConverter {
                 javaEntityData.add(new ByteEntityMetadata(JAVA_FLAGS, MetadataTypes.BYTE, (byte) javaFlags));
                 if (entityType == EntityType.PLAYER) {
                     // A java client goes by this for how a player stands
-                    Pose pose = entityData.getFlag(EntityFlag.GLIDING) ? Pose.FALL_FLYING : entityData.getFlag(EntityFlag.SWIMMING) ? Pose.SWIMMING : entityData.getFlag(EntityFlag.SNEAKING) ? Pose.SNEAKING : Pose.STANDING;
+                    Pose pose = entity.isSleeping() ? Pose.SLEEPING : entityData.getFlag(EntityFlag.GLIDING) ? Pose.FALL_FLYING : entityData.getFlag(EntityFlag.SWIMMING) ? Pose.SWIMMING
+                            : entityData.getFlag(EntityFlag.SNEAKING) ? Pose.SNEAKING : Pose.STANDING;
                     javaEntityData.add(new ObjectEntityMetadata<>(JAVA_POSE, MetadataTypes.POSE, pose));
+
+                    // Eating, drinking and drawing a bow are a hand in use for a java client, a raised shield is
+                    // the other hand in use: that is where a shield is held as a rule
+                    int handState = entityData.getFlag(EntityFlag.USING_ITEM) ? JAVA_HAND_IN_USE : entityData.getFlag(EntityFlag.BLOCKING) ? JAVA_HAND_IN_USE | JAVA_OFFHAND_IN_USE : 0;
+                    if (handState != entity.getHandState()) {
+                        entity.setHandState(handState);
+                        javaEntityData.add(new ByteEntityMetadata(JAVA_HAND_STATE, MetadataTypes.BYTE, (byte) handState));
+                    }
                 }
             } else if ((javaFlags & (JAVA_ON_FIRE | JAVA_INVISIBLE)) != entity.getOwnFlags()) {
                 // The client knows itself whether its player sneaks or sprints, and stops if it is told what the
