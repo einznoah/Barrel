@@ -14,7 +14,9 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType
 
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 public class BlockConverter {
@@ -28,6 +30,19 @@ public class BlockConverter {
     // The java blocks a client draws through what they hold, a chest or a sign for example, with the kind of that.
     // A java client that is not told of it for a block that comes with a chunk does not draw the block at all
     private static final HashMap<Integer, BlockEntityType> JAVA_BLOCK_ENTITY = new HashMap<>();
+    // For a bedrock server a bed, a banner, a head on the floor, a flower pot and a lectern are the same block
+    // whatever color they have, which way the head looks, what grows in the pot and whether a book lies on the
+    // lectern: that is told with what the block holds. For a java client each of these is a block or a state of
+    // its own. These are the java blocks the bedrock ones are without knowing what they hold: a white bed, a
+    // white banner, a head that looks north, an empty pot and a lectern without a book
+    private static final Set<Integer> JAVA_BEDS = new HashSet<>();
+    private static final Set<Integer> JAVA_STANDING_BANNERS = new HashSet<>();
+    private static final Set<Integer> JAVA_WALL_BANNERS = new HashSet<>();
+    private static final Set<Integer> JAVA_FLOOR_HEADS = new HashSet<>();
+    private static final Set<Integer> JAVA_LECTERNS = new HashSet<>();
+    private static int javaFlowerPot = -1;
+    // The java block of a pot with a plant in it, by the bedrock block of the plant
+    private static final HashMap<String, Integer> JAVA_POTTED_PLANTS = new HashMap<>();
     // The first java block state of a door, for every one of its states. A door has 64 of them, counted through
     // by which way it faces, which half it is, on which side the hinge is, whether it is open and whether it is
     // powered. The bits of a state, from the first state of its door on:
@@ -50,6 +65,7 @@ public class BlockConverter {
         assert jsonObject != null;
 
         Map<String, TreeSet<Integer>> doors = new HashMap<>();
+        Map<String, TreeSet<Integer>> heads = new HashMap<>();
         for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
             Integer bedrockRuntimeId = Integer.valueOf(entry.getKey());
             JsonObject blockEntry = entry.getValue().getAsJsonObject();
@@ -73,6 +89,18 @@ public class BlockConverter {
                     JAVA_BLOCK_ENTITY.put(blockEntry.get("java_waterlogged_state").getAsInt(), blockEntity);
                 }
             }
+            switch (bedrockName) {
+                case "minecraft:bed" -> JAVA_BEDS.add(javaStateId);
+                case "minecraft:standing_banner" -> JAVA_STANDING_BANNERS.add(javaStateId);
+                case "minecraft:wall_banner" -> JAVA_WALL_BANNERS.add(javaStateId);
+                case "minecraft:lectern" -> JAVA_LECTERNS.add(javaStateId);
+                case "minecraft:flower_pot" -> javaFlowerPot = javaStateId;
+                default -> {
+                }
+            }
+            if (blockEntity == BlockEntityType.SKULL) {
+                heads.computeIfAbsent(bedrockName, name -> new TreeSet<>()).add(javaStateId);
+            }
             if (bedrockName.endsWith("_door")) {
                 doors.computeIfAbsent(bedrockName, name -> new TreeSet<>()).add(javaStateId);
             }
@@ -87,6 +115,44 @@ public class BlockConverter {
             }
         }
         doors.values().forEach(BlockConverter::addJavaDoor);
+        // Of the java blocks of a head the one on the floor comes first, the others hang on a wall
+        heads.values().forEach(javaStates -> JAVA_FLOOR_HEADS.add(javaStates.first()));
+
+        JsonObject pottedPlants = FileManager.getJsonObjectFromResource("potted_plants.json");
+        if (pottedPlants != null) {
+            for (Map.Entry<String, JsonElement> entry : pottedPlants.entrySet()) {
+                JAVA_POTTED_PLANTS.put(entry.getKey(), entry.getValue().getAsInt());
+            }
+        }
+    }
+
+    public static boolean isJavaBed(int javaBlockId) {
+        return JAVA_BEDS.contains(javaBlockId);
+    }
+
+    public static boolean isJavaStandingBanner(int javaBlockId) {
+        return JAVA_STANDING_BANNERS.contains(javaBlockId);
+    }
+
+    public static boolean isJavaWallBanner(int javaBlockId) {
+        return JAVA_WALL_BANNERS.contains(javaBlockId);
+    }
+
+    public static boolean isJavaFloorHead(int javaBlockId) {
+        return JAVA_FLOOR_HEADS.contains(javaBlockId);
+    }
+
+    public static boolean isJavaLectern(int javaBlockId) {
+        return JAVA_LECTERNS.contains(javaBlockId);
+    }
+
+    public static boolean isJavaFlowerPot(int javaBlockId) {
+        return javaBlockId == javaFlowerPot;
+    }
+
+    // The java block of a pot this bedrock block grows in, null for what a pot does not take
+    public static Integer getJavaPottedPlant(String bedrockPlant) {
+        return JAVA_POTTED_PLANTS.get(bedrockPlant);
     }
 
     // The kinds are told by the names of the bedrock blocks, which only differ from the java ones in the wood

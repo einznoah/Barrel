@@ -140,6 +140,7 @@ public class SubChunkRequests {
             if (this.tick - chunk.since > GIVE_UP_TICKS) {
                 iterator.remove();
                 chunk.bedrockBlocks.joinDoors(chunk.sections);
+                chunk.bedrockBlocks.applyBlockEntityData(chunk.sections);
                 LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections, chunk.bedrockBlocks.getJavaBlockEntities(chunk.sections.length));
                 continue;
             }
@@ -236,6 +237,7 @@ public class SubChunkRequests {
             if (chunk.missing.isEmpty()) {
                 this.chunks.remove(key);
                 chunk.bedrockBlocks.joinDoors(chunk.sections);
+                chunk.bedrockBlocks.applyBlockEntityData(chunk.sections);
                 LevelChunkPacket.sendChunk(this.player, chunk.x, chunk.z, chunk.sections, chunk.bedrockBlocks.getJavaBlockEntities(chunk.sections.length));
             }
         }

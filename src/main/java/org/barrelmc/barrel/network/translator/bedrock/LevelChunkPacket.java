@@ -74,6 +74,7 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         }
 
         bedrockBlocks.joinDoors(chunkSections);
+        bedrockBlocks.applyBlockEntityData(chunkSections);
         sendChunk(player, packet.getChunkX(), packet.getChunkZ(), chunkSections, bedrockBlocks.getJavaBlockEntities(chunkSections.length));
     }
 

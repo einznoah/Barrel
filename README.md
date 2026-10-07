@@ -98,8 +98,9 @@ saved under the name of a player by an older version is taken over the first tim
 - **Moving:** walking, sprinting, sneaking, jumping and flying, also on servers that move the player themselves
   from the keys that are held and put the client back where they got to
 - **Blocks:** breaking and placing, using what a block does when it is clicked on, doors, the blocks a Java
-  client only draws when it is told what they hold, as chests, ender chests, shulker boxes, banners and heads,
-  and signs with what is written on them and writing on them
+  client only draws when it is told what they hold, as chests, ender chests, shulker boxes and heads, signs with
+  what is written on them and writing on them, beds and banners in their colors, the patterns of a banner, the
+  plant in a flower pot, the book on a lectern, the mob in a spawner, what lies on a campfire or a shelf
 - **Entities:** mobs, other players with what they hold and wear, dropped items and picking them up, paintings,
   name tags,
   baby animals, the wool of sheep, creepers about to blow up, the swirls of effects; hitting and using entities
@@ -117,8 +118,7 @@ saved under the name of a player by an older version is taken over the first tim
 
 ## Need implemented
 
-- What a block holds beyond the text of a sign: the patterns of a banner, the head of a player, the beam of a
-  beacon, the items on a campfire or a shelf, the mob in a spawner. Colors and styles inside the text of a sign
+- Reading the book on a lectern, setting up a beacon, and colors and styles inside the text of a sign
 - Bundles in the creative inventory, and putting a bundle into a bundle
 - What a command takes: the Java client is told the names of the commands, not what follows them
 - Riding: boats, minecarts and animals

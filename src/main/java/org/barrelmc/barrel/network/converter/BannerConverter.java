@@ -40,6 +40,16 @@ public class BannerConverter {
     // The patterns a loom offers without a pattern item, in the order a java client lists them
     private static final List<String> LOOM_PATTERNS = new ArrayList<>();
 
+    // The java name of a pattern as a bedrock server calls it, null for one that is not known
+    public static String getJavaPattern(String bedrockPattern) {
+        for (int pattern = 0; pattern < PATTERNS.length; pattern += 2) {
+            if (PATTERNS[pattern + 1].equals(bedrockPattern)) {
+                return "minecraft:" + PATTERNS[pattern];
+            }
+        }
+        return null;
+    }
+
     public static void init() {
         Map<String, String> bedrockPatterns = new HashMap<>();
         for (int pattern = 0; pattern < PATTERNS.length; pattern += 2) {

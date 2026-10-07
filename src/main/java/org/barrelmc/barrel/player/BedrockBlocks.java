@@ -76,6 +76,22 @@ public class BedrockBlocks {
             }
         }
 
+        // Some blocks are another java block for what they hold, a bed of its color for one. Done once all sub
+        // chunks are there, what the blocks hold comes behind them
+        public void applyBlockEntityData(ChunkSection[] sections) {
+            for (Map.Entry<Integer, NbtMap> blockEntity : this.blockEntityData.entrySet()) {
+                int section = blockEntity.getKey() >> 12, y = blockEntity.getKey() >> 8 & 15, x = blockEntity.getKey() >> 4 & 15, z = blockEntity.getKey() & 15;
+                if (section < 0 || section >= sections.length) {
+                    continue;
+                }
+                int javaBlock = sections[section].getBlock(x, y, z);
+                int shownBlock = BlockEntityConverter.getJavaBlock(javaBlock, blockEntity.getValue());
+                if (shownBlock != javaBlock) {
+                    sections[section].setBlock(x, y, z, shownBlock);
+                }
+            }
+        }
+
         // The java client is told with the chunk which of its blocks hold something, and what
         public BlockEntityInfo[] getJavaBlockEntities(int sectionCount) {
             List<BlockEntityInfo> javaBlockEntities = new ArrayList<>();
@@ -114,6 +130,8 @@ public class BedrockBlocks {
             }
         }
     }
+
+    private static final int JAVA_AIR = 0;
 
     private final Player player;
     private final Map<Long, Column> columns = new HashMap<>();
@@ -157,6 +175,21 @@ public class BedrockBlocks {
         this.setBlock(position, bedrockBlockId);
 
         int javaBlock = BlockConverter.bedrockRuntimeToJavaStateId(bedrockBlockId, hashed);
+        Column column = this.columns.get(getKey(position.getX() >> 4, position.getZ() >> 4));
+        if (column != null) {
+            // A block that is gone holds nothing anymore. Another one is shown with what the server sent it holds:
+            // a bed that someone lies down in is still of its color
+            int place = column.getPlace(position.getX(), position.getY(), position.getZ());
+            if (javaBlock == JAVA_AIR) {
+                column.blockEntityData.remove(place);
+            } else {
+                int shownBlock = BlockEntityConverter.getJavaBlock(javaBlock, column.blockEntityData.get(place));
+                if (shownBlock != javaBlock) {
+                    this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(position, shownBlock)));
+                    return;
+                }
+            }
+        }
         if (BlockConverter.isJavaDoorHalf(javaBlock)) {
             boolean isLower = BlockConverter.isJavaDoorLower(javaBlock);
             Vector3i lower = isLower ? position : position.down();

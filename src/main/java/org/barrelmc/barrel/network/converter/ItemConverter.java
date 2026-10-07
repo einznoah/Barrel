@@ -46,6 +46,7 @@ public class ItemConverter {
     // How long the java items that are eaten or drunk take to be
     public static final HashMap<Integer, Integer> JAVA_ITEM_CONSUME_TICKS = new HashMap<>();
     private static final HashMap<String, Integer> JAVA_ITEM_IDS = new HashMap<>();
+    private static final HashMap<Integer, String> JAVA_ITEM_NAMES = new HashMap<>();
     // All the java items of a bedrock item, keyed like the bedrock items above and by the name alone
     private static final HashMap<String, List<Integer>> BEDROCK_ITEM_TO_JAVA_ITEMS = new HashMap<>();
     // The data of these bedrock items is the potion they hold
@@ -78,6 +79,7 @@ public class ItemConverter {
 
             JAVA_ITEM_TO_BEDROCK_ITEM.put(javaItemId, bedrockItem);
             JAVA_ITEM_IDS.put(javaName, javaItemId);
+            JAVA_ITEM_NAMES.put(javaItemId, javaName);
             BEDROCK_ITEM_TO_JAVA_ITEMS.computeIfAbsent(bedrockName, key -> new ArrayList<>()).add(javaItemId);
             if (itemEntry.has("bedrock_data")) {
                 BEDROCK_ITEM_TO_JAVA_ITEMS.computeIfAbsent(bedrockItem, key -> new ArrayList<>()).add(javaItemId);
@@ -158,6 +160,16 @@ public class ItemConverter {
         }
 
         return javaItemId == null ? unknownJavaItem : javaItemId;
+    }
+
+    // The name of the java item a bedrock item is, null for one that is not known. What a block holds is told to a
+    // java client with the names of the items
+    public static String getJavaItemName(String bedrockName, int bedrockData) {
+        Integer javaItemId = BEDROCK_ITEM_TO_JAVA_ITEM.get(bedrockName + ":" + bedrockData);
+        if (javaItemId == null) {
+            javaItemId = BEDROCK_ITEM_TO_JAVA_ITEM.get(bedrockName);
+        }
+        return javaItemId == null ? null : JAVA_ITEM_NAMES.get(javaItemId);
     }
 
     public static int getJavaItemId(String javaName) {
