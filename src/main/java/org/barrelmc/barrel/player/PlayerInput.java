@@ -40,6 +40,11 @@ public class PlayerInput {
     // The server putting the player back is told of when it did so this often in a minute
     private static final int CORRECTIONS_TOLD = 20;
     private static final long CORRECTIONS_MILLIS = 60_000;
+    // For how many ticks it is kept where the server was told the player is, more than a server looks back
+    private static final int TOLD_TICKS = 128;
+    // How far the server may have the player from where it was told for that to be taken as the two having moved
+    // it not quite alike, and not as the server having put the player somewhere
+    private static final float MOVED_UNALIKE = 4;
 
     private final Player player;
     private boolean started;
@@ -71,6 +76,10 @@ public class PlayerInput {
     private int dimensionChangeTicks;
     private int corrections;
     private long correctionsSince;
+    // Where the server was told the eyes of the player are, for the last ticks: what the server corrects is where
+    // the player was at one of them
+    private final long[] toldTicks = new long[TOLD_TICKS];
+    private final Vector3f[] told = new Vector3f[TOLD_TICKS];
 
     public PlayerInput(Player player) {
         this.player = player;
@@ -103,6 +112,7 @@ public class PlayerInput {
         this.awaitedTeleport = this.teleports;
         this.awaitedTicks = 0;
         this.lastPosition = null;
+        java.util.Arrays.fill(this.told, null);
         this.player.getJavaSession().send(new ClientboundPlayerPositionPacket(this.awaitedTeleport, this.player.x, this.player.y, this.player.z, 0, 0, 0, this.player.getYaw(), this.player.getPitch()));
     }
 
@@ -145,23 +155,45 @@ public class PlayerInput {
     }
 
     // The server did not get to where the client says the player is, the player is where the server says. Also
-    // when that is told late: left aside, the player would stay somewhere else for the server than for the client
-    public void correct(Vector3f position, boolean onGround) {
+    // when that is told late: left aside, the player would stay somewhere else for the server than for the client.
+    // The server tells where it had the player at a tick that has passed, and has moved the player on from there by
+    // what was pressed since. A bedrock client goes back to that tick and moves again as it did. The java client is
+    // moved by as much as the server was off at that tick, which comes to the same where nothing is in the way: put
+    // where the server had the player then, it would be behind the server by what it moved since, far enough to
+    // be corrected again and again while it moves
+    public void correct(Vector3f position, boolean onGround, long tick) {
         long now = System.currentTimeMillis();
         if (now - this.correctionsSince > CORRECTIONS_MILLIS) {
             this.correctionsSince = now;
             this.corrections = 0;
         }
+
+        int place = (int) Math.floorMod(tick, (long) TOLD_TICKS);
+        Vector3f toldThen = this.toldTicks[place] == tick ? this.told[place] : null;
+        Vector3f off = toldThen == null ? null : position.sub(toldThen);
+        if (off != null && off.length() <= MOVED_UNALIKE) {
+            this.player.setPosition(this.player.x + off.getX(), this.player.y + off.getY(), this.player.z + off.getZ());
+            this.count(onGround);
+            // Told as how far to move from where the client has the player by now, which the proxy knows a little late
+            this.player.getJavaSession().send(new ClientboundPlayerPositionPacket(CORRECTION_TELEPORT_ID, off.getX(), off.getY(), off.getZ(), 0, 0, 0, 0, 0,
+                    PositionElement.X, PositionElement.Y, PositionElement.Z, PositionElement.Y_ROT, PositionElement.X_ROT, PositionElement.DELTA_X, PositionElement.DELTA_Y, PositionElement.DELTA_Z));
+            return;
+        }
+
         this.player.setPosition(position.getX(), position.getY() - Entity.PLAYER_EYE_HEIGHT, position.getZ());
+        this.count(onGround);
+        // Where the player looks and how fast it is stay as they are
+        this.player.getJavaSession().send(new ClientboundPlayerPositionPacket(CORRECTION_TELEPORT_ID, this.player.x, this.player.y, this.player.z, 0, 0, 0, 0, 0,
+                PositionElement.Y_ROT, PositionElement.X_ROT, PositionElement.DELTA_X, PositionElement.DELTA_Y, PositionElement.DELTA_Z));
+    }
+
+    private void count(boolean onGround) {
         if (++this.corrections == CORRECTIONS_TOLD) {
             System.out.println("The server put the player back " + CORRECTIONS_TOLD + " times within a minute, the last time to " + this.player.getFloorX() + " " + this.player.getFloorY() + " " + this.player.getFloorZ()
                     + ": it does not get to where the java client says the player is [player " + this.player.getUsername() + "]");
         }
         this.onGround = onGround;
         this.lastPosition = null;
-        // Where the player looks and how fast it is stay as they are
-        this.player.getJavaSession().send(new ClientboundPlayerPositionPacket(CORRECTION_TELEPORT_ID, this.player.x, this.player.y, this.player.z, 0, 0, 0, 0, 0,
-                PositionElement.Y_ROT, PositionElement.X_ROT, PositionElement.DELTA_X, PositionElement.DELTA_Y, PositionElement.DELTA_Z));
     }
 
     private static float wrapDegrees(float degrees) {
@@ -290,6 +322,10 @@ public class PlayerInput {
         packet.setCameraOrientation(this.player.getDirectionVector());
         packet.setItemStackRequest(null);
         this.player.getBedrockSession().sendPacketImmediately(packet);
+
+        int place = (int) Math.floorMod(this.tick, (long) TOLD_TICKS);
+        this.toldTicks[place] = this.tick;
+        this.told[place] = position;
 
         this.lastPosition = position;
         this.lastOnGround = this.onGround;

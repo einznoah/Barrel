@@ -13,7 +13,7 @@ public class CorrectPlayerMovePredictionPacket implements BedrockPacketTranslato
 
         // TODO: What the player rides
         if (packet.getPredictionType() == PredictionType.PLAYER) {
-            player.getInput().correct(packet.getPosition(), packet.isOnGround());
+            player.getInput().correct(packet.getPosition(), packet.isOnGround(), packet.getTick());
         }
     }
 }

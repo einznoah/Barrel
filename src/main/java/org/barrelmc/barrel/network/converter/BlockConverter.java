@@ -41,6 +41,13 @@ public class BlockConverter {
     private static final Set<Integer> JAVA_FLOOR_HEADS = new HashSet<>();
     private static final Set<Integer> JAVA_LECTERNS = new HashSet<>();
     private static final Set<Integer> JAVA_BARRELS = new HashSet<>();
+    // The java blocks of a chest that stands by itself, with the way it faces as a java client counts them: north,
+    // south, west, east. The left and the right half of a large chest are java blocks of their own, this far on
+    private static final HashMap<Integer, Integer> JAVA_CHEST_FACING = new HashMap<>();
+    private static final int CHEST_LEFT = 2;
+    private static final int CHEST_RIGHT = 4;
+    // Where the right of a chest is, by the way it faces: one on x and one on z
+    private static final int[][] CHEST_RIGHT_SIDE = {{1, 0}, {-1, 0}, {0, -1}, {0, 1}};
     private static int javaFlowerPot = -1;
     // The java block of a pot with a plant in it, by the bedrock block of the plant
     private static final HashMap<String, Integer> JAVA_POTTED_PLANTS = new HashMap<>();
@@ -67,6 +74,7 @@ public class BlockConverter {
 
         Map<String, TreeSet<Integer>> doors = new HashMap<>();
         Map<String, TreeSet<Integer>> heads = new HashMap<>();
+        Map<String, TreeSet<Integer>> chests = new HashMap<>();
         for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
             Integer bedrockRuntimeId = Integer.valueOf(entry.getKey());
             JsonObject blockEntry = entry.getValue().getAsJsonObject();
@@ -100,6 +108,9 @@ public class BlockConverter {
                 default -> {
                 }
             }
+            if (blockEntity == BlockEntityType.CHEST || blockEntity == BlockEntityType.TRAPPED_CHEST) {
+                chests.computeIfAbsent(bedrockName, name -> new TreeSet<>()).add(javaStateId);
+            }
             if (blockEntity == BlockEntityType.SKULL) {
                 heads.computeIfAbsent(bedrockName, name -> new TreeSet<>()).add(javaStateId);
             }
@@ -117,6 +128,20 @@ public class BlockConverter {
             }
         }
         doors.values().forEach(BlockConverter::addJavaDoor);
+        // A chest has a java block for each of the four ways it faces, in the order a java client counts them
+        for (TreeSet<Integer> javaStates : chests.values()) {
+            int facing = 0;
+            for (int javaState : javaStates) {
+                if (javaStates.size() == CHEST_RIGHT_SIDE.length) {
+                    JAVA_CHEST_FACING.put(javaState, facing);
+                    Integer waterlogged = WATERLOGGED_JAVA_BLOCK.get(javaState);
+                    if (waterlogged != null) {
+                        JAVA_CHEST_FACING.put(waterlogged, facing);
+                    }
+                }
+                facing++;
+            }
+        }
         // Of the java blocks of a head the one on the floor comes first, the others hang on a wall
         heads.values().forEach(javaStates -> JAVA_FLOOR_HEADS.add(javaStates.first()));
 
@@ -146,6 +171,26 @@ public class BlockConverter {
 
     public static boolean isJavaLectern(int javaBlockId) {
         return JAVA_LECTERNS.contains(javaBlockId);
+    }
+
+    public static boolean isJavaChest(int javaBlockId) {
+        return JAVA_CHEST_FACING.containsKey(javaBlockId);
+    }
+
+    // The java block of a chest that is one half of a large chest, by where its other half is from it. For a java
+    // client the left half is the one that has the other half to the right of where it faces
+    public static int getJavaChest(int javaBlockId, int otherX, int otherZ) {
+        Integer facing = JAVA_CHEST_FACING.get(javaBlockId);
+        if (facing == null) {
+            return javaBlockId;
+        }
+        int[] right = CHEST_RIGHT_SIDE[facing];
+        if (otherX == right[0] && otherZ == right[1]) {
+            return javaBlockId + CHEST_LEFT;
+        } else if (otherX == -right[0] && otherZ == -right[1]) {
+            return javaBlockId + CHEST_RIGHT;
+        }
+        return javaBlockId;
     }
 
     public static boolean isJavaBarrel(int javaBlockId) {

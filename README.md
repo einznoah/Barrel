@@ -128,14 +128,15 @@ saved under the name of a player by an older version is taken over the first tim
 - **Moving:** walking, sprinting, sneaking, jumping and flying, also on servers that move the player themselves
   from the keys that are held and put the client back where they got to
 - **Blocks:** breaking and placing, using what a block does when it is clicked on, doors, the blocks a Java
-  client only draws when it is told what they hold, as chests, ender chests, shulker boxes and heads, signs with
+  client only draws when it is told what they hold, as chests, ender chests, shulker boxes and heads, two chests
+  next to each other as one large chest, signs with
   what is written on them and writing on them, beds and banners in their colors, the patterns of a banner, the
   plant in a flower pot, the book on a lectern, the mob in a spawner, what lies on a campfire or a shelf
 - **Entities:** mobs, other players with what they hold and wear, dropped items and picking them up, paintings,
   name tags,
   baby animals, the wool of sheep, creepers about to blow up, the swirls of effects; hitting and using entities
 - **The inventory:** the inventory of the player with armor and offhand, the creative inventory, chests,
-  furnaces, blast furnaces and smokers, brewing stands, dispensers, droppers and hoppers, and bundles: what is in
+  barrels and shulker boxes, furnaces, blast furnaces and smokers, brewing stands, dispensers, droppers and hoppers, and bundles: what is in
   them, putting items in and taking them out
 - **Crafting:** the grid of the inventory and the crafting table with the recipe book, anvils, enchanting tables,
   stonecutters, smithing tables, grindstones, looms and cartography tables, trading with villagers

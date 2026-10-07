@@ -34,13 +34,33 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class PacketTranslatorManager {
 
-    // A single thread, the java client has to receive the translated packets in the order the bedrock server sent them
-    private final ExecutorService threadPoolExecutor = Executors.newSingleThreadExecutor();
+    // A single thread, the java client has to receive the translated packets in the order the bedrock server sent
+    // them. What the java client sends and what is done every tick goes before what the server sent: the chunks of
+    // a wide view take the thread for a good while, and a player that could not move or click until they are
+    // through would stay where it was for the server
+    private final ExecutorService threadPoolExecutor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new PriorityBlockingQueue<>());
+    private final AtomicLong translations = new AtomicLong();
+
+    private record Translation(boolean first, long number, Runnable translation) implements Runnable, Comparable<Translation> {
+
+        @Override
+        public void run() {
+            this.translation.run();
+        }
+
+        @Override
+        public int compareTo(Translation other) {
+            return this.first != other.first ? (this.first ? -1 : 1) : Long.compare(this.number, other.number);
+        }
+    }
 
     @Getter
     private final Map<Class<? extends Packet>, JavaPacketTranslator> javaTranslators = new HashMap<>();
@@ -86,14 +106,23 @@ public class PacketTranslatorManager {
         JavaPacketTranslator translator = javaTranslators.get(pk.getClass());
 
         if (translator != null) {
-            this.execute(() -> translator.translate(pk, player));
+            this.executeFirst(() -> translator.translate(pk, player));
         }
     }
 
-    // Runs after the packets that are being translated, and returns whether it will
+    // Runs after the packets of the server that are being translated, and returns whether it will
     public boolean execute(Runnable translation) {
+        return this.execute(translation, false);
+    }
+
+    // Runs before the packets of the server that wait to be translated, after what was to run first before it
+    public boolean executeFirst(Runnable translation) {
+        return this.execute(translation, true);
+    }
+
+    private boolean execute(Runnable translation, boolean first) {
         try {
-            threadPoolExecutor.execute(translation);
+            threadPoolExecutor.execute(new Translation(first, this.translations.getAndIncrement(), translation));
             return true;
         } catch (RejectedExecutionException e) {
             // The player disconnected

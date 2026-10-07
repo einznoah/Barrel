@@ -31,6 +31,7 @@ import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.barrelmc.barrel.network.nethernet.NetherNetInitializer;
+import org.barrelmc.barrel.network.nethernet.NetherNetProbe;
 import org.barrelmc.barrel.network.nethernet.NetherNetServerTrust;
 import org.cloudburstmc.netty.channel.nethernet.NetherNetChannelFactory;
 import org.cloudburstmc.netty.channel.nethernet.config.NetherChannelOption;
@@ -73,7 +74,6 @@ import java.security.interfaces.ECPublicKey;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.CompletableFuture;
@@ -101,8 +101,6 @@ public class Player extends Vector3 {
     private static boolean netherNetLoaded;
     // Where the tokens of players come from, which a nethernet server is told with the token
     private static final String NETHERNET_AUTH_DOMAIN = "authorization.franchise.minecraft-services.net";
-    // How long a nethernet server may take to tell that it is one
-    private static final int NETHERNET_PROBE_SECONDS = 15;
     // The kind of device the proxy says it is: the game for windows
     private static final int DEVICE_OS = 8;
 
@@ -297,7 +295,7 @@ public class Player extends Vector3 {
 
     // For what does not wait for a packet. It runs on the thread that translates the packets
     public void runEveryTick(Runnable task) {
-        playerInputExecutor.scheduleAtFixedRate(() -> packetTranslatorManager.execute(task), 50, 50, TimeUnit.MILLISECONDS);
+        playerInputExecutor.scheduleAtFixedRate(() -> packetTranslatorManager.executeFirst(task), 50, 50, TimeUnit.MILLISECONDS);
     }
 
     public void startSendingPlayerInput() {
@@ -374,15 +372,9 @@ public class Player extends Vector3 {
 
         // The game first asks a server whether it is one of nethernet, and so whether it answers to https or to
         // http. The library would ask with more in the address than the game does, which a server of mojang
-        // answers as not found, so it is asked here and the library is told what was found
-        NetherNetHTTPClientSignaling.Probe server;
-        try {
-            server = NetherNetHTTPClientSignaling.probe(address, HttpSignalingSettings.DEFAULT).get(NETHERNET_PROBE_SECONDS, TimeUnit.SECONDS);
-        } catch (ExecutionException e) {
-            throw new ConnectException(e.getCause() == null || e.getCause().getMessage() == null ? e.toString() : e.getCause().getMessage());
-        }
-
-        HttpSignalingSettings settings = HttpSignalingSettings.DEFAULT.withScheme(server.scheme());
+        // answers as not found, and takes no answer with nothing in it, which is what a server gives that does not
+        // show itself to the players around it. So it is asked here and the library is told what was found
+        HttpSignalingSettings settings = HttpSignalingSettings.DEFAULT.withScheme(NetherNetProbe.probe(address));
         bootstrap.channelFactory(NetherNetChannelFactory.client(new NetherNetHTTPClientSignaling(settings)))
                 .option(NetherChannelOption.NETHER_CLIENT_IDENTITY, this.getNetherNetIdentity())
                 .option(NetherChannelOption.NETHER_CLIENT_SERVER_TRUST, NetherNetServerTrust.INSTANCE)

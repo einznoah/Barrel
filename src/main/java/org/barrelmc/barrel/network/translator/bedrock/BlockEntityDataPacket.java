@@ -24,7 +24,8 @@ public class BlockEntityDataPacket implements BedrockPacketTranslator {
         int javaBlock = BlockConverter.bedrockRuntimeToJavaStateId(player.getBedrockBlocks().getBlock(packet.getBlockPosition()), player.getStartGamePacketCache().isBlockNetworkIdsHashed());
         // The block can be another one for a java client with what it holds now, a bed of another color for one
         int shownBlock = BlockEntityConverter.getJavaBlock(javaBlock, packet.getData());
-        if (shownBlock != javaBlock) {
+        // A chest is told whenever what it holds is: it can have stopped being one half of a large chest
+        if (shownBlock != javaBlock || BlockConverter.isJavaChest(javaBlock)) {
             player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(packet.getBlockPosition(), shownBlock)));
         }
         BlockEntityType type = BlockConverter.getJavaBlockEntity(javaBlock);

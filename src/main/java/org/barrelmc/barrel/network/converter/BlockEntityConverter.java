@@ -59,6 +59,12 @@ public class BlockEntityConverter {
             // A java head looks one of 16 ways, a bedrock one is turned by degrees, or was told as the java one is
             float rotation = bedrock.containsKey("Rot", NbtType.BYTE) ? bedrock.getByte("Rot") * (360f / HEAD_ROTATIONS) : bedrock.getFloat("Rotation", 0);
             return javaBlock + (Math.round(rotation * HEAD_ROTATIONS / 360) % HEAD_ROTATIONS + HEAD_ROTATIONS) % HEAD_ROTATIONS;
+        } else if (BlockConverter.isJavaChest(javaBlock)) {
+            // Two chests are one large chest when each tells where its other half is
+            if (bedrock.containsKey("pairx", NbtType.INT) && bedrock.containsKey("pairz", NbtType.INT)) {
+                return BlockConverter.getJavaChest(javaBlock, bedrock.getInt("pairx") - bedrock.getInt("x"), bedrock.getInt("pairz") - bedrock.getInt("z"));
+            }
+            return javaBlock;
         } else if (BlockConverter.isJavaFlowerPot(javaBlock)) {
             Integer potted = BlockConverter.getJavaPottedPlant(bedrock.getCompound("PlantBlock").getString("name", ""));
             return potted == null ? javaBlock : potted;
