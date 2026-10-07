@@ -224,12 +224,12 @@ public class PlayerInput {
 
         // A player that rides is where its seat is: a java client says nothing of where it is while it rides. It
         // gets off when the sneak key is pressed, which a java client leaves to its server
+        if (this.shift && !this.lastShift) {
+            this.player.getRiding().leave();
+        }
         Vector3f seat = this.player.getRiding().getSeat();
         if (seat != null) {
             this.player.setPosition(seat.getX(), seat.getY() - Entity.PLAYER_EYE_HEIGHT, seat.getZ());
-            if (this.shift && !this.lastShift) {
-                this.player.getRiding().leave();
-            }
         }
         if ((seat != null) != this.wasRiding) {
             // Getting on or off puts the player somewhere else: what the server corrects next is where it has the

@@ -11,7 +11,8 @@ public class CorrectPlayerMovePredictionPacket implements BedrockPacketTranslato
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.CorrectPlayerMovePredictionPacket packet = (org.cloudburstmc.protocol.bedrock.packet.CorrectPlayerMovePredictionPacket) pk;
 
-        // TODO: What the player rides
+        // What the player steers is moved by the server, see Riding: where the server has it is told with it, and
+        // there is nothing to put right for the java client
         if (packet.getPredictionType() == PredictionType.PLAYER) {
             player.getInput().correct(packet.getPosition(), packet.isOnGround(), packet.getTick());
         }

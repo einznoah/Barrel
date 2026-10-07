@@ -60,10 +60,18 @@ public class Entity extends Vector3 {
     @Getter
     private boolean standIn;
     // How much higher the java client has the entity than the server: what stands in for a seat is put where a
-    // java client seats a player as high as the server does
+    // java client seats a player as high as the server does, and a boat lies deeper for a java client
     @Setter
     @Getter
     private float shownOffset;
+    // How much further the java client has the entity turned than the server: a boat by a quarter less
+    @Setter
+    @Getter
+    private float shownYaw;
+    // Which paddles of a boat the java client was told to row
+    @Setter
+    @Getter
+    private int paddles;
 
     public Entity(EntityType type) {
         this.type = type;
@@ -71,5 +79,10 @@ public class Entity extends Vector3 {
 
     public boolean isPlayer() {
         return this.type == EntityType.PLAYER;
+    }
+
+    // A boat or a raft, with a chest or without
+    public boolean isBoat() {
+        return this.type.name().endsWith("_BOAT") || this.type.name().endsWith("_RAFT");
     }
 }

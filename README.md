@@ -145,6 +145,11 @@ saved under the name of a player by an older version is taken over the first tim
   already makes heard
 - **Riding:** seeing who rides what, riding along in a minecart, sitting on what a server or an add-on seats a
   player on, also an entity a Java client has no kind for (it is not seen then), and getting off with the sneak key
+- **Steering** a boat or a saddled animal, on a server that moves what a player steers itself by the keys the
+  player holds, as the dedicated server of Mojang does: the keys go to the server and the Java client is shown
+  where the server has the boat or the animal. A boat goes and turns as it does for a Bedrock client, not as a
+  Java client is used to, and the view does not turn with it. A horse goes where the player looks and jumps when
+  the jump key is let go, without the bar a Java client shows for how strong the jump will be
 - **The inventory:** the inventory of the player with armor and offhand, the creative inventory, chests,
   barrels and shulker boxes, furnaces, blast furnaces and smokers, brewing stands, dispensers, droppers and hoppers, and bundles: what is in
   them, putting items in and taking them out
@@ -163,7 +168,8 @@ saved under the name of a player by an older version is taken over the first tim
 - Reading the book on a lectern, setting up a beacon, and colors and styles inside the text of a sign
 - Bundles in the creative inventory, and putting a bundle into a bundle
 - What a command takes: the Java client is told the names of the commands, not what follows them
-- Steering what is ridden: boats and animals
+- Steering on a server that leaves moving a boat or an animal to the client, as PowerNukkitX does: a player can
+  get in and out there, but what it sits in stays where it is
 - Pistons moving: what they push is where it ends up at once
 - Most particles, and of the sounds those a Bedrock client makes without being told: the steps of other players,
   the hit of the own player, music and what a place sounds like

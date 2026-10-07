@@ -3,24 +3,39 @@ package org.barrelmc.barrel.player;
 import lombok.Getter;
 import org.barrelmc.barrel.entity.Entity;
 import org.barrelmc.barrel.network.translator.TranslatorUtils;
+import org.cloudburstmc.math.vector.Vector3d;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityLinkData;
 import org.cloudburstmc.protocol.bedrock.packet.InteractPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundAddEntityPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRemoveEntitiesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetPassengersPacket;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 // Who rides what. A bedrock server tells of every rider by itself, with the ids that stay with an entity. A java
 // client is told all riders of a vehicle at once, and seats them itself. This belongs to the thread that translates
 // the packets
+//
+// What a player steers, a boat or a horse, a server of mojang moves itself by the keys the player holds, and puts
+// right whoever has it somewhere else. A java client moves what its player steers itself, by rules of its own: a
+// boat is faster for it and turns faster. So the java client is kept from steering. Its player is seated on
+// something that is not seen, the saddle, and that rides in the place of the player: with a rider that is no
+// player, a java client leaves a boat or a horse to its server, and seats the player where it would sit anyway
 public class Riding {
 
     // A bedrock server has a player that rides this far above where a java client has the place it is seated at:
     // the one tells where the eyes are, the other seats a player by a point a little above its feet
     private static final float JAVA_SEAT = Entity.PLAYER_EYE_HEIGHT - 0.6F;
+    // The id the java client has the saddle by, which no entity of a server has
+    private static final int SADDLE_ID = Integer.MAX_VALUE - 1;
+    // For how long a server that was asked to let the player off is waited for
+    private static final long LEAVING_MILLIS = 1000;
 
     private final Player player;
     // The riders of the vehicles, the one that steers first
@@ -28,6 +43,10 @@ public class Riding {
     // What the player itself rides, 0 for nothing
     @Getter
     private long vehicle;
+    // Whether the java client has the saddle
+    private boolean saddled;
+    // Until when the player is said to be where it gets off to, see leave
+    private long leavingUntil;
 
     public Riding(Player player) {
         this.player = player;
@@ -68,6 +87,10 @@ public class Riding {
         boolean self = rider == this.player.getRuntimeEntityId();
         if (self) {
             this.vehicle = rides ? vehicle : 0;
+            this.leavingUntil = 0;
+            if (!rides) {
+                this.removeSaddle();
+            }
         }
         changed.forEach(this::sendRiders);
         if (self && !rides) {
@@ -91,6 +114,8 @@ public class Riding {
         this.riders.remove(runtimeEntityId);
         if (this.vehicle == runtimeEntityId) {
             this.vehicle = 0;
+            this.leavingUntil = 0;
+            this.removeSaddle();
             this.getOff(entity);
         }
         List<Long> changed = new ArrayList<>();
@@ -106,13 +131,20 @@ public class Riding {
     public void clear() {
         this.riders.clear();
         this.vehicle = 0;
+        this.leavingUntil = 0;
+        // Gone for the java client with everything else
+        this.saddled = false;
     }
 
-    // Where the server has the eyes of the player while it rides, null when it does not or what it rides is not known
+    // Where the server has the eyes of the player while it rides, or is to have them while the player gets off.
+    // Null when the player does not ride or what it rides is not known
     public Vector3f getSeat() {
         Entity vehicle = this.vehicle == 0 ? null : this.player.getEntities().get(this.vehicle);
         if (vehicle == null) {
             return null;
+        }
+        if (System.currentTimeMillis() < this.leavingUntil) {
+            return Vector3f.from(vehicle.x, vehicle.y + vehicle.getHeight() + Entity.PLAYER_EYE_HEIGHT, vehicle.z);
         }
         Vector3f seat = this.player.getSelf().getSeatOffset();
         if (seat == null) {
@@ -134,13 +166,18 @@ public class Riding {
         }
     }
 
-    // What a bedrock client tells the server when its player wants to get off what it rides
+    // What a bedrock client tells the server when its player wants to get off what it rides. A bedrock client
+    // has its player off at once, and a server of mojang takes the player to be where the client says next. So
+    // from now on the player is said to be where it gets off to, see getOff, and not on its seat anymore: the feet
+    // of a player that is seated can be in the ground, which it then falls through. The java client is taken off
+    // when the server tells that the player got off
     public void leave() {
         if (this.vehicle != 0) {
             InteractPacket interactPacket = new InteractPacket();
             interactPacket.setAction(InteractPacket.Action.LEAVE_VEHICLE);
             interactPacket.setRuntimeEntityId(this.vehicle);
             this.player.getBedrockSession().sendPacket(interactPacket);
+            this.leavingUntil = System.currentTimeMillis() + LEAVING_MILLIS;
         }
     }
 
@@ -165,9 +202,37 @@ public class Riding {
         }
         List<Long> ridersOfVehicle = this.riders.getOrDefault(vehicleId, List.of());
         int[] javaRiders = ridersOfVehicle.stream().filter(rider -> rider == this.player.getRuntimeEntityId() || this.player.getEntities().containsKey(rider)).mapToInt(Long::intValue).toArray();
+
+        // What stands in for a seat is not steered by a java client, it needs no saddle
+        Entity vehicle = this.player.getEntities().get(vehicleId);
+        boolean saddle = vehicleId == this.vehicle && vehicle != null && !vehicle.isStandIn();
+        if (saddle) {
+            if (!this.saddled) {
+                this.saddled = true;
+                this.player.getJavaSession().send(new ClientboundAddEntityPacket(SADDLE_ID, UUID.randomUUID(), EntityType.ITEM_DISPLAY, vehicle.x, vehicle.y + vehicle.getShownOffset(), vehicle.z, Vector3d.ZERO, 0, 0, 0));
+            }
+            for (int i = 0; i < javaRiders.length; i++) {
+                if (javaRiders[i] == (int) this.player.getRuntimeEntityId()) {
+                    javaRiders[i] = SADDLE_ID;
+                }
+            }
+        } else if (vehicleId == this.vehicle) {
+            this.removeSaddle();
+        }
         this.player.getJavaSession().send(new ClientboundSetPassengersPacket((int) vehicleId, javaRiders));
+        if (saddle) {
+            this.player.getJavaSession().send(new ClientboundSetPassengersPacket(SADDLE_ID, new int[]{(int) this.player.getRuntimeEntityId()}));
+        }
         if (ridersOfVehicle.isEmpty()) {
             this.riders.remove(vehicleId);
+        }
+    }
+
+    // A java client takes whoever rode something off it when that is gone
+    private void removeSaddle() {
+        if (this.saddled) {
+            this.saddled = false;
+            this.player.getJavaSession().send(new ClientboundRemoveEntitiesPacket(new int[]{SADDLE_ID}));
         }
     }
 

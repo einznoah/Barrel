@@ -287,7 +287,7 @@ public class TranslatorUtils {
     }
 
     public static void sendEntityPosition(Player player, long runtimeEntityId, Entity entity, boolean onGround) {
-        player.getJavaSession().send(new ClientboundTeleportEntityPacket((int) runtimeEntityId, Vector3d.from(entity.x, entity.y + entity.getShownOffset(), entity.z), Vector3d.ZERO, entity.yaw, entity.pitch, Collections.emptyList(), onGround));
+        player.getJavaSession().send(new ClientboundTeleportEntityPacket((int) runtimeEntityId, Vector3d.from(entity.x, entity.y + entity.getShownOffset(), entity.z), Vector3d.ZERO, entity.yaw + entity.getShownYaw(), entity.pitch, Collections.emptyList(), onGround));
         player.getJavaSession().send(new ClientboundRotateHeadPacket((int) runtimeEntityId, entity.getHeadYaw()));
     }
 }

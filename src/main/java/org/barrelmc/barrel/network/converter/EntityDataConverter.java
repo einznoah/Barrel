@@ -51,6 +51,11 @@ public class EntityDataConverter {
     // Of what a bedrock server tells of a player by itself: that it sleeps
     private static final int BEDROCK_PLAYER_SLEEPS = 0x02;
     private static final int JAVA_BABY = 16;
+    // After what every vehicle has: how it shakes when it is hit
+    private static final int JAVA_BOAT_PADDLE_LEFT = 11;
+    private static final int JAVA_BOAT_PADDLE_RIGHT = 12;
+    private static final int PADDLE_LEFT = 0x01;
+    private static final int PADDLE_RIGHT = 0x02;
     private static final int JAVA_CLOUD_RADIUS = 8;
     private static final int JAVA_CLOUD_PARTICLE = 10;
     // After whether it is a baby and whether it stays one, which every animal has
@@ -126,6 +131,24 @@ public class EntityDataConverter {
                 entity.setOwnFlags(javaFlags & (JAVA_ON_FIRE | JAVA_INVISIBLE));
                 javaFlags |= (self.isSneaking() ? JAVA_SNEAKING : 0) | (self.isSprinting() ? JAVA_SPRINTING : 0);
                 javaEntityData.add(new ByteEntityMetadata(JAVA_FLAGS, MetadataTypes.BYTE, (byte) javaFlags));
+            }
+        }
+
+        if (entity.isBoat()) {
+            // A bedrock server tells for how long each paddle has been rowing, and nothing once it rests. A java
+            // client is told whether a paddle rows, and moves it and lets it splash itself
+            Float left = entityData.get(EntityDataTypes.ROW_TIME_LEFT), right = entityData.get(EntityDataTypes.ROW_TIME_RIGHT);
+            int paddles = entity.getPaddles();
+            if (left != null) {
+                paddles = left > 0 ? paddles | PADDLE_LEFT : paddles & ~PADDLE_LEFT;
+            }
+            if (right != null) {
+                paddles = right > 0 ? paddles | PADDLE_RIGHT : paddles & ~PADDLE_RIGHT;
+            }
+            if (paddles != entity.getPaddles()) {
+                entity.setPaddles(paddles);
+                javaEntityData.add(new BooleanEntityMetadata(JAVA_BOAT_PADDLE_LEFT, MetadataTypes.BOOLEAN, (paddles & PADDLE_LEFT) != 0));
+                javaEntityData.add(new BooleanEntityMetadata(JAVA_BOAT_PADDLE_RIGHT, MetadataTypes.BOOLEAN, (paddles & PADDLE_RIGHT) != 0));
             }
         }
 

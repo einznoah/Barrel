@@ -22,6 +22,8 @@ import java.util.UUID;
 
 public class AddEntityPacket implements BedrockPacketTranslator {
 
+    private static final float BOAT_HEIGHT = 0.375F;
+    private static final float BOAT_TURN = 90;
     // Index of the item in the data of a java entity that is a thrown item
     private static final int JAVA_ITEM_METADATA = 8;
 
@@ -39,12 +41,17 @@ public class AddEntityPacket implements BedrockPacketTranslator {
         Vector3f motion = packet.getMotion();
         Entity entity = new Entity(entityType);
         entity.setStandIn(knownType == null);
+        if (entity.isBoat()) {
+            // A bedrock server has a boat higher and a quarter further turned than a java client
+            entity.setShownOffset(-BOAT_HEIGHT);
+            entity.setShownYaw(-BOAT_TURN);
+        }
         entity.setLocation(position.getX(), position.getY(), position.getZ(), packet.getRotation().getY(), packet.getRotation().getX());
         entity.setHeadYaw(packet.getHeadRotation());
         player.getEntities().put(packet.getRuntimeEntityId(), entity);
         player.getEntityRuntimeIds().put(packet.getUniqueEntityId(), packet.getRuntimeEntityId());
 
-        player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), UUID.randomUUID(), entityType, position.getX(), position.getY(), position.getZ(), Vector3d.from(motion.getX(), motion.getY(), motion.getZ()), entity.yaw, entity.pitch, entity.getHeadYaw()));
+        player.getJavaSession().send(new ClientboundAddEntityPacket((int) packet.getRuntimeEntityId(), UUID.randomUUID(), entityType, position.getX(), position.getY() + entity.getShownOffset(), position.getZ(), Vector3d.from(motion.getX(), motion.getY(), motion.getZ()), entity.yaw + entity.getShownYaw(), entity.pitch, entity.getHeadYaw()));
 
         TranslatorUtils.sendEntityData(player, packet.getRuntimeEntityId(), entity, packet.getMetadata());
         if (entityType == EntityType.SPLASH_POTION || entityType == EntityType.LINGERING_POTION) {
