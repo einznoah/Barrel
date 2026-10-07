@@ -8,6 +8,7 @@ package org.barrelmc.barrel.player;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.barrelmc.barrel.network.converter.BannerConverter;
+import org.barrelmc.barrel.network.converter.BlockConverter;
 import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.cloudburstmc.math.vector.Vector3f;
@@ -59,6 +60,7 @@ import org.cloudburstmc.protocol.bedrock.packet.MobEquipmentPacket;
 import org.cloudburstmc.protocol.bedrock.packet.UnlockedRecipesPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.inventory.VillagerTrade;
 import org.geysermc.mcprotocollib.protocol.data.game.item.ItemStack;
+import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.recipe.display.RecipeDisplay;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipeBookAddPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.ClientboundRecipeBookRemovePacket;
@@ -155,6 +157,9 @@ public class Inventory {
     private boolean inventoryRequested;
     private Integer inventoryWindowId;
     private ContainerType containerType = null;
+    // What the server calls the slots of what is open like a chest, and what the java client shows above them
+    private ContainerSlotType chestSlotType = ContainerSlotType.LEVEL_ENTITY;
+    private String chestTitle = null;
     // The slots of the open container in the order java has them, null as long as the client is not shown it
     private List<Slot> containerSlots = null;
 
@@ -619,11 +624,29 @@ public class Inventory {
         }
     }
 
-    public void openContainer(int containerId, ContainerType containerType) {
+    public void openContainer(int containerId, ContainerType containerType, Vector3i position) {
         this.containerId = containerId;
         this.containerType = containerType;
         this.container = null;
         this.containerSlots = null;
+
+        // A barrel and a shulker box are opened like a chest, but the server has its own names for their slots, and
+        // takes nothing that is put into a slot of another name
+        this.chestSlotType = ContainerSlotType.LEVEL_ENTITY;
+        this.chestTitle = null;
+        if (containerType == ContainerType.CONTAINER && position != null) {
+            int javaBlock = BlockConverter.bedrockRuntimeToJavaStateId(this.player.getBedrockBlocks().getBlock(position), this.player.getStartGamePacketCache().isBlockNetworkIdsHashed());
+            BlockEntityType blockEntity = BlockConverter.getJavaBlockEntity(javaBlock);
+            if (BlockConverter.isJavaBarrel(javaBlock)) {
+                this.chestSlotType = ContainerSlotType.BARREL;
+                this.chestTitle = "container.barrel";
+            } else if (blockEntity == BlockEntityType.SHULKER_BOX) {
+                this.chestSlotType = ContainerSlotType.SHULKER_BOX;
+                this.chestTitle = "container.shulkerBox";
+            } else if (blockEntity == BlockEntityType.ENDER_CHEST) {
+                this.chestTitle = "container.enderchest";
+            }
+        }
 
         switch (containerType) {
             case CONTAINER:
@@ -778,15 +801,17 @@ public class Inventory {
                     this.closeContainer();
                     return false;
                 }
-                javaContainerType = org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.from(size / 9 - 1);
-                title = size > 27 ? "container.chestDouble" : "container.chest";
+                // A java client does not let a shulker box be put into what it knows to be one
+                javaContainerType = this.chestSlotType == ContainerSlotType.SHULKER_BOX && size == 27 ? org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.SHULKER_BOX
+                        : org.geysermc.mcprotocollib.protocol.data.game.inventory.ContainerType.from(size / 9 - 1);
+                title = this.chestTitle != null ? this.chestTitle : size > 27 ? "container.chestDouble" : "container.chest";
                 break;
         }
 
         // Every other container has its slots in the order of the bedrock server
         if (slots.isEmpty()) {
             for (int slot = 0; slot < size; slot++) {
-                slots.add(this.containerSlot(ContainerSlotType.LEVEL_ENTITY, slot));
+                slots.add(this.containerSlot(this.chestSlotType, slot));
             }
         }
         this.containerSlots = slots;

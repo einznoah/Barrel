@@ -31,6 +31,15 @@ public class PlayerInput {
     private static final long JAVA_TICK_NANOS = 250_000_000L;
     // The teleport the java client is told about when the server puts the player somewhere else
     private static final int CORRECTION_TELEPORT_ID = 2;
+    // The numbers the java client is told with where the player is and has to answer, from this one on
+    private static final int FIRST_TELEPORT_ID = 100;
+    // A java server tells its client again where the player is when the client did not answer for this many ticks
+    private static final int TELEPORT_AGAIN_TICKS = 20;
+    // How long the server is waited for to tell that the player has arrived in another dimension
+    private static final int DIMENSION_CHANGE_TICKS = 200;
+    // The server putting the player back is told of when it did so this often in a minute
+    private static final int CORRECTIONS_TOLD = 20;
+    private static final long CORRECTIONS_MILLIS = 60_000;
 
     private final Player player;
     private boolean started;
@@ -53,6 +62,15 @@ public class PlayerInput {
     private boolean horizontalCollision;
     private boolean teleported;
     private Vector3f lastPosition;
+
+    // The number the java client was last told with where the player is, and for how long it has not answered. What
+    // it sends of where the player is until it answers, it sent from where the player was before
+    private int teleports = FIRST_TELEPORT_ID;
+    private int awaitedTeleport;
+    private int awaitedTicks;
+    private int dimensionChangeTicks;
+    private int corrections;
+    private long correctionsSince;
 
     public PlayerInput(Player player) {
         this.player = player;
@@ -79,6 +97,31 @@ public class PlayerInput {
         this.lastPosition = null;
     }
 
+    // Puts the java client where the player is for the proxy, which is where the server put it
+    public void teleportJava() {
+        this.teleports = this.teleports == Integer.MAX_VALUE ? FIRST_TELEPORT_ID : this.teleports + 1;
+        this.awaitedTeleport = this.teleports;
+        this.awaitedTicks = 0;
+        this.lastPosition = null;
+        this.player.getJavaSession().send(new ClientboundPlayerPositionPacket(this.awaitedTeleport, this.player.x, this.player.y, this.player.z, 0, 0, 0, this.player.getYaw(), this.player.getPitch()));
+    }
+
+    public void acceptTeleport(int teleport) {
+        if (teleport == this.awaitedTeleport) {
+            this.awaitedTeleport = 0;
+        }
+    }
+
+    // Whether the player is where the server put it, whatever the java client sends of where it is: the client has
+    // not said yet that it is there, or the server is taking the player to another dimension
+    public boolean isHeld() {
+        return this.awaitedTeleport != 0 || this.player.isChangingDimension();
+    }
+
+    public void startDimensionChange() {
+        this.dimensionChangeTicks = 0;
+    }
+
     public void start(long tick) {
         if (!this.started) {
             this.started = true;
@@ -101,13 +144,19 @@ public class PlayerInput {
         }
     }
 
-    // The server did not get to where the client says the player is, the player is where the server says
-    public void correct(Vector3f position, boolean onGround, long tick) {
-        if (tick > this.tick || tick < this.tick - this.player.getStartGamePacketCache().getRewindHistorySize()) {
-            return;
+    // The server did not get to where the client says the player is, the player is where the server says. Also
+    // when that is told late: left aside, the player would stay somewhere else for the server than for the client
+    public void correct(Vector3f position, boolean onGround) {
+        long now = System.currentTimeMillis();
+        if (now - this.correctionsSince > CORRECTIONS_MILLIS) {
+            this.correctionsSince = now;
+            this.corrections = 0;
         }
-
         this.player.setPosition(position.getX(), position.getY() - Entity.PLAYER_EYE_HEIGHT, position.getZ());
+        if (++this.corrections == CORRECTIONS_TOLD) {
+            System.out.println("The server put the player back " + CORRECTIONS_TOLD + " times within a minute, the last time to " + this.player.getFloorX() + " " + this.player.getFloorY() + " " + this.player.getFloorZ()
+                    + ": it does not get to where the java client says the player is [player " + this.player.getUsername() + "]");
+        }
         this.onGround = onGround;
         this.lastPosition = null;
         // Where the player looks and how fast it is stay as they are
@@ -121,9 +170,18 @@ public class PlayerInput {
     }
 
     private void send() {
-        // While the server takes the player to another dimension, a bedrock client shows a loading screen
-        if (!this.player.getBedrockSession().isConnected() || this.player.isChangingDimension()) {
+        if (!this.player.getBedrockSession().isConnected()) {
             return;
+        }
+        // While the server takes the player to another dimension a bedrock client shows a loading screen, and goes on
+        // telling the server every tick where the player is. A server that never tells that the player has arrived
+        // is not waited for without end: the player would stay where it is for the server, whatever the client does
+        if (this.player.isChangingDimension() && ++this.dimensionChangeTicks >= DIMENSION_CHANGE_TICKS) {
+            System.out.println("The server did not tell that the player has arrived in the other dimension, the proxy goes on without that [player " + this.player.getUsername() + "]");
+            org.barrelmc.barrel.network.translator.bedrock.ChangeDimensionPacket.finish(this.player, true);
+        }
+        if (this.awaitedTeleport != 0 && ++this.awaitedTicks >= TELEPORT_AGAIN_TICKS) {
+            this.teleportJava();
         }
         this.tick++;
 
@@ -211,7 +269,7 @@ public class PlayerInput {
         Vector3f moved = this.lastPosition == null ? Vector3f.ZERO : position.sub(this.lastPosition);
         // How fast the player is after this tick, which is what a bedrock client says of itself
         Vector3f delta = moved;
-        if (!this.player.isFlying()) {
+        if (!this.player.isFlying() && !this.player.isChangingDimension()) {
             float friction = (this.onGround ? GROUND_FRICTION : 1) * DRAG;
             delta = Vector3f.from(moved.getX() * 0.98F * friction, (moved.getY() - GRAVITY) * 0.98F, moved.getZ() * 0.98F * friction);
         }

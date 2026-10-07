@@ -19,6 +19,10 @@ public class MovePlayerPosRotPacket implements JavaPacketTranslator {
             player.getJavaSession().send(new ClientboundPlayerPositionPacket(1, player.x, player.y, player.z, 0, 0, 0, player.yaw, player.pitch));
             return;
         }
+        // Sent from where the player was before the server put it somewhere else
+        if (player.getInput().isHeld()) {
+            return;
+        }
 
         player.getInput().setCollisions(packet.isOnGround(), packet.isHorizontalCollision());
         player.setOldPosition(player.getVector3f());

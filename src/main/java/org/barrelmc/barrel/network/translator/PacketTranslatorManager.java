@@ -181,6 +181,7 @@ public class PacketTranslatorManager {
         javaTranslators.put(ServerboundChatCommandSignedPacket.class, new ChatCommandPacket());
         javaTranslators.put(ServerboundSetCarriedItemPacket.class, new SetCarriedItemPacket());
         javaTranslators.put(ServerboundMovePlayerPosPacket.class, new MovePlayerPosPacket());
+        javaTranslators.put(org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundAcceptTeleportationPacket.class, new org.barrelmc.barrel.network.translator.java.AcceptTeleportationPacket());
         javaTranslators.put(ServerboundMovePlayerPosRotPacket.class, new MovePlayerPosRotPacket());
         javaTranslators.put(ServerboundMovePlayerRotPacket.class, new MovePlayerRotPacket());
         javaTranslators.put(ServerboundMovePlayerStatusOnlyPacket.class, new MovePlayerStatusOnlyPacket());

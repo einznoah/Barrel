@@ -40,6 +40,7 @@ public class BlockConverter {
     private static final Set<Integer> JAVA_WALL_BANNERS = new HashSet<>();
     private static final Set<Integer> JAVA_FLOOR_HEADS = new HashSet<>();
     private static final Set<Integer> JAVA_LECTERNS = new HashSet<>();
+    private static final Set<Integer> JAVA_BARRELS = new HashSet<>();
     private static int javaFlowerPot = -1;
     // The java block of a pot with a plant in it, by the bedrock block of the plant
     private static final HashMap<String, Integer> JAVA_POTTED_PLANTS = new HashMap<>();
@@ -94,6 +95,7 @@ public class BlockConverter {
                 case "minecraft:standing_banner" -> JAVA_STANDING_BANNERS.add(javaStateId);
                 case "minecraft:wall_banner" -> JAVA_WALL_BANNERS.add(javaStateId);
                 case "minecraft:lectern" -> JAVA_LECTERNS.add(javaStateId);
+                case "minecraft:barrel" -> JAVA_BARRELS.add(javaStateId);
                 case "minecraft:flower_pot" -> javaFlowerPot = javaStateId;
                 default -> {
                 }
@@ -144,6 +146,10 @@ public class BlockConverter {
 
     public static boolean isJavaLectern(int javaBlockId) {
         return JAVA_LECTERNS.contains(javaBlockId);
+    }
+
+    public static boolean isJavaBarrel(int javaBlockId) {
+        return JAVA_BARRELS.contains(javaBlockId);
     }
 
     public static boolean isJavaFlowerPot(int javaBlockId) {

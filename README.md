@@ -169,6 +169,11 @@ The console of the proxy tells what a Bedrock server does not like:
   secret in it.
 - `The bedrock server did not take a change of the inventory: ...` — the server did not let the player move an
   item, with the reason of the server.
+- `The server put the player back 20 times within a minute, the last time to ...` — a server of Mojang moves the
+  player itself from what is pressed, and puts the player back where it got to when the Java client got somewhere
+  else. Now and then is as it should be, all the time means that the two do not move the player alike.
+- `The server did not tell that the player has arrived in the other dimension, ...` — the proxy waited ten seconds
+  for the server to end a change of dimension and went on without it.
 - `Could not join the server over nethernet: ...` — the server did not answer as one of NetherNet at the address
   and port of the config, the line tells what happened instead. `Server offline ... Connection timed out` after
   that means the server let the player in, but the connection over UDP did not come about.

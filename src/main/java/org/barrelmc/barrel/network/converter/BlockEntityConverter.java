@@ -16,7 +16,8 @@ public class BlockEntityConverter {
 
     private static final int SIGN_LINES = 4;
     private static final int CAMPFIRE_SLOTS = 4;
-    private static final int POT_SIDES = 4;
+    // The sides of a decorated pot, in the order a bedrock server lists them
+    private static final String[] POT_SIDES = {"back", "left", "right", "front"};
     // How many java block states lie between a block and the same block of the next color, and between a lectern
     // and the same lectern with a book
     private static final int BED_STATES = 16;
@@ -146,13 +147,18 @@ public class BlockEntityConverter {
     }
 
     // What the four sides of a pot are made of, a side without a sherd is a brick
+    // A bedrock pot lists what its four sides were made of, a brick for a side without a picture. A java pot has
+    // the item of a side under the name of the side, and nothing for a side without a picture
     private static NbtMap getDecoratedPot(NbtMap bedrock) {
-        List<String> sherds = new ArrayList<>();
-        for (String bedrockSherd : bedrock.getList("sherds", NbtType.STRING, new ArrayList<>())) {
-            String sherd = bedrockSherd.isEmpty() ? null : ItemConverter.getJavaItemName(bedrockSherd, 0);
-            sherds.add(sherd == null ? "minecraft:brick" : sherd);
+        List<String> bedrockSherds = bedrock.getList("sherds", NbtType.STRING, new ArrayList<>());
+        NbtMapBuilder sherds = NbtMap.builder();
+        for (int side = 0; side < POT_SIDES.length && side < bedrockSherds.size(); side++) {
+            String sherd = bedrockSherds.get(side).isEmpty() ? null : ItemConverter.getJavaItemName(bedrockSherds.get(side), 0);
+            if (sherd != null && !sherd.equals("minecraft:brick")) {
+                sherds.putCompound(POT_SIDES[side], NbtMap.builder().putString("id", sherd).putInt("count", 1).build());
+            }
         }
-        return sherds.size() == POT_SIDES ? NbtMap.builder().putList("sherds", NbtType.STRING, sherds).build() : NbtMap.EMPTY;
+        return NbtMap.builder().putCompound("sherds", sherds.build()).build();
     }
 
     private static NbtMap getSignText(NbtMap bedrockText) {

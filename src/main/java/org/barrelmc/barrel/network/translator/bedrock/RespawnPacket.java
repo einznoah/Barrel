@@ -23,10 +23,12 @@ public class RespawnPacket implements BedrockPacketTranslator {
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.RespawnPacket packet = (org.cloudburstmc.protocol.bedrock.packet.RespawnPacket) pk;
 
-        // The server found where the player comes back to life, after the java client asked to
-        if (packet.getState() != org.cloudburstmc.protocol.bedrock.packet.RespawnPacket.State.SERVER_READY || player.getHealth() > 0) {
+        // The server found where the player comes back to life, after the java client asked to. The player may
+        // have been given its health again before the server tells this
+        if (packet.getState() != org.cloudburstmc.protocol.bedrock.packet.RespawnPacket.State.SERVER_READY || (!player.isRespawning() && player.getHealth() > 0)) {
             return;
         }
+        player.setRespawning(false);
 
         PlayerActionPacket playerActionPacket = new PlayerActionPacket();
         playerActionPacket.setAction(PlayerActionType.RESPAWN);

@@ -6,7 +6,6 @@ import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 
 public class MovePlayerPacket implements BedrockPacketTranslator {
 
@@ -16,11 +15,14 @@ public class MovePlayerPacket implements BedrockPacketTranslator {
         Vector3f position = packet.getPosition(), rotation = packet.getRotation();
 
         if (packet.getRuntimeEntityId() == player.getRuntimeEntityId()) {
-            player.getJavaSession().send(new ClientboundPlayerPositionPacket(1, position.getX(), position.getY() - 1.62, position.getZ(), 0, 0, 0, rotation.getY(), rotation.getX()));
-            player.setPosition(position.getX(), position.getY() - 1.62, position.getZ());
+            // The server puts the player somewhere. The java client is put there too, and until it says that it is
+            // there the player is where the server put it
+            player.setPosition(position.getX(), position.getY() - Entity.PLAYER_EYE_HEIGHT, position.getZ());
+            player.setRotation(rotation.getY(), rotation.getX());
             if (packet.getMode() == org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket.Mode.TELEPORT || packet.getMode() == org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket.Mode.RESPAWN) {
                 player.getInput().setTeleported();
             }
+            player.getInput().teleportJava();
             player.setLastServerPosition(position);
             player.setLastServerRotation(rotation.toVector2());
         } else {

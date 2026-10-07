@@ -179,6 +179,14 @@ public class Player extends Vector3 {
     @Setter
     @Getter
     private Integer dimensionLoadingScreen = null;
+    // The server was not answered yet that the player has arrived in the dimension
+    @Setter
+    @Getter
+    private boolean dimensionAnswerOwed = false;
+    // The java client asked to come back to life and the server has not found where yet
+    @Setter
+    @Getter
+    private boolean respawning = false;
     // What the java client was last told the player may do, and the effects on the player as it was told them with
     // the time. A java client forgets both when the player comes into another dimension
     @Setter

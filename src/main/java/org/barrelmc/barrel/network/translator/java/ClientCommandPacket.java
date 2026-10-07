@@ -20,6 +20,7 @@ public class ClientCommandPacket implements JavaPacketTranslator {
             respawnPacket.setPosition(Vector3f.from(0, 0, 0));
             respawnPacket.setRuntimeEntityId(player.getRuntimeEntityId());
             respawnPacket.setState(RespawnPacket.State.CLIENT_READY);
+            player.setRespawning(true);
 
             player.getBedrockSession().sendPacket(respawnPacket);
         }

@@ -13,7 +13,7 @@ public class ContainerOpenPacket implements BedrockPacketTranslator {
 
         // A java client opens its own inventory without the server
         if (packet.getType() != ContainerType.INVENTORY) {
-            player.getInventory().openContainer(packet.getId(), packet.getType());
+            player.getInventory().openContainer(packet.getId(), packet.getType(), packet.getBlockPosition());
         } else {
             player.getInventory().onBedrockInventoryOpen(packet.getId());
         }
