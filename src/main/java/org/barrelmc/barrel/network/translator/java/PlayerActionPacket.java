@@ -18,6 +18,9 @@ public class PlayerActionPacket implements JavaPacketTranslator {
         Vector3i blockPos = Vector3i.from(playerActionPacket.getPosition().getX(), playerActionPacket.getPosition().getY(), playerActionPacket.getPosition().getZ());
 
         PlayerAction action = playerActionPacket.getAction();
+        if (action == PlayerAction.START_DIGGING || action == PlayerAction.FINISH_DIGGING) {
+            player.setOwnAction(blockPos);
+        }
         if (action == PlayerAction.START_DIGGING && player.getGameMode() == GameType.CREATIVE) {
             action = PlayerAction.FINISH_DIGGING;
         }

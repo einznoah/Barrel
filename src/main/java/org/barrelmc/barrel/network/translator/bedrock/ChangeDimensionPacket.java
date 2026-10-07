@@ -37,6 +37,7 @@ public class ChangeDimensionPacket implements BedrockPacketTranslator {
         player.getSubChunkRequests().clear();
         player.getEntities().clear();
         player.getRiding().clear();
+        player.getJukeboxes().clear();
         player.getEntityRuntimeIds().clear();
 
         // A bedrock client shows a loading screen from here on. The server sends the chunks and then tells that it is

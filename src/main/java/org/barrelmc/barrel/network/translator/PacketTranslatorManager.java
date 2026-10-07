@@ -144,6 +144,9 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(MoveEntityAbsolutePacket.class, new org.barrelmc.barrel.network.translator.bedrock.MoveEntityAbsolutePacket());
         bedrockTranslators.put(MovePlayerPacket.class, new org.barrelmc.barrel.network.translator.bedrock.MovePlayerPacket());
         bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.SetEntityLinkPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetEntityLinkPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket.class, new org.barrelmc.barrel.network.translator.bedrock.LevelSoundEventPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.PlaySoundPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlaySoundPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.StopSoundPacket.class, new org.barrelmc.barrel.network.translator.bedrock.StopSoundPacket());
         bedrockTranslators.put(CorrectPlayerMovePredictionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CorrectPlayerMovePredictionPacket());
         bedrockTranslators.put(PlayerListPacket.class, new org.barrelmc.barrel.network.translator.bedrock.PlayerListPacket());
         bedrockTranslators.put(RemoveEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.RemoveEntityPacket());

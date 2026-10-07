@@ -10,7 +10,10 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockChangeEntr
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.value.BellValue;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.value.BellValueType;
+import org.geysermc.mcprotocollib.protocol.data.game.level.event.LevelEventType;
+import org.geysermc.mcprotocollib.protocol.data.game.level.event.RecordEventData;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockEventPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelEventPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockUpdatePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockEntityDataPacket;
 
@@ -31,6 +34,10 @@ public class BlockEntityDataPacket implements BedrockPacketTranslator {
         }
 
         player.getBedrockBlocks().setBlockEntityData(packet.getBlockPosition(), packet.getData());
+        // A jukebox that no longer holds a record has stopped playing it, a server tells nothing else of that
+        if (packet.getData().getString("id", "").equals("Jukebox") && !packet.getData().containsKey("RecordItem") && player.getJukeboxes().remove(packet.getBlockPosition())) {
+            player.getJavaSession().send(new ClientboundLevelEventPacket(LevelEventType.SOUND_STOP_JUKEBOX_SONG, packet.getBlockPosition(), new RecordEventData(0)));
+        }
         // A bell that starts to ring is told with what it holds, a java client is told that it was struck and from
         // where. The sides are numbered alike from the south on, a java client counts down and up before them
         if (packet.getData().getString("id", "").equals("Bell") && packet.getData().getBoolean("Ringing") && packet.getData().getInt("Ticks", 0) == 0) {

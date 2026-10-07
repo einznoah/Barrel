@@ -11,7 +11,10 @@ import org.cloudburstmc.nbt.NbtType;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockChangeEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityInfo;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
+import org.geysermc.mcprotocollib.protocol.data.game.level.event.LevelEventType;
+import org.geysermc.mcprotocollib.protocol.data.game.level.event.RecordEventData;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockUpdatePacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelEventPacket;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -173,6 +176,10 @@ public class BedrockBlocks {
     public void changeBlock(Vector3i position, int bedrockBlockId) {
         boolean hashed = this.player.getStartGamePacketCache().isBlockNetworkIdsHashed();
         this.setBlock(position, bedrockBlockId);
+        // A jukebox that is taken away stops playing
+        if (this.player.getJukeboxes().remove(position)) {
+            this.player.getJavaSession().send(new ClientboundLevelEventPacket(LevelEventType.SOUND_STOP_JUKEBOX_SONG, position, new RecordEventData(0)));
+        }
 
         int javaBlock = BlockConverter.bedrockRuntimeToJavaStateId(bedrockBlockId, hashed);
         Column column = this.columns.get(getKey(position.getX() >> 4, position.getZ() >> 4));

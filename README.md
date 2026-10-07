@@ -139,6 +139,10 @@ saved under the name of a player by an older version is taken over the first tim
   swinging, players lying in their beds and getting up, with the screen to leave the bed, other players eating,
   drinking, raising a shield or drawing a bow, and what mobs show: the swing of a golem, hearts and smoke of
   taming and feeding, a wolf shaking itself dry, a sheep grazing, villagers angry or happy, a totem
+- **Sounds:** what a server tells of a sound: chests, barrels and doors, bells and note blocks at their pitch, the
+  records of a jukebox, mobs, blocks being placed, hit and broken by others with the pieces flying off, hits,
+  explosions, and the sounds a command or an add-on plays by name. A player is not told again what its own client
+  already makes heard
 - **Riding:** seeing who rides what, riding along in a minecart, sitting on what a server or an add-on seats a
   player on, also an entity a Java client has no kind for (it is not seen then), and getting off with the sneak key
 - **The inventory:** the inventory of the player with armor and offhand, the creative inventory, chests,
@@ -161,7 +165,8 @@ saved under the name of a player by an older version is taken over the first tim
 - What a command takes: the Java client is told the names of the commands, not what follows them
 - Steering what is ridden: boats and animals
 - Pistons moving: what they push is where it ends up at once
-- Sounds and most particles
+- Most particles, and of the sounds those a Bedrock client makes without being told: the steps of other players,
+  the hit of the own player, music and what a place sounds like
 - Light: every place is as bright as under the open sky, also caves, and the Nether is bright all over. A Bedrock
   server does not send light and the proxy does not work it out yet
 - Biomes, every place has the same one
@@ -199,12 +204,14 @@ These lines, together with the first line of the console, are what a bug report 
   other.
 - `player` holds what the proxy has to remember of a player: the inventory with every container and crafting
   station (`Inventory`), what is sent to a server that moves the player itself (`PlayerInput`), the chunks whose
-  blocks are still asked for (`SubChunkRequests`) and the blocks as the server names them (`BedrockBlocks`).
+  blocks are still asked for (`SubChunkRequests`), the blocks as the server names them (`BedrockBlocks`) and who
+  rides what (`Riding`).
 - `auth` signs players in to Xbox and builds the login a Bedrock server asks for.
 
-The blocks and items of both editions are in `src/main/resources/runtime_blocks.json` and `runtime_items.json`.
-They are made by the scripts in [`tools`](tools), which say at their top where their input comes from, and have to
-be made again when the Java or the Bedrock version changes.
+The blocks and items of both editions are in `src/main/resources/runtime_blocks.json` and `runtime_items.json`,
+the Java sound for what a Bedrock server tells of a sound in `sounds.json`. They are made by the scripts in
+[`tools`](tools), which say at their top where their input comes from, and have to be made again when the Java or
+the Bedrock version changes.
 
 Servers differ in how much they check. A server of Mojang asks for much that others do not: the keys a player
 holds, when the loading screen and the inventory are open, which block is clicked on. What such a server sends

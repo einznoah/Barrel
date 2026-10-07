@@ -24,6 +24,9 @@ public class BlockConverter {
     public static final HashMap<Integer, Integer> BEDROCK_BLOCK_RUNTIME_TO_JAVA_BLOCK_STATE = new HashMap<>();
     // Servers can use a hash of the block state instead of its index in the block palette
     public static final HashMap<Integer, Integer> BEDROCK_BLOCK_HASH_TO_JAVA_BLOCK_STATE = new HashMap<>();
+    // What a bedrock server calls a block, which tells how the block sounds
+    private static final HashMap<Integer, String> BEDROCK_BLOCK_RUNTIME_TO_NAME = new HashMap<>();
+    private static final HashMap<Integer, String> BEDROCK_BLOCK_HASH_TO_NAME = new HashMap<>();
     public static final HashMap<Integer, Integer> WATERLOGGED_JAVA_BLOCK = new HashMap<>();
     public static final BitSet JAVA_WATER_BLOCK = new BitSet();
     public static final BitSet JAVA_FLUID_BLOCK = new BitSet();
@@ -83,6 +86,8 @@ public class BlockConverter {
 
             BEDROCK_BLOCK_RUNTIME_TO_JAVA_BLOCK_STATE.put(bedrockRuntimeId, javaStateId);
             BEDROCK_BLOCK_HASH_TO_JAVA_BLOCK_STATE.put(blockEntry.get("bedrock_network_id").getAsInt(), javaStateId);
+            BEDROCK_BLOCK_RUNTIME_TO_NAME.put(bedrockRuntimeId, bedrockName.intern());
+            BEDROCK_BLOCK_HASH_TO_NAME.put(blockEntry.get("bedrock_network_id").getAsInt(), bedrockName.intern());
             javaBlockStateCount = Math.max(javaBlockStateCount, javaStateId + 1);
             if (bedrockName.equals("minecraft:air")) {
                 bedrockAirRuntimeId = bedrockRuntimeId;
@@ -294,6 +299,11 @@ public class BlockConverter {
     public static int getJavaDoorUpper(int lowerHalf, int upperHalf) {
         int first = JAVA_DOOR_FIRST_STATE.get(lowerHalf);
         return first + (upperHalf - first & ~(DOOR_FACING | DOOR_OPEN) | lowerHalf - first & (DOOR_FACING | DOOR_OPEN));
+    }
+
+    // What a bedrock server calls the block, null for a number that is not one of a block
+    public static String getBedrockName(int bedrockBlockId, boolean hashed) {
+        return (hashed ? BEDROCK_BLOCK_HASH_TO_NAME : BEDROCK_BLOCK_RUNTIME_TO_NAME).get(bedrockBlockId);
     }
 
     public static int getBedrockAirId(boolean hashed) {

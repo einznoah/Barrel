@@ -30,6 +30,7 @@ public class UseItemOnPacket implements JavaPacketTranslator {
 
         // The client keeps the blocks it expects to have changed until the server acknowledged its action
         player.getJavaSession().send(new ClientboundBlockChangedAckPacket(packet.getSequence()));
+        player.setOwnAction(packet.getPosition());
         if (packet.getHand() != Hand.MAIN_HAND) {
             return;
         }

@@ -101,6 +101,8 @@ public class ProxyServer {
     private final Dimension[] dimensions;
     // The paintings the java client was told of, by their names
     private final Map<String, Painting> paintings = new HashMap<>();
+    // The numbers of the songs a jukebox plays, by their names
+    private final Map<String, Integer> jukeboxSongs = new HashMap<>();
     @Getter
     private final int defaultBiomeId;
     @Getter
@@ -124,6 +126,9 @@ public class ProxyServer {
         for (NbtMap painting : registries.getCompound("minecraft:painting_variant").getList("value", NbtType.COMPOUND)) {
             NbtMap element = painting.getCompound("element");
             this.paintings.put(painting.getString("name"), new Painting(painting.getInt("id"), element.getInt("width"), element.getInt("height")));
+        }
+        for (NbtMap song : registries.getCompound("minecraft:jukebox_song").getList("value", NbtType.COMPOUND)) {
+            this.jukeboxSongs.put(song.getString("name"), song.getInt("id"));
         }
         this.defaultBiomeId = getRegistryEntry(registries, "minecraft:worldgen/biome", "minecraft:plains").getInt("id");
         this.biomeCount = registries.getCompound("minecraft:worldgen/biome").getList("value", NbtType.COMPOUND).size();
@@ -151,6 +156,11 @@ public class ProxyServer {
 
     // What the java client was told of a painting: its number, and how many blocks wide and high it is
     public record Painting(int id, int width, int height) {
+    }
+
+    // The number of a song for a java client, null for one it was not told of
+    public Integer getJukeboxSong(String name) {
+        return this.jukeboxSongs.get(name);
     }
 
     public Painting getPainting(String name) {

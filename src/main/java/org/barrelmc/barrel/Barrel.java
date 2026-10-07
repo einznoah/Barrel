@@ -12,6 +12,7 @@
 package org.barrelmc.barrel;
 
 import org.barrelmc.barrel.network.converter.BannerConverter;
+import org.barrelmc.barrel.network.converter.SoundConverter;
 import org.barrelmc.barrel.network.converter.BlockConverter;
 import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
@@ -48,6 +49,7 @@ public class Barrel {
         EnchantmentConverter.init();
         JavaRegistries.init();
         BannerConverter.init();
+        SoundConverter.init();
         new ProxyServer(DATA_PATH);
     }
 }

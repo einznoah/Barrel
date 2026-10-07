@@ -194,6 +194,12 @@ public class Player extends Vector3 {
     private final Map<Effect, SentEffect> sentEffects = new HashMap<>();
     @Getter
     private final PlayerInput input = new PlayerInput(this);
+    // The block the player last did something to, and when: a java client makes the sound of that itself
+    private Vector3i ownActionBlock;
+    private long ownActionTime;
+    // Where a jukebox plays a record for the java client, which goes on with it until it is told to stop
+    @Getter
+    private final Set<Vector3i> jukeboxes = new HashSet<>();
     // Who rides what, the player itself for one
     @Getter
     private final Riding riding = new Riding(this);
@@ -653,6 +659,23 @@ public class Player extends Vector3 {
     }
 
     public record SentEffect(ClientboundUpdateMobEffectPacket packet, long time) {
+    }
+
+    // How long after the player did something to a block a sound from there is taken for the sound of that, and how
+    // far from the block: what is placed against a block sounds from next to it
+    private static final long OWN_ACTION_MILLIS = 600;
+    private static final double OWN_ACTION_REACH = 2;
+
+    public void setOwnAction(Vector3i block) {
+        this.ownActionBlock = block;
+        this.ownActionTime = System.currentTimeMillis();
+    }
+
+    public boolean isOwnAction(Vector3f at) {
+        // A block that is being broken is the player's doing for as long as that takes
+        boolean recent = System.currentTimeMillis() - this.ownActionTime < OWN_ACTION_MILLIS || this.diggingStatus == PlayerActionType.START_BREAK;
+        return this.ownActionBlock != null && recent
+                && at.distance(this.ownActionBlock.getX() + 0.5F, this.ownActionBlock.getY() + 0.5F, this.ownActionBlock.getZ() + 0.5F) <= OWN_ACTION_REACH;
     }
 
     public ProxyServer.Dimension getJavaDimension() {
