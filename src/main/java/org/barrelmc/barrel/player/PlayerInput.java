@@ -67,6 +67,9 @@ public class PlayerInput {
     private boolean horizontalCollision;
     private boolean teleported;
     private boolean wasRiding;
+    private boolean wasSleeping;
+    // Where the server said it has the player while it sleeps, null when it does not sleep or nothing was said
+    private Vector3f asleepAt;
     private Vector3f lastPosition;
 
     // The number the java client was last told with where the player is, and for how long it has not answered. What
@@ -174,6 +177,15 @@ public class PlayerInput {
         if (this.player.getRiding().isRiding()) {
             return;
         }
+        // A player that sleeps is in its bed, where the java client was put when it lay down. The server tells
+        // where it has a sleeping player by another point than the eyes of one that stands: taken for those, the
+        // java client would be put into the ground under the bed, and fall through it. The server is told back
+        // what it said, so that it stops saying it
+        if (this.player.getSelf().isSleeping()) {
+            this.asleepAt = position;
+            return;
+        }
+        this.settleSleep();
         Vector3f toldThen = this.toldTicks[place] == tick ? this.told[place] : null;
         Vector3f off = toldThen == null ? null : position.sub(toldThen);
         if (off != null && off.length() <= MOVED_UNALIKE) {
@@ -190,6 +202,18 @@ public class PlayerInput {
         // Where the player looks and how fast it is stay as they are
         this.player.getJavaSession().send(new ClientboundPlayerPositionPacket(CORRECTION_TELEPORT_ID, this.player.x, this.player.y, this.player.z, 0, 0, 0, 0, 0,
                 PositionElement.Y_ROT, PositionElement.X_ROT, PositionElement.DELTA_X, PositionElement.DELTA_Y, PositionElement.DELTA_Z));
+    }
+
+    // Lying down and getting up put the player somewhere else, and a java client that wakes its player up stands
+    // it next to the bed by itself: what the server corrects next is where it has the player, not how far the two
+    // were apart while the player slept
+    private void settleSleep() {
+        boolean sleeping = this.player.getSelf().isSleeping();
+        if (sleeping != this.wasSleeping) {
+            this.wasSleeping = sleeping;
+            this.lastPosition = null;
+            java.util.Arrays.fill(this.told, null);
+        }
     }
 
     private void count(boolean onGround) {
@@ -231,6 +255,7 @@ public class PlayerInput {
         if (seat != null) {
             this.player.setPosition(seat.getX(), seat.getY() - Entity.PLAYER_EYE_HEIGHT, seat.getZ());
         }
+        this.settleSleep();
         if ((seat != null) != this.wasRiding) {
             // Getting on or off puts the player somewhere else: what the server corrects next is where it has the
             // player, not how far the two were apart before
@@ -320,6 +345,11 @@ public class PlayerInput {
         Vector2f moveVector = Vector2f.from(sideways, ahead);
 
         Vector3f position = this.player.getVector3f();
+        if (!this.player.getSelf().isSleeping()) {
+            this.asleepAt = null;
+        } else if (this.asleepAt != null) {
+            position = this.asleepAt;
+        }
         Vector3f moved = this.lastPosition == null ? Vector3f.ZERO : position.sub(this.lastPosition);
         // How fast the player is after this tick, which is what a bedrock client says of itself
         Vector3f delta = moved;
