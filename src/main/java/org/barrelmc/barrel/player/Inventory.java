@@ -43,7 +43,6 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftLoomAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftRecipeAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftRecipeOptionalAction;
-import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.CraftResultsDeprecatedAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.DestroyAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.DropAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.ItemStackRequestAction;
@@ -1900,8 +1899,9 @@ public class Inventory {
         }
 
         this.requestText = craft.text();
+        // A bedrock client also tells what it expects the craft to make, by an action the protocol calls deprecated.
+        // The server works that out itself, and a server of mojang crashed when it was told for a stonecutter
         this.requestActions.add(craft.action().apply(crafts));
-        this.requestActions.add(new CraftResultsDeprecatedAction(new ItemData[]{craftedItem}, crafts));
         for (Map.Entry<Slot, Integer> ingredient : craft.ingredients().entrySet()) {
             // The server can use up another number of them, of what an anvil repairs with for example, and tells
             Slot slot = ingredient.getKey();
@@ -1997,7 +1997,6 @@ public class Inventory {
 
         ItemData item = enchantedItem.build();
         this.requestActions.add(new CraftRecipeAction(enchantOption.getEnchantNetId(), 1));
-        this.requestActions.add(new CraftResultsDeprecatedAction(new ItemData[]{item}, 1));
         this.requestActions.add(new ConsumeAction(item.getCount(), input.toNetwork()));
         this.change(input, ItemData.AIR);
         if (!creative) {

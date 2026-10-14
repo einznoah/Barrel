@@ -18,7 +18,6 @@ import org.barrelmc.barrel.auth.AuthManager;
 import org.barrelmc.barrel.auth.Whitelist;
 import org.barrelmc.barrel.auth.server.AuthServer;
 import org.barrelmc.barrel.config.Config;
-import org.barrelmc.barrel.network.BedrockCodecFix;
 import org.barrelmc.barrel.network.JavaPacketHandler;
 import org.barrelmc.barrel.player.Player;
 import org.barrelmc.barrel.utils.FileManager;
@@ -70,7 +69,7 @@ public class ProxyServer {
     @Getter
     private final Map<String, Player> onlinePlayers = new ConcurrentHashMap<>();
     @Getter
-    private final BedrockCodec bedrockPacketCodec = acceptViolationWarnings(BedrockCodecFix.fix(Bedrock_v2193.CODEC)).toBuilder().updateSerializer(LoginPacket.class, new LoginSerializer()).updateSerializer(CommandOutputPacket.class, new CommandOutputSerializer()).build();
+    private final BedrockCodec bedrockPacketCodec = acceptViolationWarnings(Bedrock_v2193.CODEC).toBuilder().updateSerializer(LoginPacket.class, new LoginSerializer()).updateSerializer(CommandOutputPacket.class, new CommandOutputSerializer()).build();
     @Getter
     private final EventLoopGroup bedrockEventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
