@@ -35,6 +35,13 @@ EVENTS = {
     'BOW_HIT': 'entity.arrow.hit', 'DRINK': 'entity.generic.drink', 'FIZZ': 'block.fire.extinguish', 'THUNDER': 'entity.lightning_bolt.thunder',
     # A zombie that bangs on a door is told as one that attacks, a Bedrock server tells it for the swing at a mob
     'ATTACK|zombie': None,
+    # What a Java client makes heard itself: going under water and what is heard there, and the buzz of a bee. The
+    # same goes for the long loops of a place, told as one sound they would go on for minutes. A fish says its
+    # sound in the water, which is its own and not what is heard under water
+    'AMBIENT_IN_WATER': None, 'AMBIENT_UNDERWATER_ENTER': None, 'AMBIENT_UNDERWATER_EXIT': None,
+    'AMBIENT_BASALT_DELTAS': None, 'AMBIENT_CRIMSON_FOREST': None, 'AMBIENT_NETHER_WASTES': None,
+    'AMBIENT_SOULSAND_VALLEY': None, 'AMBIENT_WARPED_FOREST': None,
+    'AMBIENT|bee': None, 'AMBIENT_AGGRESSIVE|bee': None, 'AMBIENT|bat': 'entity.bat.ambient',
 }
 PLAYSOUNDS = {
     'random.orb': 'entity.experience_orb.pickup', 'random.pop': 'entity.item.pickup', 'random.bow': 'entity.arrow.shoot', 'random.bowhit': 'entity.arrow.hit',

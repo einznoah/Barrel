@@ -8,6 +8,7 @@ import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.SoundEvent;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.level.sound.BuiltinSound;
+import org.geysermc.mcprotocollib.protocol.data.game.level.sound.SoundCategory;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundSoundPacket;
 
 import java.util.EnumSet;
@@ -30,10 +31,20 @@ public class LevelSoundEventPacket implements BedrockPacketTranslator {
             SoundEvent.FENCE_GATE_OPEN, SoundEvent.FENCE_GATE_CLOSE, SoundEvent.BUTTON_CLICK_ON, SoundEvent.BUTTON_CLICK_OFF, SoundEvent.PRESSURE_PLATE_CLICK_ON,
             SoundEvent.PRESSURE_PLATE_CLICK_OFF);
 
+    private static final float POP_VOLUME = 0.2F;
+
     @Override
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket packet = (org.cloudburstmc.protocol.bedrock.packet.LevelSoundEventPacket) pk;
         SoundEvent event = packet.getSound();
+        // The pop of items a player gets, from a command for one: a java server makes it quiet and high
+        if (event == SoundEvent.POP && (packet.getIdentifier() == null || packet.getIdentifier().isEmpty())) {
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            Vector3f at = packet.getPosition();
+            player.getJavaSession().send(new ClientboundSoundPacket(BuiltinSound.ENTITY_ITEM_PICKUP, SoundCategory.PLAYER, at.getX(), at.getY(), at.getZ(), POP_VOLUME,
+                    ((random.nextFloat() - random.nextFloat()) * 0.7F + 1) * 2, random.nextLong()));
+            return;
+        }
         if (event == null || (OWN.contains(event) && packet.getEntityUniqueId() == player.getUniqueEntityId()) || (OWN_AT_BLOCK.contains(event) && player.isOwnAction(packet.getPosition()))) {
             return;
         }

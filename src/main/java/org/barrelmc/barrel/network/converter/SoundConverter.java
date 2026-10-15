@@ -65,6 +65,9 @@ public class SoundConverter {
             Map.entry(EntityType.BEE, 0.4F), Map.entry(EntityType.SLIME, 0.4F), Map.entry(EntityType.MAGMA_CUBE, 0.4F), Map.entry(EntityType.BAT, 0.1F),
             Map.entry(EntityType.GHAST, 5F), Map.entry(EntityType.ENDER_DRAGON, 5F), Map.entry(EntityType.WARDEN, 4F));
     private static final float HORSE_VOLUME = 0.8F;
+    // How a bedrock server tells what a mob says now and then
+    private static final Set<SoundEvent> MOB_AMBIENT_EVENTS = EnumSet.of(SoundEvent.AMBIENT, SoundEvent.AMBIENT_BABY, SoundEvent.AMBIENT_IN_WATER,
+            SoundEvent.AMBIENT_IN_AIR, SoundEvent.AMBIENT_TAME, SoundEvent.AMBIENT_AGGRESSIVE, SoundEvent.AMBIENT_WORRIED, SoundEvent.AMBIENT_IN_RAID);
 
     // The instrument of a note is told above its pitch, a note block has 25 pitches from two octaves
     private static final int NOTE_PITCH = 0xFF;
@@ -160,6 +163,11 @@ public class SoundConverter {
             BuiltinSound sound = get(EVENTS.get(name + "|" + entity), EVENTS.get(name + "|" + identifier));
             if (sound != null) {
                 return sound;
+            }
+            // What a mob says now and then is its own sound or none, and not what a place sounds like
+            if (MOB_AMBIENT_EVENTS.contains(event)) {
+                MobSound mobSound = javaEntity == null ? null : MOB_SOUNDS.get(javaEntity);
+                return mobSound == null ? null : mobSound.sound();
             }
         }
         BuiltinSound sound = get(EVENTS.get(name + "|" + extraData), EVENTS.get(name));
