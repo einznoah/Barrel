@@ -140,7 +140,8 @@ saved under the name of a player by an older version is taken over the first tim
   it
 - **Entities:** mobs, other players with what they hold and wear, dropped items and picking them up, paintings,
   name tags,
-  baby animals, the wool of sheep, creepers about to blow up, the swirls of effects; hitting and using entities
+  baby animals, the wool of sheep, creepers about to blow up, the swirls of effects, villagers in the clothes of
+  their profession and their biome with the badge of their level; hitting and using entities
 - **What is seen for a moment:** the lid of a chest, an ender chest or a shulker box going up and down, a bell
   swinging, players lying in their beds and getting up, with the screen to leave the bed, other players eating,
   drinking, raising a shield or drawing a bow, and what mobs show: the swing of a golem, hearts and smoke of

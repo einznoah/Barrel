@@ -83,6 +83,17 @@ public class Entity extends Vector3 {
     @Setter
     @Getter
     private boolean dead;
+    // The profession of a villager, the biome it is from and its tier as a bedrock server numbers them. A server tells
+    // what changed of them only, a java client is told all three at once
+    @Setter
+    @Getter
+    private int villagerProfession;
+    @Setter
+    @Getter
+    private int villagerType;
+    @Setter
+    @Getter
+    private int villagerTier;
     // The ticks since the mob last made its sound now and then, counted as a java server does, null until it is heard
     @Setter
     @Getter

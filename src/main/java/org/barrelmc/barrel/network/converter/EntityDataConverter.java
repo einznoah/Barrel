@@ -10,6 +10,7 @@ import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.MetadataTypes;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.Pose;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.VillagerData;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.BooleanEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.ByteEntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.type.FloatEntityMetadata;
@@ -60,6 +61,18 @@ public class EntityDataConverter {
     private static final int JAVA_CLOUD_PARTICLE = 10;
     // After whether it is a baby and whether it stays one, which every animal has
     private static final int JAVA_SHEEP_WOOL = 18;
+    // The profession of a villager, the biome it is from and its level are one value for a java client, which comes
+    // after one more for a zombie villager
+    private static final int JAVA_VILLAGER_DATA = 19;
+    private static final int JAVA_ZOMBIE_VILLAGER_DATA = 20;
+    // The professions and the biomes of villagers as a bedrock server numbers them, and in the order of the
+    // registries of a java client
+    private static final List<String> BEDROCK_PROFESSIONS = List.of("none", "farmer", "fisherman", "shepherd", "fletcher", "librarian",
+            "cartographer", "cleric", "armorer", "weaponsmith", "toolsmith", "butcher", "leatherworker", "mason", "nitwit");
+    private static final List<String> JAVA_PROFESSIONS = List.of("none", "armorer", "butcher", "cartographer", "cleric", "farmer", "fisherman",
+            "fletcher", "leatherworker", "librarian", "mason", "nitwit", "shepherd", "toolsmith", "weaponsmith");
+    private static final List<String> BEDROCK_VILLAGER_TYPES = List.of("plains", "desert", "jungle", "savanna", "snow", "swamp", "taiga");
+    private static final List<String> JAVA_VILLAGER_TYPES = List.of("desert", "jungle", "plains", "savanna", "snow", "swamp", "taiga");
     private static final int JAVA_SHEEP_SHEARED = 0x10;
     private static final int JAVA_CREEPER_SWELLING = 16;
     private static final int JAVA_CREEPER_CHARGED = 17;
@@ -201,6 +214,25 @@ public class EntityDataConverter {
         if (JAVA_AGEABLE_ENTITIES.contains(entityType) && flags) {
             javaEntityData.add(new BooleanEntityMetadata(JAVA_BABY, MetadataTypes.BOOLEAN, entityData.getFlag(EntityFlag.BABY)));
         }
+        if ((entityType == EntityType.VILLAGER || entityType == EntityType.ZOMBIE_VILLAGER) && (entityData.containsKey(EntityDataTypes.VARIANT)
+                || entityData.containsKey(EntityDataTypes.MARK_VARIANT) || entityData.containsKey(EntityDataTypes.TRADE_TIER))) {
+            // A bedrock server tells each of the three by itself, and what changed only: a villager that takes a job
+            Integer profession = entityData.get(EntityDataTypes.VARIANT), biome = entityData.get(EntityDataTypes.MARK_VARIANT), tier = entityData.get(EntityDataTypes.TRADE_TIER);
+            if (profession != null) {
+                entity.setVillagerProfession(profession);
+            }
+            if (biome != null) {
+                entity.setVillagerType(biome);
+            }
+            if (tier != null) {
+                entity.setVillagerTier(tier);
+            }
+            javaEntityData.add(new ObjectEntityMetadata<>(entityType == EntityType.VILLAGER ? JAVA_VILLAGER_DATA : JAVA_ZOMBIE_VILLAGER_DATA, MetadataTypes.VILLAGER_DATA,
+                    new VillagerData(toJava(entity.getVillagerType(), BEDROCK_VILLAGER_TYPES, JAVA_VILLAGER_TYPES, "plains"),
+                            toJava(entity.getVillagerProfession(), BEDROCK_PROFESSIONS, JAVA_PROFESSIONS, "none"),
+                            // A java villager has five levels from one on, a bedrock one five tiers from none on
+                            Math.max(1, Math.min(5, entity.getVillagerTier() + 1)))));
+        }
         if (entityType == EntityType.SHEEP && (flags || entityData.containsKey(EntityDataTypes.COLOR))) {
             // Java has the color of the wool and whether it is shorn in one number
             if (entityData.containsKey(EntityDataTypes.COLOR)) {
@@ -216,6 +248,12 @@ public class EntityDataConverter {
             javaEntityData.add(new BooleanEntityMetadata(JAVA_CREEPER_IGNITED, MetadataTypes.BOOLEAN, entityData.getFlag(EntityFlag.IGNITED)));
         }
         return javaEntityData.toArray(new EntityMetadata<?, ?>[0]);
+    }
+
+    // The java number of what a bedrock server numbers otherwise, both lists of the same names. A number the server
+    // has that is not known is told as the given name
+    private static int toJava(int bedrock, List<String> bedrockNames, List<String> javaNames, String otherwise) {
+        return javaNames.indexOf(bedrock >= 0 && bedrock < bedrockNames.size() ? bedrockNames.get(bedrock) : otherwise);
     }
 
     private static Particle getEffectParticle(int color) {
