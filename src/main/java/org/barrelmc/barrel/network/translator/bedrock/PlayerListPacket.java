@@ -29,10 +29,12 @@ public class PlayerListPacket implements BedrockPacketTranslator {
                 case ADD: {
                     GameProfile gameProfile = new GameProfile(entry.getUuid(), Utils.lengthCutter(entry.getName(), 16));
                     playerListEntries.add(new PlayerListEntry(entry.getUuid(), gameProfile, true, 0, GameMode.SURVIVAL, Component.text(Utils.lengthCutter(entry.getName(), 16)), true, 0, null, 0L, null, null));
+                    player.getWaypoints().playerAdded(entry.getEntityId(), entry.getUuid());
                     break;
                 }
                 case REMOVE: {
                     removedPlayers.add(entry.getUuid());
+                    player.getWaypoints().playerRemoved(entry.getUuid());
                     break;
                 }
             }
