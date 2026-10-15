@@ -50,6 +50,8 @@ public class PlayerInput {
     private boolean started;
     private long tick;
     private long lastJavaTick;
+    // Whether the java client tells when it ticks, every client of a recent version does
+    private boolean javaTicks;
 
     // What is pressed
     private boolean forward;
@@ -147,13 +149,17 @@ public class PlayerInput {
     // The java client ended a tick: it has sent where the player is now and what is pressed
     public void javaTick() {
         if (this.started) {
+            this.javaTicks = true;
             this.lastJavaTick = System.nanoTime();
             this.send();
         }
     }
 
+    // Only for a client that does not tell when it ticks. One that does but is late, as when its connection
+    // hiccups, is waited for, as a server waits for a bedrock client: ticks made up here would move the player on
+    // for the server by what is held, which the client did not do, and the server would put the player back
     private void proxyTick() {
-        if (System.nanoTime() - this.lastJavaTick > JAVA_TICK_NANOS) {
+        if (!this.javaTicks && System.nanoTime() - this.lastJavaTick > JAVA_TICK_NANOS) {
             this.send();
         }
     }
@@ -373,7 +379,10 @@ public class PlayerInput {
         packet.setDelta(delta);
         packet.setCameraOrientation(this.player.getDirectionVector());
         packet.setItemStackRequest(null);
-        this.player.getBedrockSession().sendPacketImmediately(packet);
+        // In line with what was sent before it: a block the player placed this tick has to be there for the server
+        // when it moves the player onto it. Sent ahead, many ticks at once after the connection of the java client
+        // hiccuped, the server would move the player over air and let it fall
+        this.player.getBedrockSession().sendPacket(packet);
 
         int place = (int) Math.floorMod(this.tick, (long) TOLD_TICKS);
         this.toldTicks[place] = this.tick;
