@@ -33,6 +33,7 @@ public class ChangeDimensionPacket implements BedrockPacketTranslator {
 
         // What was known of the dimension the player leaves is not true where it comes to
         player.setDimension(packet.getDimension());
+        player.getWaypoints().dimensionChanged();
         player.getBedrockBlocks().clear();
         player.getLight().clear();
         player.getSubChunkRequests().clear();

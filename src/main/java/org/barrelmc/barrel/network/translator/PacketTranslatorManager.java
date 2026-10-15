@@ -161,6 +161,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(StartGamePacket.class, new org.barrelmc.barrel.network.translator.bedrock.StartGamePacket());
         bedrockTranslators.put(SubChunkPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SubChunkPacket());
         bedrockTranslators.put(TakeItemEntityPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TakeItemEntityPacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.LocatorBarPacket.class, new org.barrelmc.barrel.network.translator.bedrock.LocatorBarPacket());
         bedrockTranslators.put(TextPacket.class, new org.barrelmc.barrel.network.translator.bedrock.TextPacket());
         bedrockTranslators.put(CommandOutputPacket.class, new org.barrelmc.barrel.network.translator.bedrock.CommandOutputPacket());
         bedrockTranslators.put(AvailableCommandsPacket.class, new org.barrelmc.barrel.network.translator.bedrock.AvailableCommandsPacket());
