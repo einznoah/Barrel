@@ -17,6 +17,7 @@ import org.barrelmc.barrel.network.converter.BlockConverter;
 import org.barrelmc.barrel.network.converter.EnchantmentConverter;
 import org.barrelmc.barrel.network.converter.ItemConverter;
 import org.barrelmc.barrel.network.converter.JavaRegistries;
+import org.barrelmc.barrel.network.converter.LightConverter;
 import org.barrelmc.barrel.server.ProxyServer;
 
 import java.io.InputStream;
@@ -49,6 +50,7 @@ public class Barrel {
         EnchantmentConverter.init();
         JavaRegistries.init();
         BannerConverter.init();
+        LightConverter.init();
         SoundConverter.init();
         new ProxyServer(DATA_PATH);
     }

@@ -6,7 +6,6 @@ import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
-import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockChangeEntry;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.value.BellValue;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.value.BellValueType;
@@ -14,7 +13,6 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.event.LevelEventType;
 import org.geysermc.mcprotocollib.protocol.data.game.level.event.RecordEventData;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockEventPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelEventPacket;
-import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockUpdatePacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundBlockEntityDataPacket;
 
 // What a block holds has changed, the text of a sign was written for one
@@ -49,7 +47,7 @@ public class BlockEntityDataPacket implements BedrockPacketTranslator {
         int shownBlock = BlockEntityConverter.getJavaBlock(javaBlock, packet.getData());
         // A chest is told whenever what it holds is: it can have stopped being one half of a large chest
         if (shownBlock != javaBlock || BlockConverter.isJavaChest(javaBlock)) {
-            player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(packet.getBlockPosition(), shownBlock)));
+            player.getBedrockBlocks().sendJavaBlock(packet.getBlockPosition(), shownBlock);
         }
         BlockEntityType type = BlockConverter.getJavaBlockEntity(javaBlock);
         if (BlockEntityConverter.isTranslated(type)) {

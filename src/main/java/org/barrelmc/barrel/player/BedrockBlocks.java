@@ -202,7 +202,7 @@ public class BedrockBlocks {
             } else {
                 int shownBlock = BlockEntityConverter.getJavaBlock(javaBlock, column.blockEntityData.get(place));
                 if (shownBlock != javaBlock) {
-                    this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(position, shownBlock)));
+                    this.sendJavaBlock(position, shownBlock);
                     return;
                 }
             }
@@ -214,12 +214,18 @@ public class BedrockBlocks {
             int lowerHalf = isLower ? javaBlock : BlockConverter.bedrockRuntimeToJavaStateId(this.getBlock(lower), hashed);
             int upperHalf = isLower ? BlockConverter.bedrockRuntimeToJavaStateId(this.getBlock(upper), hashed) : javaBlock;
             if (BlockConverter.isJavaDoor(lowerHalf, upperHalf)) {
-                this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(lower, BlockConverter.getJavaDoorLower(lowerHalf, upperHalf))));
-                this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(upper, BlockConverter.getJavaDoorUpper(lowerHalf, upperHalf))));
+                this.sendJavaBlock(lower, BlockConverter.getJavaDoorLower(lowerHalf, upperHalf));
+                this.sendJavaBlock(upper, BlockConverter.getJavaDoorUpper(lowerHalf, upperHalf));
                 return;
             }
         }
+        this.sendJavaBlock(position, javaBlock);
+    }
+
+    // The java client is told of a block, and the light goes with it
+    public void sendJavaBlock(Vector3i position, int javaBlock) {
         this.player.getJavaSession().send(new ClientboundBlockUpdatePacket(new BlockChangeEntry(position, javaBlock)));
+        this.player.getLight().changeBlock(position, javaBlock);
     }
 
     // What the server sent that the block at a place holds, null when it sent nothing

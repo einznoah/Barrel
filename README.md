@@ -125,6 +125,9 @@ saved under the name of a player by an older version is taken over the first tim
 - **The world:** chunks, also from servers that send a chunk without its blocks and wait to be asked for them,
   blocks that change, one or many at once, and water a block is in, the Nether
   and the End
+- **Light:** a Bedrock server sends none, so the proxy works it out as a Java server does: the light of the sky
+  with the shade of roofs, slabs, stairs, leaves and water, dark caves, and the light of torches, lanterns, lava
+  and every other block that gives light, also as blocks change
 - **Moving:** walking, sprinting, sneaking, jumping and flying, also on servers that move the player themselves
   from the keys that are held and put the client back where they got to
 - **Blocks:** breaking and placing, using what a block does when it is clicked on, doors, the blocks a Java
@@ -176,8 +179,6 @@ saved under the name of a player by an older version is taken over the first tim
 - Pistons moving: what they push is where it ends up at once
 - Most particles, and of the sounds those a Bedrock client makes without being told: the steps of other players,
   the hit of the own player, music and what a place sounds like
-- Light: every place is as bright as under the open sky, also caves, and the Nether is bright all over. A Bedrock
-  server does not send light and the proxy does not work it out yet
 - Biomes, every place has the same one
 - Forms, boss bars, and the resource packs of a server (the server is told the client has them)
 - And More...
@@ -213,14 +214,14 @@ These lines, together with the first line of the console, are what a bug report 
   other.
 - `player` holds what the proxy has to remember of a player: the inventory with every container and crafting
   station (`Inventory`), what is sent to a server that moves the player itself (`PlayerInput`), the chunks whose
-  blocks are still asked for (`SubChunkRequests`), the blocks as the server names them (`BedrockBlocks`) and who
-  rides what (`Riding`).
+  blocks are still asked for (`SubChunkRequests`), the blocks as the server names them (`BedrockBlocks`), the
+  light of the chunks (`Light`) and who rides what (`Riding`).
 - `auth` signs players in to Xbox and builds the login a Bedrock server asks for.
 
 The blocks and items of both editions are in `src/main/resources/runtime_blocks.json` and `runtime_items.json`,
-the Java sound for what a Bedrock server tells of a sound in `sounds.json`. They are made by the scripts in
-[`tools`](tools), which say at their top where their input comes from, and have to be made again when the Java or
-the Bedrock version changes.
+the Java sound for what a Bedrock server tells of a sound in `sounds.json`, and how much light each Java block
+gives and stops in `block_light.json`. They are made by the scripts in [`tools`](tools), which say at their top
+where their input comes from, and have to be made again when the Java or the Bedrock version changes.
 
 Servers differ in how much they check. A server of Mojang asks for much that others do not: the keys a player
 holds, when the loading screen and the inventory are open, which block is clicked on. What such a server sends

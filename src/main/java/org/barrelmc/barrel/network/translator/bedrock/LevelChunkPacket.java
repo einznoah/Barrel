@@ -24,24 +24,16 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundLevelChunkWithLightPacket;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Collections;
 
 public class LevelChunkPacket implements BedrockPacketTranslator {
 
-    // The light of a section, half a byte for each place, all of them the brightest
-    private static final byte[] FULL_LIGHT = new byte[2048];
     // No dimension has more sub chunks than this
     private static final int MAX_SUB_CHUNKS = 32;
     // What biomes are told as when they are those of the sub chunk below
     private static final int SAME_AS_BELOW = 127;
     // The first byte of what a block holds, as of everything that is made of named parts
     private static final int COMPOUND_TAG = 10;
-
-    static {
-        Arrays.fill(FULL_LIGHT, (byte) 0xFF);
-    }
 
     @Override
     public void translate(BedrockPacket pk, Player player) {
@@ -132,16 +124,8 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
     }
 
     public static void sendChunk(Player player, int chunkX, int chunkZ, ChunkSection[] chunkSections, BlockEntityInfo[] blockEntities) {
-        // A bedrock server does not send light, its clients work it out themselves. A java client shows a chunk it
-        // was sent no light for as dark, so every place is told to be in the light of the sky, also below the ground
-        // TODO: Work out the light as a client does, with shadows and with what gives light
-        int lightSections = chunkSections.length + 2;
-        BitSet everywhere = new BitSet(lightSections);
-        everywhere.set(0, lightSections);
-        // Where the sky gives no light, in the nether and the end, the same is told of the light of blocks
-        LightUpdateData light = player.getJavaDimension().skyLight()
-                ? new LightUpdateData(everywhere, new BitSet(), new BitSet(), everywhere, Collections.nCopies(lightSections, FULL_LIGHT), Collections.emptyList())
-                : new LightUpdateData(new BitSet(), everywhere, new BitSet(), new BitSet(), Collections.emptyList(), Collections.nCopies(lightSections, FULL_LIGHT));
+        // A bedrock server does not send light, its clients work it out themselves. A java client is sent it
+        LightUpdateData light = player.getLight().addChunk(chunkX, chunkZ, chunkSections);
         ClientboundLevelChunkWithLightPacket chunkPacket = new ClientboundLevelChunkWithLightPacket(
                 chunkX, chunkZ,
                 Utils.writeChunkSections(chunkSections), Collections.singletonMap(HeightmapTypes.MOTION_BLOCKING, new long[37]), blockEntities,
