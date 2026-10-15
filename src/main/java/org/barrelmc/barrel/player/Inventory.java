@@ -1898,31 +1898,37 @@ public class Inventory {
             return;
         }
 
-        this.requestText = craft.text();
-        // A bedrock client also tells what it expects the craft to make, by an action the protocol calls deprecated.
-        // The server works that out itself, and a server of mojang crashed when it was told for a stonecutter
-        this.requestActions.add(craft.action().apply(crafts));
-        for (Map.Entry<Slot, Integer> ingredient : craft.ingredients().entrySet()) {
-            // The server can use up another number of them, of what an anvil repairs with for example, and tells
-            Slot slot = ingredient.getKey();
-            int count = Math.min(slot.get().getCount(), ingredient.getValue() * crafts);
-            this.requestActions.add(new ConsumeAction(count, slot.toNetwork()));
-            this.change(slot, this.withCount(slot.get(), slot.get().getCount() - count));
-        }
+        // A server of mojang makes no more than a stack at a time, more is asked for a stack after the other
+        int perRequest = Math.max(1, ItemConverter.getMaxStackSize(craftedItem) / craftedItem.getCount());
+        for (int made = 0; made < crafts; made += perRequest) {
+            int batch = Math.min(perRequest, crafts - made);
+            this.requestText = craft.text();
+            // A bedrock client also tells what it expects the craft to make, by an action the protocol calls
+            // deprecated. The server works that out itself, and a server of mojang crashed when it was told for a
+            // stonecutter
+            this.requestActions.add(craft.action().apply(batch));
+            for (Map.Entry<Slot, Integer> ingredient : craft.ingredients().entrySet()) {
+                // The server can use up another number of them, of what an anvil repairs with for example, and tells
+                Slot slot = ingredient.getKey();
+                int count = Math.min(slot.get().getCount(), ingredient.getValue() * batch);
+                this.requestActions.add(new ConsumeAction(count, slot.toNetwork()));
+                this.change(slot, this.withCount(slot.get(), slot.get().getCount() - count));
+            }
 
-        Slot createdOutput = this.createOutput(craftedItem, craftedItem.getCount() * crafts);
-        Slot destination = cursorSlot;
-        if (asManyAsPossible) {
-            List<Slot> targets = this.getPlayerSlots(false);
-            Collections.reverse(targets);
-            destination = this.quickMove(createdOutput, targets);
-        } else {
-            this.move(createdOutput, cursorSlot, createdOutput.get().getCount());
+            Slot createdOutput = this.createOutput(craftedItem, craftedItem.getCount() * batch);
+            Slot destination = cursorSlot;
+            if (asManyAsPossible) {
+                List<Slot> targets = this.getPlayerSlots(false);
+                Collections.reverse(targets);
+                destination = this.quickMove(createdOutput, targets);
+            } else {
+                this.move(createdOutput, cursorSlot, createdOutput.get().getCount());
+            }
+            if (craft.repaired() && destination != null) {
+                this.pendingRepairs.put(this.requestId, destination);
+            }
+            this.sendRequest();
         }
-        if (craft.repaired() && destination != null) {
-            this.pendingRepairs.put(this.requestId, destination);
-        }
-        this.sendRequest();
     }
 
     public void setEnchantOptions(List<EnchantOptionData> enchantOptions) {
