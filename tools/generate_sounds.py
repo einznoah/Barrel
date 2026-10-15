@@ -33,6 +33,8 @@ BLOCK_EVENTS = {'STEP', 'HIT', 'PLACE', 'BREAK', 'BREAK_BLOCK', 'FALL', 'LAND', 
 EVENTS = {
     'POP': 'entity.item.pickup', 'SPAWN': None, 'TELEPORT': 'entity.enderman.teleport', 'THROW': 'entity.snowball.throw', 'BOW': 'entity.arrow.shoot',
     'BOW_HIT': 'entity.arrow.hit', 'DRINK': 'entity.generic.drink', 'FIZZ': 'block.fire.extinguish', 'THUNDER': 'entity.lightning_bolt.thunder',
+    # A zombie that bangs on a door is told as one that attacks, a Bedrock server tells it for the swing at a mob
+    'ATTACK|zombie': None,
 }
 PLAYSOUNDS = {
     'random.orb': 'entity.experience_orb.pickup', 'random.pop': 'entity.item.pickup', 'random.bow': 'entity.arrow.shoot', 'random.bowhit': 'entity.arrow.hit',

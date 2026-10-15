@@ -148,7 +148,8 @@ saved under the name of a player by an older version is taken over the first tim
 - **Sounds:** what a server tells of a sound: chests, barrels and doors, bells and note blocks at their pitch, the
   records of a jukebox, mobs, blocks being placed, hit and broken by others with the pieces flying off, hits,
   explosions, and the sounds a command or an add-on plays by name. A player is not told again what its own client
-  already makes heard
+  already makes heard. What a Bedrock client makes heard of mobs without being told is made by the proxy as a Java
+  server does: the sound each mob makes now and then, how it sounds when it is hurt and when it dies
 - **Riding:** seeing who rides what, riding along in a minecart, sitting on what a server or an add-on seats a
   player on, also an entity a Java client has no kind for (it is not seen then), and getting off with the sneak key
 - **Steering** a boat or a saddled animal, on a server that moves what a player steers itself by the keys the
@@ -177,8 +178,8 @@ saved under the name of a player by an older version is taken over the first tim
 - Steering on a server that leaves moving a boat or an animal to the client, as PowerNukkitX does: a player can
   get in and out there, but what it sits in stays where it is
 - Pistons moving: what they push is where it ends up at once
-- Most particles, and of the sounds those a Bedrock client makes without being told: the steps of other players,
-  the hit of the own player, music and what a place sounds like
+- Most particles, and of the sounds those a Bedrock client makes without being told: the steps of other players
+  and of mobs, the swing of the own player, music and what a place sounds like
 - Biomes, every place has the same one
 - Forms, boss bars, and the resource packs of a server (the server is told the client has them)
 - And More...

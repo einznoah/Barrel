@@ -72,6 +72,21 @@ public class Entity extends Vector3 {
     @Setter
     @Getter
     private int paddles;
+    // What the sounds of a mob go by, which a bedrock client makes heard itself: whether it is young, whether it
+    // makes no sound and whether it died
+    @Setter
+    @Getter
+    private boolean baby;
+    @Setter
+    @Getter
+    private boolean silent;
+    @Setter
+    @Getter
+    private boolean dead;
+    // The ticks since the mob last made its sound now and then, counted as a java server does, null until it is heard
+    @Setter
+    @Getter
+    private Integer ambientSoundTime;
 
     public Entity(EntityType type) {
         this.type = type;

@@ -9,9 +9,11 @@ import org.geysermc.mcprotocollib.protocol.data.game.level.sound.BuiltinSound;
 import org.geysermc.mcprotocollib.protocol.data.game.level.sound.SoundCategory;
 
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 // A bedrock server tells of a sound by what happened, an event, with a number or the kind of an entity where that
 // takes more to tell, or by the name the sound has for a bedrock client. A java client is told the sound itself.
@@ -32,6 +34,37 @@ public class SoundConverter {
     private static final Map<SoundEvent, String> OPENING_EVENTS = new EnumMap<>(SoundEvent.class);
     // What is pressed, which a java client has a sound of wood and one of stone for
     private static final Map<SoundEvent, String> PRESSED_EVENTS = new EnumMap<>(SoundEvent.class);
+
+    // The sound a mob makes now and then, the ticks it waits at least before it may make it again and how loud it
+    // is, as the java game has them. A server of mojang does not tell these sounds, a bedrock client makes them
+    public record MobSound(BuiltinSound sound, int interval, float volume) {
+    }
+
+    private static final Map<EntityType, MobSound> MOB_SOUNDS = new EnumMap<>(EntityType.class);
+    // The mobs whose sound is not named after them
+    private static final Map<EntityType, String> MOB_SOUND_NAMES = Map.of(
+            EntityType.MOOSHROOM, "entity.cow.ambient",
+            EntityType.TRADER_LLAMA, "entity.llama.ambient",
+            EntityType.PUFFERFISH, "entity.puffer_fish.ambient",
+            EntityType.ALLAY, "entity.allay.ambient_without_item",
+            EntityType.TURTLE, "entity.turtle.ambient_land");
+    private static final int MOB_INTERVAL = 80;
+    // Animals, golems and what swims wait longer, horses and their kin much longer
+    private static final Set<EntityType> ANIMALS = EnumSet.of(EntityType.COW, EntityType.MOOSHROOM, EntityType.PIG, EntityType.SHEEP,
+            EntityType.CHICKEN, EntityType.RABBIT, EntityType.WOLF, EntityType.CAT, EntityType.FOX, EntityType.PANDA, EntityType.POLAR_BEAR,
+            EntityType.BEE, EntityType.GOAT, EntityType.FROG, EntityType.AXOLOTL, EntityType.PARROT, EntityType.HOGLIN, EntityType.STRIDER,
+            EntityType.SNIFFER, EntityType.ARMADILLO, EntityType.HAPPY_GHAST, EntityType.DOLPHIN, EntityType.SQUID, EntityType.GLOW_SQUID,
+            EntityType.COD, EntityType.SALMON, EntityType.PUFFERFISH, EntityType.TROPICAL_FISH, EntityType.TADPOLE, EntityType.SNOW_GOLEM,
+            EntityType.IRON_GOLEM);
+    private static final Set<EntityType> HORSES = EnumSet.of(EntityType.HORSE, EntityType.DONKEY, EntityType.MULE, EntityType.SKELETON_HORSE,
+            EntityType.ZOMBIE_HORSE, EntityType.LLAMA, EntityType.TRADER_LLAMA, EntityType.CAMEL);
+    private static final Map<EntityType, Integer> OWN_INTERVALS = Map.of(EntityType.OCELOT, 900, EntityType.TURTLE, 200,
+            EntityType.GUARDIAN, 160, EntityType.ELDER_GUARDIAN, 160);
+    private static final Map<EntityType, Float> OWN_VOLUMES = Map.ofEntries(Map.entry(EntityType.COW, 0.4F), Map.entry(EntityType.MOOSHROOM, 0.4F),
+            Map.entry(EntityType.WOLF, 0.4F), Map.entry(EntityType.SQUID, 0.4F), Map.entry(EntityType.GLOW_SQUID, 0.4F), Map.entry(EntityType.ALLAY, 0.4F),
+            Map.entry(EntityType.BEE, 0.4F), Map.entry(EntityType.SLIME, 0.4F), Map.entry(EntityType.MAGMA_CUBE, 0.4F), Map.entry(EntityType.BAT, 0.1F),
+            Map.entry(EntityType.GHAST, 5F), Map.entry(EntityType.ENDER_DRAGON, 5F), Map.entry(EntityType.WARDEN, 4F));
+    private static final float HORSE_VOLUME = 0.8F;
 
     // The instrument of a note is told above its pitch, a note block has 25 pitches from two octaves
     private static final int NOTE_PITCH = 0xFF;
@@ -74,6 +107,18 @@ public class SoundConverter {
         for (BuiltinSound sound : BuiltinSound.values()) {
             JAVA_SOUNDS.put(sound.getName(), sound);
         }
+        for (EntityType type : EntityType.values()) {
+            BuiltinSound sound = JAVA_SOUNDS.get(MOB_SOUND_NAMES.getOrDefault(type, "entity." + type.name().toLowerCase(Locale.ROOT) + ".ambient"));
+            if (sound != null && type != EntityType.PLAYER) {
+                int interval = OWN_INTERVALS.getOrDefault(type, HORSES.contains(type) ? 400 : ANIMALS.contains(type) ? 120 : MOB_INTERVAL);
+                MOB_SOUNDS.put(type, new MobSound(sound, interval, OWN_VOLUMES.getOrDefault(type, HORSES.contains(type) ? HORSE_VOLUME : 1F)));
+            }
+        }
+    }
+
+    // The sound a mob of a kind makes now and then, null for one that makes none
+    public static MobSound getMobSound(EntityType type) {
+        return MOB_SOUNDS.get(type);
     }
 
     private static void read(JsonObject from, Map<String, String> to) {
@@ -118,7 +163,9 @@ public class SoundConverter {
             }
         }
         BuiltinSound sound = get(EVENTS.get(name + "|" + extraData), EVENTS.get(name));
-        return sound != null ? sound : get(EVENTS.get(name + "|generic"), EVENTS.get(name + "|player"));
+        // What a player does sounds like a player only when it is a player: a wolf that bites does not swing a sword
+        boolean ofPlayer = identifier == null || identifier.isEmpty() || identifier.equals("minecraft:player");
+        return sound != null ? sound : get(EVENTS.get(name + "|generic"), ofPlayer ? EVENTS.get(name + "|player") : null);
     }
 
     // A java client plays a sound as it is, higher or lower when it is told so: the note of a note block, and the

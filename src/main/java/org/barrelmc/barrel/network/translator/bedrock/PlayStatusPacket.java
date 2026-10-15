@@ -51,6 +51,7 @@ public class PlayStatusPacket implements BedrockPacketTranslator {
             player.getBedrockSession().sendPacket(setLocalPlayerAsInitializedPacket);
 
             player.getSubChunkRequests().start();
+            player.getMobSounds().start();
 
             Vector3f pos = player.getLastServerPosition();
             Vector2f rotation = player.getLastServerRotation();

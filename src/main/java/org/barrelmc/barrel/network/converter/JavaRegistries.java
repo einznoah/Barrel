@@ -11,6 +11,7 @@ import java.util.Map;
 public class JavaRegistries {
 
     public static final String BANNER_PATTERN = "minecraft:banner_pattern";
+    public static final String DAMAGE_TYPE = "minecraft:damage_type";
     public static final String ENCHANTMENT = "minecraft:enchantment";
     public static final String ITEM = "minecraft:item";
     public static final String TRIM_MATERIAL = "minecraft:trim_material";

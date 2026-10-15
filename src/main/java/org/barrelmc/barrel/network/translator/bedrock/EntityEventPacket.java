@@ -1,12 +1,14 @@
 package org.barrelmc.barrel.network.translator.bedrock;
 
 import org.barrelmc.barrel.entity.Entity;
+import org.barrelmc.barrel.network.converter.JavaRegistries;
 import org.barrelmc.barrel.network.translator.interfaces.BedrockPacketTranslator;
 import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityEventType;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.EntityEvent;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.type.EntityType;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundDamageEventPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundEntityEventPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundHurtAnimationPacket;
 
@@ -19,6 +21,20 @@ public class EntityEventPacket implements BedrockPacketTranslator {
     // What a java client is told for what a bedrock server tells. What is not here a java client has nothing for,
     // or shows by itself
     private static final Map<EntityEventType, EntityEvent> JAVA_EVENTS = new EnumMap<>(EntityEventType.class);
+    // The kind of damage a java client is told for what a bedrock server tells hurt something, where a java client
+    // sounds it apart. The causes are numbered as in Mojang's protocol documentation
+    private static final Map<Integer, String> DAMAGE_TYPES = Map.of(
+            6, "minecraft:in_fire",
+            7, "minecraft:on_fire",
+            8, "minecraft:lava",
+            9, "minecraft:drown",
+            22, "minecraft:hot_floor",
+            27, "minecraft:freeze",
+            32, "minecraft:campfire",
+            33, "minecraft:campfire");
+    private static final String GENERIC_DAMAGE = "minecraft:generic";
+    // What a java client is told of an entity that caused no damage
+    private static final int NO_ENTITY = -1;
 
     static {
         JAVA_EVENTS.put(EntityEventType.ATTACK_START, EntityEvent.ATTACK);
@@ -55,10 +71,26 @@ public class EntityEventPacket implements BedrockPacketTranslator {
 
         switch (packet.getType()) {
             case HURT: {
-                player.getJavaSession().send(new ClientboundHurtAnimationPacket((int) packet.getRuntimeEntityId(), 0));
+                // A bedrock client makes the sound of a hit itself when it is told of it. A java client does when it
+                // is told of the damage, by its kind, which is the cause the server tells: a burning player sounds
+                // other than a drowning one
+                if (self || !entity.isStandIn()) {
+                    int damageType = JavaRegistries.getId(JavaRegistries.DAMAGE_TYPE, DAMAGE_TYPES.getOrDefault(packet.getData(), GENERIC_DAMAGE));
+                    if (damageType < 0) {
+                        damageType = Math.max(0, JavaRegistries.getId(JavaRegistries.DAMAGE_TYPE, GENERIC_DAMAGE));
+                    }
+                    player.getJavaSession().send(new ClientboundDamageEventPacket((int) packet.getRuntimeEntityId(), damageType, NO_ENTITY, NO_ENTITY, null));
+                }
+                // The view of the player tilts with the hit
+                if (self) {
+                    player.getJavaSession().send(new ClientboundHurtAnimationPacket((int) packet.getRuntimeEntityId(), 0));
+                }
                 break;
             }
             case DEATH: {
+                if (entity != null) {
+                    entity.setDead(true);
+                }
                 // TODO: The health of the player, it does not see itself die
                 if (!self) {
                     player.getJavaSession().send(new ClientboundEntityEventPacket((int) packet.getRuntimeEntityId(), EntityEvent.LIVING_DEATH));

@@ -129,7 +129,6 @@
   "ATTACK|slime": "entity.slime.attack",
   "ATTACK|warden": "entity.warden.attack_impact",
   "ATTACK|zoglin": "entity.zoglin.attack",
-  "ATTACK|zombie": "entity.zombie.attack_iron_door",
   "BABY_DEATH|baby_cat": "entity.baby_cat.death",
   "BABY_DEATH|baby_chicken": "entity.baby_chicken.death",
   "BABY_DEATH|baby_pig": "entity.baby_pig.death",

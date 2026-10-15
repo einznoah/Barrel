@@ -193,6 +193,11 @@ public class EntityDataConverter {
             javaEntityData.add(new ObjectEntityMetadata<>(JAVA_EFFECT_PARTICLES, MetadataTypes.PARTICLES, color == 0 ? new ArrayList<Particle>() : List.of(getEffectParticle(color))));
         }
 
+        if (flags) {
+            // The sounds of a mob go by these, a bedrock client makes them heard itself
+            entity.setBaby(entityData.getFlag(EntityFlag.BABY));
+            entity.setSilent(entityData.getFlag(EntityFlag.SILENT));
+        }
         if (JAVA_AGEABLE_ENTITIES.contains(entityType) && flags) {
             javaEntityData.add(new BooleanEntityMetadata(JAVA_BABY, MetadataTypes.BOOLEAN, entityData.getFlag(EntityFlag.BABY)));
         }
