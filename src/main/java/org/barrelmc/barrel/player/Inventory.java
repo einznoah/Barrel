@@ -140,11 +140,17 @@ public class Inventory {
     // A slot of the crafting grid is not given more of an ingredient than a stack holds
     private static final int MAX_PLACED_INGREDIENTS = 64;
 
-    // Data of the java furnace and enchanting table windows
+    // Data of the java furnace, brewing stand and enchanting table windows
     private static final int JAVA_FURNACE_LIT_TIME = 0;
     private static final int JAVA_FURNACE_LIT_DURATION = 1;
     private static final int JAVA_FURNACE_COOK_TIME = 2;
     private static final int JAVA_FURNACE_COOK_DURATION = 3;
+    private static final int JAVA_BREWING_TIME = 0;
+    private static final int JAVA_BREWING_FUEL = 1;
+    private static final int JAVA_BREWING_DURATION = 2;
+    private static final int JAVA_BREWING_FUEL_TOTAL = 3;
+    // A bedrock brewing stand brews for as many ticks, and counts them down to none
+    private static final int BEDROCK_BREWING_DURATION = 400;
     private static final int JAVA_ENCHANTMENT_HINT = 4;
     private static final int JAVA_ENCHANTMENT_LEVEL_HINT = 7;
 
@@ -157,6 +163,9 @@ public class Inventory {
     private final ItemData[] ui = new ItemData[SMITHING_TEMPLATE_SLOT + 1];
     private ItemData[] container = null;
     private int containerId = ContainerId.NONE;
+    // What the server tells of a container before it opens it, how far it is: told once the java window is open
+    private int earlyDataContainerId = ContainerId.NONE;
+    private final Map<Integer, Integer> earlyData = new LinkedHashMap<>();
     // Whether the java client uses its own inventory, whether the server was told that it is open, and the id the
     // server gave it
     private boolean inventoryOpen;
@@ -831,25 +840,47 @@ public class Inventory {
             // The bedrock server counts the cook time up to 200 for all of them
             this.player.getJavaSession().send(new ClientboundContainerSetDataPacket(JAVA_CONTAINER_WINDOW, JAVA_FURNACE_COOK_DURATION, 200));
         }
+        // A java client shows the progress and the fuel of a brewing stand only once it knows what they are out of
+        if (this.containerType == ContainerType.BREWING_STAND) {
+            this.player.getJavaSession().send(new ClientboundContainerSetDataPacket(JAVA_CONTAINER_WINDOW, JAVA_BREWING_DURATION, BEDROCK_BREWING_DURATION));
+        }
+        if (this.earlyDataContainerId == this.containerId) {
+            this.earlyData.forEach(this::sendContainerData);
+        }
+        this.earlyData.clear();
+        this.earlyDataContainerId = ContainerId.NONE;
         if (size == 0) {
             this.sendContents();
         }
         return true;
     }
 
-    // The progress of a furnace or a brewing stand
+    // The progress of a furnace or a brewing stand. The server tells how far it is just before it opens it, then
+    // what changes
     public void setContainerData(int containerId, int property, int value) {
         if (containerId != this.containerId || this.containerSlots == null) {
+            if (containerId != this.earlyDataContainerId) {
+                this.earlyData.clear();
+                this.earlyDataContainerId = containerId;
+            }
+            this.earlyData.put(property, value);
             return;
         }
+        this.sendContainerData(property, value);
+    }
 
+    private void sendContainerData(int property, int value) {
         int javaProperty;
         if (this.containerType == ContainerType.BREWING_STAND) {
-            if (property != ContainerSetDataPacket.BREWING_STAND_BREW_TIME && property != ContainerSetDataPacket.BREWING_STAND_FUEL_AMOUNT) {
+            if (property == ContainerSetDataPacket.BREWING_STAND_BREW_TIME) {
+                javaProperty = JAVA_BREWING_TIME;
+            } else if (property == ContainerSetDataPacket.BREWING_STAND_FUEL_AMOUNT) {
+                javaProperty = JAVA_BREWING_FUEL;
+            } else if (property == ContainerSetDataPacket.BREWING_STAND_FUEL_TOTAL) {
+                javaProperty = JAVA_BREWING_FUEL_TOTAL;
+            } else {
                 return;
             }
-            // Java has the same two first
-            javaProperty = property;
         } else if (property == ContainerSetDataPacket.FURNACE_TICK_COUNT) {
             javaProperty = JAVA_FURNACE_COOK_TIME;
         } else if (property == ContainerSetDataPacket.FURNACE_LIT_TIME) {
