@@ -41,6 +41,7 @@ public class RespawnPacket implements BedrockPacketTranslator {
         // A java client makes a new player of the one that died, which has nothing of what the server did not send again
         GameMode gameMode = TranslatorUtils.translateGamemodeToJE(player.getGameMode());
         player.getJavaSession().send(new ClientboundRespawnPacket(new PlayerSpawnInfo(player.getJavaDimension().id(), player.getJavaDimension().name(), 100, gameMode, gameMode, false, false, null, 0, 63), false, false));
+        player.getWeather().resend();
         player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.LEVEL_CHUNKS_LOAD_START, null));
         player.getEffects().clear();
         player.getSentEffects().clear();

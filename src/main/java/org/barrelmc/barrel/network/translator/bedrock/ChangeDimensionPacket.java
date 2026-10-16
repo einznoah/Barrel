@@ -61,6 +61,7 @@ public class ChangeDimensionPacket implements BedrockPacketTranslator {
         ProxyServer.Dimension dimension = player.getJavaDimension();
         GameMode gameMode = TranslatorUtils.translateGamemodeToJE(player.getGameMode());
         player.getJavaSession().send(new ClientboundRespawnPacket(new PlayerSpawnInfo(dimension.id(), dimension.name(), 100, gameMode, gameMode, false, false, null, 0, 63), true, true));
+        player.getWeather().resend();
 
         // Unlike elsewhere, the server sends where the feet of the player are
         Vector3f position = packet.getPosition();

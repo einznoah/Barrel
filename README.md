@@ -169,7 +169,7 @@ saved under the name of a player by an older version is taken over the first tim
   the server answers, also what a server sends as a text made of parts. A server sends many of its messages as
   the key of a text of the Bedrock client. The Java client has most of these texts itself and shows them in its
   own language, with the names of mobs, items and blocks in them, for the others the key is shown
-- **The rest:** the time of day, the scoreboard on the side, the list of players
+- **The rest:** the time of day, rain and thunder, the scoreboard on the side, the list of players
 
 ## Need implemented
 

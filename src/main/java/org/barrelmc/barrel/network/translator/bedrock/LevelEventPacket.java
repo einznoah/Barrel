@@ -15,6 +15,8 @@ import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.Clien
 
 public class LevelEventPacket implements BedrockPacketTranslator {
 
+    private static final float WEATHER_FULL = 65535;
+
     @Override
     public void translate(BedrockPacket pk, Player player) {
         org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket packet = (org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket) pk;
@@ -36,6 +38,15 @@ public class LevelEventPacket implements BedrockPacketTranslator {
         } else if (packet.getType() == LevelEvent.PARTICLE_POTION_SPLASH) {
             // The data is the color of the potion that broke
             player.getJavaSession().send(new ClientboundLevelEventPacket(LevelEventType.PARTICLES_SPELL_POTION_SPLASH, packet.getPosition().toInt(), new BreakPotionEventData(packet.getData() & 0xFFFFFF)));
+        } else if (packet.getType() == LevelEvent.START_RAINING) {
+            // The data is how strong it is to be, out of 65535
+            player.getWeather().rain(packet.getData() / WEATHER_FULL);
+        } else if (packet.getType() == LevelEvent.STOP_RAINING) {
+            player.getWeather().rain(0);
+        } else if (packet.getType() == LevelEvent.START_THUNDERSTORM) {
+            player.getWeather().thunder(packet.getData() / WEATHER_FULL);
+        } else if (packet.getType() == LevelEvent.STOP_THUNDERSTORM) {
+            player.getWeather().thunder(0);
         }
     }
 }

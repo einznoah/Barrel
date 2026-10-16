@@ -60,6 +60,7 @@ public class StartGamePacket implements BedrockPacketTranslator {
         player.getJavaSession().send(new ClientboundEntityEventPacket((int) packet.getRuntimeEntityId(), EntityEvent.PLAYER_SET_NO_PERMISSIONS));
         // The client stays on the loading screen until it is told that the chunks are coming
         player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.LEVEL_CHUNKS_LOAD_START, null));
+        player.getWeather().set(packet.getRainLevel(), packet.getLightningLevel());
 
         // The client already sent its render distance before it joined the game
         RequestChunkRadiusPacket chunkRadiusPacket = new RequestChunkRadiusPacket();

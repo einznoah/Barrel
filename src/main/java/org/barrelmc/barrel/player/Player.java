@@ -236,6 +236,8 @@ public class Player extends Vector3 {
     private final MobSounds mobSounds = new MobSounds(this);
     @Getter
     private final Waypoints waypoints = new Waypoints(this);
+    @Getter
+    private final Weather weather = new Weather(this);
     // The entities the java client was told about, by their bedrock runtime id
     @Getter
     private final Map<Long, Entity> entities = new HashMap<>();
