@@ -238,6 +238,8 @@ public class Player extends Vector3 {
     private final Waypoints waypoints = new Waypoints(this);
     @Getter
     private final Weather weather = new Weather(this);
+    @Getter
+    private final ItemFrames itemFrames = new ItemFrames(this);
     // The entities the java client was told about, by their bedrock runtime id
     @Getter
     private final Map<Long, Entity> entities = new HashMap<>();

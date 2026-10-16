@@ -1,4 +1,292 @@
 {
+  "1208": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 209894407,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "1209": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 1926062766,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "1210": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -855841999,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "1211": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -687909456,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "1212": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 350970419,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "1213": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 2063999914,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
+  "1214": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 1409158516,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "1215": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 594507737,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "1216": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -1579941306,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "1217": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 1050399555,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "1218": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -1127579936,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "1219": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -1112259371,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
+  "1220": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -845412164,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "1221": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -1313597959,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "1222": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -1911148570,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "1223": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 367397115,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "1224": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -704336152,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "1225": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -1175660811,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
+  "1226": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -1830502209,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "1227": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -460798834,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "1228": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -524634735,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "1229": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -4907016,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "1230": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": -72273365,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "1231": {
+    "bedrock_name": "minecraft:glow_frame",
+    "bedrock_network_id": 2127401354,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
+  "8563": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -1819391482,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "8564": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -1960651489,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "8565": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -407719800,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "8566": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -43468727,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "8567": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -112058814,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "8568": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -1907170485,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
+  "8569": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -89148431,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "8570": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -131930964,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "8571": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -841911109,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "8572": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -28109602,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "8573": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 735150253,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "8574": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 241396952,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
+  "8575": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -764084911,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "8576": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 1279009236,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "8577": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 647586771,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "8578": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -1098775298,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "8579": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 943247757,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "8580": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 1332490240,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
+  "8581": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -1144455002,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 0
+  },
+  "8582": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 923375607,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 1
+  },
+  "8583": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -1897217680,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 2
+  },
+  "8584": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 1027196969,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 3
+  },
+  "8585": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": -320156318,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 4
+  },
+  "8586": {
+    "bedrock_name": "minecraft:frame",
+    "bedrock_network_id": 1296703523,
+    "java_default_state": 0,
+    "bedrock_frame_facing": 5
+  },
   "17025": {
     "bedrock_name": "minecraft:air",
     "bedrock_network_id": -604749536,

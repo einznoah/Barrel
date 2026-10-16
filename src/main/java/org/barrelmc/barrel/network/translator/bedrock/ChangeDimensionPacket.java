@@ -35,6 +35,7 @@ public class ChangeDimensionPacket implements BedrockPacketTranslator {
         player.setDimension(packet.getDimension());
         player.getWaypoints().dimensionChanged();
         player.getBedrockBlocks().clear();
+        player.getItemFrames().clear();
         player.getLight().clear();
         player.getSubChunkRequests().clear();
         player.getEntities().clear();

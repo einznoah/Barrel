@@ -45,7 +45,25 @@ public class LevelSoundEventPacket implements BedrockPacketTranslator {
                     ((random.nextFloat() - random.nextFloat()) * 0.7F + 1) * 2, random.nextLong()));
             return;
         }
-        if (event == null || (OWN.contains(event) && packet.getEntityUniqueId() == player.getUniqueEntityId()) || (OWN_AT_BLOCK.contains(event) && player.isOwnAction(packet.getPosition()))) {
+        if (event == null) {
+            return;
+        }
+        // An item frame is an entity for a java client, which makes no sound of its own when it puts one up or
+        // breaks it: it is told the sound of the frame, and of none else of the block
+        BlockConverter.BedrockFrame frame = WITH_BLOCK.contains(event) ? BlockConverter.getBedrockFrame(packet.getExtraData(), player.getStartGamePacketCache().isBlockNetworkIdsHashed()) : null;
+        if (frame != null) {
+            BuiltinSound sound = switch (event) {
+                case PLACE -> frame.glow() ? BuiltinSound.ENTITY_GLOW_ITEM_FRAME_PLACE : BuiltinSound.ENTITY_ITEM_FRAME_PLACE;
+                case BREAK, BREAK_BLOCK -> frame.glow() ? BuiltinSound.ENTITY_GLOW_ITEM_FRAME_BREAK : BuiltinSound.ENTITY_ITEM_FRAME_BREAK;
+                default -> null;
+            };
+            if (sound != null) {
+                Vector3f at = packet.getPosition();
+                player.getJavaSession().send(new ClientboundSoundPacket(sound, SoundCategory.BLOCK, at.getX(), at.getY(), at.getZ(), 1, 1, ThreadLocalRandom.current().nextLong()));
+            }
+            return;
+        }
+        if ((OWN.contains(event) && packet.getEntityUniqueId() == player.getUniqueEntityId()) || (OWN_AT_BLOCK.contains(event) && player.isOwnAction(packet.getPosition()))) {
             return;
         }
 

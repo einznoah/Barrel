@@ -32,6 +32,7 @@ public class BlockEntityDataPacket implements BedrockPacketTranslator {
         }
 
         player.getBedrockBlocks().setBlockEntityData(packet.getBlockPosition(), packet.getData());
+        player.getItemFrames().dataChanged(packet.getBlockPosition(), packet.getData());
         // A jukebox that no longer holds a record has stopped playing it, a server tells nothing else of that
         if (packet.getData().getString("id", "").equals("Jukebox") && !packet.getData().containsKey("RecordItem") && player.getJukeboxes().remove(packet.getBlockPosition())) {
             player.getJavaSession().send(new ClientboundLevelEventPacket(LevelEventType.SOUND_STOP_JUKEBOX_SONG, packet.getBlockPosition(), new RecordEventData(0)));

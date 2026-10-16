@@ -34,6 +34,20 @@ BEDROCK_ALIASES = {
 # Java blocks that hold a fluid without having a waterlogged property
 JAVA_FLUID_BLOCKS = {'water', 'lava', 'bubble_column', 'kelp', 'kelp_plant', 'seagrass', 'tall_seagrass'}
 
+# Bedrock blocks that are an entity for Java: an item frame hangs on the block behind it. They are air for a Java
+# client, with the side they face as Java numbers the sides, which Barrel shows the entity by
+BEDROCK_FRAMES = {'minecraft:frame', 'minecraft:glow_frame'}
+JAVA_AIR = 0
+
+
+def frame_entry(block):
+    return {
+        'bedrock_name': block['name'][1],
+        'bedrock_network_id': block['network_id'][1],
+        'java_default_state': JAVA_AIR,
+        'bedrock_frame_facing': block['states'][1]['facing_direction'][1],
+    }
+
 
 class NbtReader:
     """Just enough big-endian NBT to read Geyser's mapping files."""
@@ -174,6 +188,9 @@ def main():
     known = []
     unknown = {}
     for runtime_id, block in enumerate(palette):
+        if block['name'][1] in BEDROCK_FRAMES:
+            known.append((JAVA_AIR, runtime_id, frame_entry(block)))
+            continue
         if runtime_id not in java_ids:
             states = block['states'][1]
             similar = runtime_ids.get(state_key(BEDROCK_ALIASES.get(block['name'][1]), states))

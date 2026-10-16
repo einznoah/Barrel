@@ -17,7 +17,7 @@ public class InteractPacket implements JavaPacketTranslator {
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundInteractPacket packet = (ServerboundInteractPacket) pk;
 
-        if (packet.getHand() != Hand.MAIN_HAND) {
+        if (packet.getHand() != Hand.MAIN_HAND || player.getItemFrames().interact(packet.getEntityId())) {
             return;
         }
 

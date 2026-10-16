@@ -5,6 +5,7 @@ import org.barrelmc.barrel.player.Player;
 import org.cloudburstmc.math.vector.Vector3i;
 import org.cloudburstmc.protocol.bedrock.data.*;
 import org.geysermc.mcprotocollib.protocol.codec.MinecraftPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PlayerAction;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundBlockChangedAckPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.player.ServerboundPlayerActionPacket;
@@ -14,7 +15,6 @@ public class PlayerActionPacket implements JavaPacketTranslator {
     @Override
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundPlayerActionPacket playerActionPacket = (ServerboundPlayerActionPacket) pk;
-        PlayerBlockActionData blockActionData;
         Vector3i blockPos = Vector3i.from(playerActionPacket.getPosition().getX(), playerActionPacket.getPosition().getY(), playerActionPacket.getPosition().getZ());
 
         PlayerAction action = playerActionPacket.getAction();
@@ -33,6 +33,27 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                 break;
         }
         switch (action) {
+            case START_DIGGING, CANCEL_DIGGING, FINISH_DIGGING -> dig(player, action, blockPos, playerActionPacket.getFace());
+            case DROP_ITEM, DROP_ITEM_STACK -> {
+                player.getInventory().dropItem(player.getInventory().getHeldItemSlot(), action == PlayerAction.DROP_ITEM_STACK);
+                player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());
+            }
+            case RELEASE_USE_ITEM -> player.getInventory().releaseItem();
+            case SWAP_HANDS -> {
+                player.getInventory().swapSlots(player.getInventory().getHeldItemSlot(), player.getInventory().getOffhandSlot());
+                player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());
+                player.getInventory().sendSlot(player.getInventory().getOffhandSlot());
+            }
+            default -> {
+            }
+        }
+    }
+
+    // What a bedrock client tells of breaking a block: that it starts, that it stops before the block is broken, or
+    // that the block is broken. A player in creative mode breaks it at once
+    public static void dig(Player player, PlayerAction action, Vector3i blockPos, Direction face) {
+        PlayerBlockActionData blockActionData;
+        switch (action) {
             case START_DIGGING:
                 if (player.getStartGamePacketCache().getAuthoritativeMovementMode() == AuthoritativeMovementMode.CLIENT) {
                     // TODO: implement for client authoritative
@@ -41,10 +62,10 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                     blockActionData = new PlayerBlockActionData();
                     blockActionData.setAction(PlayerActionType.START_BREAK);
                     blockActionData.setBlockPosition(blockPos);
-                    blockActionData.setFace(playerActionPacket.getFace().ordinal());
+                    blockActionData.setFace(face.ordinal());
                     player.getPlayerAuthInputActions().add(blockActionData);
                     player.setDiggingPosition(blockPos);
-                    player.setDiggingFace(playerActionPacket.getFace());
+                    player.setDiggingFace(face);
                     player.setDiggingStatus(PlayerActionType.START_BREAK);
                 }
                 break;
@@ -57,7 +78,7 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                     blockActionData = new PlayerBlockActionData();
                     blockActionData.setAction(PlayerActionType.ABORT_BREAK);
                     blockActionData.setBlockPosition(blockPos);
-                    blockActionData.setFace(playerActionPacket.getFace().ordinal());
+                    blockActionData.setFace(face.ordinal());
                     player.getPlayerAuthInputActions().add(blockActionData);
                 }
                 break;
@@ -72,7 +93,7 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                         blockActionData = new PlayerBlockActionData();
                         blockActionData.setAction(PlayerActionType.START_BREAK);
                         blockActionData.setBlockPosition(blockPos);
-                        blockActionData.setFace(playerActionPacket.getFace().ordinal());
+                        blockActionData.setFace(face.ordinal());
                         player.getPlayerAuthInputActions().add(blockActionData);
                     }
                     player.setDiggingStatus(PlayerActionType.BLOCK_PREDICT_DESTROY);
@@ -82,13 +103,13 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                         blockActionData = new PlayerBlockActionData();
                         blockActionData.setAction(PlayerActionType.BLOCK_CONTINUE_DESTROY);
                         blockActionData.setBlockPosition(blockPos);
-                        blockActionData.setFace(playerActionPacket.getFace().ordinal());
+                        blockActionData.setFace(face.ordinal());
                         player.getPlayerAuthInputActions().add(blockActionData);
                     }
                     blockActionData = new PlayerBlockActionData();
                     blockActionData.setAction(PlayerActionType.BLOCK_PREDICT_DESTROY);
                     blockActionData.setBlockPosition(blockPos);
-                    blockActionData.setFace(playerActionPacket.getFace().ordinal());
+                    blockActionData.setFace(face.ordinal());
                     player.getPlayerAuthInputActions().add(blockActionData);
                     if (serverBreaksBlocks) {
                         // And that it is not breaking a block anymore
@@ -100,18 +121,7 @@ public class PlayerActionPacket implements JavaPacketTranslator {
                     }
                 }
                 break;
-            case DROP_ITEM:
-            case DROP_ITEM_STACK:
-                player.getInventory().dropItem(player.getInventory().getHeldItemSlot(), action == PlayerAction.DROP_ITEM_STACK);
-                player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());
-                break;
-            case RELEASE_USE_ITEM:
-                player.getInventory().releaseItem();
-                break;
-            case SWAP_HANDS:
-                player.getInventory().swapSlots(player.getInventory().getHeldItemSlot(), player.getInventory().getOffhandSlot());
-                player.getInventory().sendSlot(player.getInventory().getHeldItemSlot());
-                player.getInventory().sendSlot(player.getInventory().getOffhandSlot());
+            default:
                 break;
         }
     }

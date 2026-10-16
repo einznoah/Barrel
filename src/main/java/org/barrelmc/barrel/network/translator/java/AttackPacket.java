@@ -15,6 +15,9 @@ public class AttackPacket implements JavaPacketTranslator {
     @Override
     public void translate(MinecraftPacket pk, Player player) {
         ServerboundAttackPacket packet = (ServerboundAttackPacket) pk;
+        if (player.getItemFrames().attack(packet.getEntityId())) {
+            return;
+        }
 
         InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
         inventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE_ON_ENTITY);

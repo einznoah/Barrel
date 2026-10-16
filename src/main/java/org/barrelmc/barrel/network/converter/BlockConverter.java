@@ -10,6 +10,7 @@ import com.google.gson.JsonObject;
 import lombok.Getter;
 import org.barrelmc.barrel.utils.FileManager;
 
+import org.geysermc.mcprotocollib.protocol.data.game.entity.object.Direction;
 import org.geysermc.mcprotocollib.protocol.data.game.level.block.BlockEntityType;
 
 import java.util.BitSet;
@@ -20,6 +21,10 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class BlockConverter {
+
+    // An item frame: the side it faces, which the bedrock and the java numbers of the sides count alike
+    public record BedrockFrame(Direction facing, boolean glow) {
+    }
 
     public static final HashMap<Integer, Integer> BEDROCK_BLOCK_RUNTIME_TO_JAVA_BLOCK_STATE = new HashMap<>();
     // Servers can use a hash of the block state instead of its index in the block palette
@@ -47,6 +52,9 @@ public class BlockConverter {
     // The java blocks of a chest that stands by itself, with the way it faces as a java client counts them: north,
     // south, west, east. The left and the right half of a large chest are java blocks of their own, this far on
     private static final HashMap<Integer, Integer> JAVA_CHEST_FACING = new HashMap<>();
+    // The bedrock blocks that are an item frame for a java client, which is an entity and not a block
+    private static final HashMap<Integer, BedrockFrame> BEDROCK_RUNTIME_FRAMES = new HashMap<>();
+    private static final HashMap<Integer, BedrockFrame> BEDROCK_HASH_FRAMES = new HashMap<>();
     private static final int CHEST_LEFT = 2;
     private static final int CHEST_RIGHT = 4;
     // Where the right of a chest is, by the way it faces: one on x and one on z
@@ -124,6 +132,11 @@ public class BlockConverter {
             }
             if (blockEntry.has("java_fluid")) {
                 JAVA_FLUID_BLOCK.set(javaStateId);
+            }
+            if (blockEntry.has("bedrock_frame_facing")) {
+                BedrockFrame frame = new BedrockFrame(Direction.values()[blockEntry.get("bedrock_frame_facing").getAsInt()], bedrockName.equals("minecraft:glow_frame"));
+                BEDROCK_RUNTIME_FRAMES.put(bedrockRuntimeId, frame);
+                BEDROCK_HASH_FRAMES.put(blockEntry.get("bedrock_network_id").getAsInt(), frame);
             }
             JsonElement waterlogged = blockEntry.get("java_waterlogged_state");
             if (waterlogged != null) {
@@ -304,6 +317,11 @@ public class BlockConverter {
     // What a bedrock server calls the block, null for a number that is not one of a block
     public static String getBedrockName(int bedrockBlockId, boolean hashed) {
         return (hashed ? BEDROCK_BLOCK_HASH_TO_NAME : BEDROCK_BLOCK_RUNTIME_TO_NAME).get(bedrockBlockId);
+    }
+
+    // The item frame a bedrock block is, null for any other block
+    public static BedrockFrame getBedrockFrame(int bedrockBlockId, boolean hashed) {
+        return (hashed ? BEDROCK_HASH_FRAMES : BEDROCK_RUNTIME_FRAMES).get(bedrockBlockId);
     }
 
     public static int getBedrockAirId(boolean hashed) {

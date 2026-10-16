@@ -41,6 +41,8 @@ public class BedrockBlocks {
         private final Map<Integer, Integer> changed = new HashMap<>();
         // Where the lower halves of the doors are that came with the sub chunks: the section, then x, z and y in it
         private final List<Integer> doors = new ArrayList<>();
+        // Where the item frames are that came with the sub chunks, in the same way
+        private final List<Integer> frames = new ArrayList<>();
         // The blocks of the chunk a java client draws through what they hold, by where they are in the same way
         private final Map<Integer, BlockEntityType> blockEntities = new HashMap<>();
         // What the server sent that its blocks hold, by their place in the chunk
@@ -67,6 +69,7 @@ public class BedrockBlocks {
             this.palettes.put(section, palette);
             this.changed.keySet().removeIf(place -> place >> 12 == section);
             this.doors.removeIf(door -> door >> 12 == section);
+            this.frames.removeIf(frame -> frame >> 12 == section);
             this.blockEntities.keySet().removeIf(blockEntity -> blockEntity >> 12 == section);
         }
 
@@ -117,6 +120,19 @@ public class BedrockBlocks {
             this.doors.add(section << 12 | x << 8 | z << 4 | y);
         }
 
+        public void addFrame(int section, int x, int y, int z) {
+            this.frames.add(section << 12 | x << 8 | z << 4 | y);
+        }
+
+        // Where the item frames that came with the sub chunks are in the world
+        public List<Vector3i> getFrames() {
+            List<Vector3i> frames = new ArrayList<>();
+            for (int frame : this.frames) {
+                frames.add(Vector3i.from(this.x << 4 | frame >> 8 & 15, (frame >> 12) + this.minSection << 4 | frame & 15, this.z << 4 | frame >> 4 & 15));
+            }
+            return frames;
+        }
+
         // The halves of the doors are put together as a java client shows them, once all sub chunks are there: the
         // upper half of a door can be in the next one
         public void joinDoors(ChunkSection[] sections) {
@@ -159,11 +175,18 @@ public class BedrockBlocks {
 
     // A chunk comes, what was known of it is not true anymore
     public Column startChunk(int chunkX, int chunkZ) {
-        // The chunks the player has left behind are not kept
+        // The chunks the player has left behind are not kept, nor the item frames shown in them
         int reach = this.player.getRenderDistance() * 2 + 8;
         if (this.columns.size() > reach * reach) {
-            this.columns.values().removeIf(column -> Math.abs(column.x - chunkX) > reach || Math.abs(column.z - chunkZ) > reach);
+            this.columns.values().removeIf(column -> {
+                boolean far = Math.abs(column.x - chunkX) > reach || Math.abs(column.z - chunkZ) > reach;
+                if (far) {
+                    this.player.getItemFrames().forgetChunk(column.x, column.z);
+                }
+                return far;
+            });
         }
+        this.player.getItemFrames().forgetChunk(chunkX, chunkZ);
 
         Column column = new Column(chunkX, chunkZ, this.player.getJavaDimension().minSection());
         this.columns.put(getKey(chunkX, chunkZ), column);
@@ -172,6 +195,12 @@ public class BedrockBlocks {
 
     public void clear() {
         this.columns.clear();
+    }
+
+    // The item frames that came with the sub chunks of a chunk, none for a chunk that is not known
+    public List<Vector3i> getFrames(int chunkX, int chunkZ) {
+        Column column = this.columns.get(getKey(chunkX, chunkZ));
+        return column == null ? List.of() : column.getFrames();
     }
 
     public void setBlock(Vector3i position, int bedrockBlockId) {
@@ -192,12 +221,15 @@ public class BedrockBlocks {
         }
 
         int javaBlock = BlockConverter.bedrockRuntimeToJavaStateId(bedrockBlockId, hashed);
+        // An item frame is air for a java client, which is shown the frame as an entity
+        this.player.getItemFrames().blockChanged(position, bedrockBlockId);
+        boolean frame = BlockConverter.getBedrockFrame(bedrockBlockId, hashed) != null;
         Column column = this.columns.get(getKey(position.getX() >> 4, position.getZ() >> 4));
         if (column != null) {
             // A block that is gone holds nothing anymore. Another one is shown with what the server sent it holds:
             // a bed that someone lies down in is still of its color
             int place = column.getPlace(position.getX(), position.getY(), position.getZ());
-            if (javaBlock == JAVA_AIR) {
+            if (javaBlock == JAVA_AIR && !frame) {
                 column.blockEntityData.remove(place);
             } else {
                 int shownBlock = BlockEntityConverter.getJavaBlock(javaBlock, column.blockEntityData.get(place));

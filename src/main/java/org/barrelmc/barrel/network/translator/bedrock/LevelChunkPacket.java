@@ -133,6 +133,8 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
         );
 
         player.getJavaSession().send(chunkPacket);
+        // The item frames are entities for a java client, which hang in the chunk
+        player.getItemFrames().chunkSent(player.getBedrockBlocks().getFrames(chunkX, chunkZ));
     }
 
     public static void networkDecodeVersionEight(ByteBuf byteBuf, ChunkSection chunkSection, byte storageSize, boolean hashedBlockIds, BedrockBlocks.Column bedrockBlocks, int sectionIndex) {
@@ -183,10 +185,12 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
             // What the blocks of the sub chunk are for a java client is looked up once for each kind of them
             int[] javaPalette = new int[paletteSize];
             boolean[] doors = new boolean[paletteSize];
+            boolean[] frames = new boolean[paletteSize];
             BlockEntityType[] blockEntities = new BlockEntityType[paletteSize];
             for (int i = 0; i < paletteSize; i++) {
                 javaPalette[i] = BlockConverter.bedrockRuntimeToJavaStateId(sectionPalette[i], hashedBlockIds);
                 doors[i] = BlockConverter.isJavaDoorLower(javaPalette[i]);
+                frames[i] = isRuntime && BlockConverter.getBedrockFrame(sectionPalette[i], hashedBlockIds) != null;
                 blockEntities[i] = BlockConverter.getJavaBlockEntity(javaPalette[i]);
             }
 
@@ -201,6 +205,9 @@ public class LevelChunkPacket implements BedrockPacketTranslator {
                             chunkSection.setBlock(x, y, z, javaStateId);
                             if (doors[paletteIndex]) {
                                 bedrockBlocks.addDoor(sectionIndex, x, y, z);
+                            }
+                            if (frames[paletteIndex] && sectionIndex >= 0) {
+                                bedrockBlocks.addFrame(sectionIndex, x, y, z);
                             }
                             if (blockEntities[paletteIndex] != null) {
                                 bedrockBlocks.addBlockEntity(sectionIndex, x, y, z, blockEntities[paletteIndex]);
