@@ -29,10 +29,13 @@ import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.AttributeT
 import org.geysermc.mcprotocollib.protocol.data.game.entity.attribute.ModifierOperation;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.metadata.EntityMetadata;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
+import org.geysermc.mcprotocollib.protocol.data.game.level.notify.GameEvent;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundRotateHeadPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundSetEntityDataPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundTeleportEntityPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundUpdateAttributesPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerAbilitiesPacket;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundGameEventPacket;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -226,6 +229,21 @@ public class TranslatorUtils {
             }
         }
         return filled.toString();
+    }
+
+    // The game mode of the player changes. A java client sets what the player may do by it, which a java server tells
+    // after it all the same; a server of mojang tells nothing of it. A spectator always flies, any other player stops
+    // flying when it gets another game mode
+    public static void changeGameMode(Player player, GameType gameType) {
+        GameMode before = translateGamemodeToJE(player.getGameMode());
+        player.setGameMode(gameType);
+        GameMode gameMode = translateGamemodeToJE(gameType);
+        player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, gameMode));
+
+        boolean mayFly = gameMode == GameMode.SPECTATOR || gameMode == GameMode.CREATIVE;
+        player.setFlying(gameMode == GameMode.SPECTATOR || (gameMode == before && player.isFlying()));
+        player.setAbilities(new ClientboundPlayerAbilitiesPacket(mayFly, mayFly, player.isFlying(), gameMode == GameMode.CREATIVE, player.getInput().getJavaFlyingSpeed(), 0.1f));
+        player.getJavaSession().send(player.getAbilities());
     }
 
     public static GameMode translateGamemodeToJE(GameType gameType) {

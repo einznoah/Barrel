@@ -164,7 +164,7 @@ saved under the name of a player by an older version is taken over the first tim
 - **Crafting:** the grid of the inventory and the crafting table with the recipe book, anvils, enchanting tables,
   stonecutters, smithing tables, grindstones, looms and cartography tables, trading with villagers
 - **The player:** health and hunger, eating, bows, potions that are drunk, thrown or linger, effects, dying and
-  respawning, game modes, and the dots of the other players on the locator bar
+  respawning, game modes with flying as a spectator, and the dots of the other players on the locator bar
 - **Chat and commands:** what is said, the commands of the server with their names offered while typing, and what
   the server answers, also what a server sends as a text made of parts. A server sends many of its messages as
   the key of a text of the Bedrock client. The Java client has most of these texts itself and shows them in its

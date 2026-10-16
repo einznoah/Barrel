@@ -1,6 +1,7 @@
 package org.barrelmc.barrel.player;
 
 import org.barrelmc.barrel.entity.Entity;
+import org.barrelmc.barrel.network.translator.TranslatorUtils;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.ClientPlayMode;
@@ -10,7 +11,9 @@ import org.cloudburstmc.protocol.bedrock.data.PlayerActionType;
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
 import org.cloudburstmc.protocol.bedrock.data.PlayerBlockActionData;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.entity.player.PositionElement;
+import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerAbilitiesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerPositionPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.serverbound.level.ServerboundPlayerInputPacket;
 
@@ -27,6 +30,12 @@ public class PlayerInput {
     private static final float DRAG = 0.91F;
     private static final float GRAVITY = 0.08F;
     private static final float SNEAKING_SPEED = 0.3F;
+    // A bedrock player flies down half as fast again as a java player, which is pushed down by three times its flying
+    // speed, and up and across as fast. A spectator, which flies always, is given a flying speed while it only flies
+    // down at which it is as fast as a bedrock one. One in creative mode is not: when it starts or stops flying, it
+    // would be told to fly or not as before
+    private static final float JAVA_FLYING_SPEED = 0.05F;
+    private static final float JAVA_DOWN_FLYING_SPEED = 0.22F / 3;
     // A java client tells when it ends a tick, 20 times a second. The proxy ticks for one that does not
     private static final long JAVA_TICK_NANOS = 250_000_000L;
     // The teleport the java client is told about when the server puts the player somewhere else
@@ -99,6 +108,17 @@ public class PlayerInput {
         this.jump = packet.isJump();
         this.shift = packet.isShift();
         this.sprint = packet.isSprint();
+
+        ClientboundPlayerAbilitiesPacket abilities = this.player.getAbilities();
+        if (abilities != null && abilities.getFlySpeed() != this.getJavaFlyingSpeed()) {
+            this.player.setAbilities(new ClientboundPlayerAbilitiesPacket(abilities.isInvincible(), abilities.isCanFly(), abilities.isFlying(), abilities.isCreative(), this.getJavaFlyingSpeed(), abilities.getWalkSpeed()));
+            this.player.getJavaSession().send(this.player.getAbilities());
+        }
+    }
+
+    public float getJavaFlyingSpeed() {
+        boolean down = this.shift && !this.jump && !this.forward && !this.backward && !this.left && !this.right;
+        return down && TranslatorUtils.translateGamemodeToJE(this.player.getGameMode()) == GameMode.SPECTATOR ? JAVA_DOWN_FLYING_SPEED : JAVA_FLYING_SPEED;
     }
 
     public void setCollisions(boolean onGround, boolean horizontalCollision) {

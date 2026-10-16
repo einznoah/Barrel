@@ -177,6 +177,7 @@ public class PacketTranslatorManager {
         bedrockTranslators.put(InventoryTransactionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.InventoryTransactionPacket());
         bedrockTranslators.put(DisconnectPacket.class, new org.barrelmc.barrel.network.translator.bedrock.DisconnectPacket());
         bedrockTranslators.put(SetPlayerGameTypePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetPlayerGameTypePacket());
+        bedrockTranslators.put(org.cloudburstmc.protocol.bedrock.packet.UpdatePlayerGameTypePacket.class, new org.barrelmc.barrel.network.translator.bedrock.UpdatePlayerGameTypePacket());
         bedrockTranslators.put(SetDefaultGameTypePacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetDefaultGameTypePacket());
         bedrockTranslators.put(ChangeDimensionPacket.class, new org.barrelmc.barrel.network.translator.bedrock.ChangeDimensionPacket());
         bedrockTranslators.put(SetEntityDataPacket.class, new org.barrelmc.barrel.network.translator.bedrock.SetEntityDataPacket());

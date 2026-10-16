@@ -7,6 +7,7 @@ import org.cloudburstmc.protocol.bedrock.data.Ability;
 import org.cloudburstmc.protocol.bedrock.data.AbilityLayer;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.geysermc.mcprotocollib.protocol.data.game.entity.player.GameMode;
 import org.geysermc.mcprotocollib.protocol.data.game.level.notify.GameEvent;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.player.ClientboundPlayerAbilitiesPacket;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.level.ClientboundGameEventPacket;
@@ -23,12 +24,14 @@ public class UpdateAbilitiesPacket implements BedrockPacketTranslator {
             for (AbilityLayer abilityLayer : packet.getAbilityLayers().toArray(new AbilityLayer[0])) {
                 if (abilityLayer.getLayerType() == AbilityLayer.Type.BASE) {
                     Set<Ability> abilityValues = abilityLayer.getAbilityValues();
-                    player.setFlying(abilityValues.contains(Ability.FLYING));
+                    // A spectator flies always, whatever the server tells of it
+                    boolean spectator = TranslatorUtils.translateGamemodeToJE(player.getGameMode()) == GameMode.SPECTATOR;
+                    player.setFlying(spectator || abilityValues.contains(Ability.FLYING));
                     if (abilityValues.contains(Ability.NO_CLIP) && player.getGameMode() == GameType.CREATIVE) {
                         player.setGameMode(GameType.SURVIVAL_VIEWER);
                         player.getJavaSession().send(new ClientboundGameEventPacket(GameEvent.CHANGE_GAME_MODE, TranslatorUtils.translateGamemodeToJE(GameType.SURVIVAL_VIEWER)));
                     }
-                    player.setAbilities(new ClientboundPlayerAbilitiesPacket(abilityValues.contains(Ability.INVULNERABLE), abilityValues.contains(Ability.MAY_FLY), abilityValues.contains(Ability.FLYING), abilityValues.contains(Ability.INSTABUILD), 0.05f, 0.1f));
+                    player.setAbilities(new ClientboundPlayerAbilitiesPacket(abilityValues.contains(Ability.INVULNERABLE), spectator || abilityValues.contains(Ability.MAY_FLY), player.isFlying(), abilityValues.contains(Ability.INSTABUILD), player.getInput().getJavaFlyingSpeed(), 0.1f));
                     player.getJavaSession().send(player.getAbilities());
                 }
             }
